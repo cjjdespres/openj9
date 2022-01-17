@@ -348,9 +348,37 @@ static int32_t J9THREAD_PROC listenerThreadProc(void * entryarg)
       {
       OMRPORT_ACCESS_FROM_J9PORT(PORTLIB);
       char timestamp[32];
+      char zoneName[32];
+      int32_t hourOffset = 0;
+      uint32_t minuteOffset = 0;
+      TR_VerboseLog::CriticalSection vlogLock;
 
       omrstr_ftime_ex(timestamp, sizeof(timestamp), "%b %d %H:%M:%S %Y", j9time_current_time_millis(), OMRSTR_FTIME_FLAG_LOCAL);
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "StartTime: %s", timestamp);
+      TR_VerboseLog::writeLine(TR_Vlog_INFO, "StartTime: %s", timestamp);
+
+      TR_VerboseLog::write(TR_Vlog_INFO, "TimeZone: ");
+      if (-1 == omrstr_current_time_zone(&hourOffset, &minuteOffset, zoneName, sizeof(zoneName)))
+         TR_VerboseLog::write("(unavailable");
+      else
+         {
+         /* Writing UTC[+/-]hr:min (zoneName) to the log */
+         uint64_t unsignedHour = (hourOffset > 0) ? hourOffset : -hourOffset;
+
+         TR_VerboseLog::write("UTC");
+
+         if (0 > hourOffset)
+            TR_VerboseLog::write("-%02d", unsignedHour);
+         else if (0 < hourOffset)
+            TR_VerboseLog::write("+%02d", unsignedHour);
+         else if (0 != minuteOffset)
+            TR_VerboseLog::write("+00");
+
+         if (0 != minuteOffset)
+            TR_VerboseLog::write(":%02d", minuteOffset);
+
+         if ('\0' != *zoneName)
+            TR_VerboseLog::write(" (%s)", zoneName);
+         }
       }
 
    J9CompileDispatcher handler(jitConfig);
