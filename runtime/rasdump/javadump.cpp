@@ -654,63 +654,27 @@ JavaCoreDumpWriter::writeTitleSection(void)
 	_OutputStream.writeInteger(now % 1000, ":%03d"); /* add the milliseconds */
 	_OutputStream.writeCharacters("\n");
 
-	bool zoneAvailable = false;
-	int32_t zoneSecondsEast = 0;
-	const char *zoneName = NULL;
-
-#if defined(WIN32)
-	/* until a reliable mechanism is found, don't report timezone */
-#elif defined(J9ZOS390) /* defined(WIN32) */
-	time64_t timeNow = time64(NULL);
-	struct tm utc;
-	struct tm local;
-
-	if ((NULL != gmtime64_r(&timeNow, &utc)) && (NULL != localtime64_r(&timeNow, &local))) {
-		zoneAvailable = true;
-		zoneSecondsEast = (int32_t)difftime64(timeNow, mktime64(&utc));
-		if (0 == local.tm_isdst) {
-			zoneName = tzname[0];
-		} else if (local.tm_isdst > 0) {
-			zoneName = tzname[1];
-			/* compensate for DST because difftime64() doesn't appear to do so */
-			zoneSecondsEast += 60 * 60;
-		}
-	}
-#else /* defined(WIN32) */
-	time_t timeNow = time(NULL);
-	struct tm utc;
-	struct tm local;
-
-	if ((NULL != gmtime_r(&timeNow, &utc)) && (NULL != localtime_r(&timeNow, &local))) {
-		zoneAvailable = true;
-		zoneSecondsEast = (int32_t)difftime(timeNow, mktime(&utc));
-		if (0 == local.tm_isdst) {
-			zoneName = tzname[0];
-		} else if (local.tm_isdst > 0) {
-			zoneName = tzname[1];
-			/* compensate for DST because difftime() doesn't appear to do so */
-			zoneSecondsEast += 60 * 60;
-		}
-	}
-#endif /* defined(WIN32) */
+	int32_t hourOffset = 0;
+	uint32_t minuteOffset = 0;
+	char zoneName[32];
 
 	_OutputStream.writeCharacters("1TITIMEZONE    Timezone: ");
-	if (!zoneAvailable) {
+	if (-1 == omrstr_current_time_zone(&hourOffset, &minuteOffset, zoneName, sizeof(zoneName))) {
 		_OutputStream.writeCharacters("(unavailable)");
 	} else {
 		_OutputStream.writeCharacters("UTC");
-		if (0 != zoneSecondsEast) {
-			const char *format = (zoneSecondsEast > 0) ? "+%d" : "-%d";
-			uint32_t offset = ((uint32_t)((zoneSecondsEast > 0) ? zoneSecondsEast : -zoneSecondsEast)) / 60;
-			uint32_t hours = offset / 60;
-			uint32_t minutes = offset % 60;
 
-			_OutputStream.writeInteger(hours, format);
-			if (0 != minutes) {
-				_OutputStream.writeInteger(minutes, ":%02d");
+		if ((0 != hourOffset) || (0 != minuteOffset)) {
+			const char *format = (hourOffset < 0) ? "-%d" : "+%d";
+			uint64_t absoluteHour = (hourOffset > 0) ? hourOffset : -hourOffset;
+
+			_OutputStream.writeInteger(absoluteHour, format);
+			if (0 != minuteOffset) {
+				_OutputStream.writeInteger(minuteOffset, ":%02d");
 			}
 		}
-		if ((NULL != zoneName) && ('\0' != *zoneName)) {
+
+		if ('\0' != *zoneName) {
 			_OutputStream.writeCharacters(" (");
 			_OutputStream.writeCharacters(zoneName);
 			_OutputStream.writeCharacters(")");
