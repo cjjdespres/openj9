@@ -127,7 +127,7 @@ public class JITServerTest {
 	private static String generatePortOption() {
 		// Most systems have a specified ephemeral ports range. We're not bothering to find the actual range, just choosing a range that is outside the reserved area, reasonably large, and well-behaved.
 		// The range chosen here is within the actual ephemeral range on recent Linux systems and others (at the time of writing).
-		final int EPHEMERAL_PORTS_START = 33000, EPHEMERAL_PORTS_LAST = 60000;
+		final int EPHEMERAL_PORTS_START = 33000, EPHEMERAL_PORTS_LAST = 33002;
 
 		// In order to run on multi-user systems we need to use a unique server port.
 		// We choose a random one in the ephemeral ports range here; the user can override via an env var if they want.
