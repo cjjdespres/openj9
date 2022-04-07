@@ -71,6 +71,8 @@ void jvmPhaseChange(J9JavaVM* vm, UDATA phase) {
 		vm->sharedClassConfig->jvmPhaseChange(currentThread, phase);
 	}
 	if (J9VM_PHASE_LATE_SCC_DISCLAIM == phase) {
+		// J9VM_PHASE_LATE_SCC_DISCLAIM is used to trigger an action in memoryManagerFunctions->jvmPhaseChange
+		// and is otherwise not important to the VM, so the old phase is restored.
 		vm->phase = oldPhase;
 	}
 }
