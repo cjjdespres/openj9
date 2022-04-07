@@ -139,6 +139,7 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _disableFurtherCompilation(false),
          _loadFactor(1),
          _jitState(STARTUP_STATE),
+         _jitStateChangeTime(0),
          _jitStateChangeSampleCount(0),
          _jitTotalSampleCount(0),
          _jitSampleCountWhenActiveStateEntered(0),
@@ -229,6 +230,9 @@ class PersistentInfo : public OMR::PersistentInfoConnector
 
    uint8_t getJitState() const { return _jitState; }
    void setJitState(uint8_t v) { _jitState = v; }
+
+   uint64_t getJitStateChangeTime() {return _jitStateChangeTime;}
+   void setJitStateChangeTime(uint64_t t) {_jitStateChangeTime = t;}
 
    void setJitStateChangeSampleCount(uint32_t t) {_jitStateChangeSampleCount = t;}
    uint32_t getJitStateChangeSampleCount() const { return _jitStateChangeSampleCount;}
@@ -388,6 +392,8 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    uint32_t _loadFactor; // set in samplerThread; increases with active threads, decreases with CPUs
 
    uint8_t _jitState; // STARTUP IDLE RAMPUP STEADY
+
+   uint64_t _jitStateChangeTime;
 
    uint32_t _jitTotalSampleCount; // similar to TR::Recompilation::globalSampleCount,
                                   // but always incremented when jitMethodSampleInterrupt is called
