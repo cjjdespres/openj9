@@ -4457,6 +4457,7 @@ static int32_t startupPhaseId = 0;
 static bool firstIdleStateAfterStartup = false;
 static uint64_t timeToAllocateTrackingHT = 0xffffffffffffffff; // never
 static bool alreadyIssuedLateDisclaim = false;
+static uint64_t timeNotInIdle = 0;
 
 #define GCR_HYSTERESIS 100
 
@@ -5004,11 +5005,14 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
       } // if (javaVM->phase != J9VM_PHASE_NOT_STARTUP)
 
 
+   if (oldState != IDLE_STATE)
+      {
+      timeNotInIdle += diffTime;
+      }
+
    if (newState != oldState) // state changed
       {
       persistentInfo->setJitState(newState);
-      persistentInfo->setJitStateChangeTime(crtElapsedTime);
-      alreadyIssuedLateDisclaim = false;
       persistentInfo->setJitStateChangeSampleCount(persistentInfo->getJitTotalSampleCount());
       if ((oldState == IDLE_STATE || oldState == STARTUP_STATE) &&
           (newState != IDLE_STATE && newState != STARTUP_STATE))
@@ -5090,8 +5094,7 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
          }
       }
    else if (!alreadyIssuedLateDisclaim
-            && (crtElapsedTime - persistentInfo->getJitStateChangeTime() >= 120000)
-            && newState != IDLE_STATE)
+            && (timeNotInIdle >= TR::Options::getLateSCCDisclaimTime()))
       {
       javaVM->internalVMFunctions->jvmPhaseChange(javaVM, J9VM_PHASE_LATE_SCC_DISCLAIM);
       alreadyIssuedLateDisclaim = true;

@@ -261,6 +261,7 @@ int32_t J9::Options::_dataCacheMinQuanta = 2;
 
 int32_t J9::Options::_updateFreeMemoryMinPeriod = 500;  // 500 ms
 
+uint64_t J9::Options::_lateSCCDisclaimTime = 120000; // 2min (in ms)
 
 size_t J9::Options::_scratchSpaceLimitKBWhenLowVirtualMemory = 64*1024; // 64MB; currently, only used on 32 bit Windows
 
@@ -2185,6 +2186,15 @@ J9::Options::fePreProcess(void * base)
       bool forceSuffixLogs = true;
    #endif
 
+   const char *xxLateSCCDisclaimTimeOption = "-XX:LateSCCDisclaimTime=";
+   int32_t xxLateSCCDisclaimTime = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxLateSCCDisclaimTimeOption, 0);
+   if (xxLateSCCDisclaimTime >= 0)
+      {
+      uint32_t disclaimMs=0;
+      IDATA ret = GET_INTEGER_VALUE(xxLateSCCDisclaimTime, xxLateSCCDisclaimTimeOption, disclaimMs);
+      if (ret == OPTION_OK)
+         _lateSCCDisclaimTime = disclaimMs;
+      }
 
   /* Using traps on z/OS for NullPointerException and ArrayIndexOutOfBound checks instead of the
    * old way of using explicit compare and branching off to a helper is causing several issues on z/OS:
