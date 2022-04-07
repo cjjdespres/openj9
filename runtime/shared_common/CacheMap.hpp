@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2020 IBM Corp. and others
+ * Copyright (c) 2001, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -132,6 +132,8 @@ public:
 	virtual UDATA releasePrivateSharedData(J9VMThread* currentThread, const J9SharedDataDescriptor* data);
 
 	void dontNeedMetadata(J9VMThread* currentThread);
+
+	void forceDontNeedMetadata(J9VMThread* currentThread);
 
 	/**
 	 * This function is extremely hot.

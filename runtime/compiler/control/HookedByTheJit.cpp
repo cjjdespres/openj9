@@ -4456,6 +4456,7 @@ char* jitStateNames[]=
 static int32_t startupPhaseId = 0;
 static bool firstIdleStateAfterStartup = false;
 static uint64_t timeToAllocateTrackingHT = 0xffffffffffffffff; // never
+static bool alreadyIssuedLateDisclaim = false;
 
 #define GCR_HYSTERESIS 100
 
@@ -5006,6 +5007,8 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
    if (newState != oldState) // state changed
       {
       persistentInfo->setJitState(newState);
+      persistentInfo->setJitStateChangeTime(crtElapsedTime);
+      alreadyIssuedLateDisclaim = false;
       persistentInfo->setJitStateChangeSampleCount(persistentInfo->getJitTotalSampleCount());
       if ((oldState == IDLE_STATE || oldState == STARTUP_STATE) &&
           (newState != IDLE_STATE && newState != STARTUP_STATE))
@@ -5084,6 +5087,17 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
                } while ((currentThread = currentThread->linkNext) != javaVM->mainThread);
                j9thread_monitor_exit(javaVM->vmThreadListMutex);
             }
+         }
+      }
+   else if (!alreadyIssuedLateDisclaim
+            && (crtElapsedTime - persistentInfo->getJitStateChangeTime() >= 120000)
+            && newState != IDLE_STATE)
+      {
+      javaVM->internalVMFunctions->jvmPhaseChange(javaVM, J9VM_PHASE_LATE_SCC_DISCLAIM);
+      alreadyIssuedLateDisclaim = true;
+      if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJitState))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITSTATE, "t=%u JIT issuing late SCC disclaim", (uint32_t)crtElapsedTime);
          }
       }
    if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJitState))
