@@ -231,6 +231,7 @@ SH_CacheMap::newInstance(J9JavaVM* vm, J9SharedClassConfig* sharedClassConfig, S
 void
 SH_CacheMap::dontNeedMetadata(J9VMThread* currentThread) 
 {
+	return;
 	Trc_SHR_CM_j9shr_dontNeedMetadata(currentThread);
 	SH_CompositeCacheImpl* ccToUse = _ccHead;
 
