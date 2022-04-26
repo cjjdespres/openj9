@@ -233,7 +233,7 @@ SH_CacheMap::dontNeedMetadata(J9VMThread* currentThread)
 {
 	Trc_SHR_CM_j9shr_dontNeedMetadata(currentThread);
 
-	if (_metadataReleased) {
+	if (_numTimesMetadataReleased >= MAX_NUM_SCC_DISCLAIMS) {
 		return;
 	}
 	SH_CacheMap::forceDontNeedMetadata(currentThread);
@@ -249,7 +249,7 @@ SH_CacheMap::forceDontNeedMetadata(J9VMThread* currentThread)
 {
 	SH_CompositeCacheImpl* ccToUse = _ccHead;
 
-	_metadataReleased = true;
+	_numTimesMetadataReleased += 1;
 	do {
 		ccToUse->dontNeedMetadata(currentThread);
 		ccToUse = ccToUse->getNext();
@@ -299,7 +299,7 @@ SH_CacheMap::initialize(J9JavaVM* vm, J9SharedClassConfig* sharedClassConfig, Bl
 	_writeHashContendedResetHash = 0;
 	_bytesRead = 0;
 	_isAssertEnabled = true;
-	_metadataReleased = false;
+	_numTimesMetadataReleased = 0;
 	_ccPool = NULL;
 
 	_managers = SH_Managers::newInstance(vm, (SH_Managers *)allocPtr);
@@ -1743,7 +1743,7 @@ SH_CacheMap::allocateROMClass(J9VMThread* currentThread, const J9RomClassRequire
 
 	if ((NULL != newItemInCache)
 		&& (_ccHead->isNewCache())
-		&& (false == _metadataReleased)
+		&& (_numTimesMetadataReleased < MAX_NUM_SCC_DISCLAIMS)
 	) {
 		/* Update the min/max boundary with the stored metadata entry only when the cache is
 		 * being created by the current VM.
@@ -2423,7 +2423,7 @@ SH_CacheMap::commitMetaDataROMClassIfRequired(J9VMThread* currentThread, Classpa
 	 * being created by the current VM.
 	 */
 	if (_ccHead->isNewCache()
-		&& (false == _metadataReleased)
+		&& (_numTimesMetadataReleased < MAX_NUM_SCC_DISCLAIMS)
 	) {
 #if !defined(J9ZOS390) && !defined(AIXPPC)
 #if defined(LINUX)
@@ -2729,7 +2729,7 @@ SH_CacheMap::findROMClass(J9VMThread* currentThread, const char* path, Classpath
 		}
 		returnVal = (J9ROMClass*)getAddressFromJ9ShrOffset(&((locateResult.known)->romClassOffset));
 #if !defined(J9ZOS390) && !defined(AIXPPC)
-		if (_metadataReleased
+		if (_numTimesMetadataReleased >= MAX_NUM_SCC_DISCLAIMS
 #if defined(LINUX)
 				&& J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE)
 #endif
@@ -2935,7 +2935,7 @@ SH_CacheMap::storeROMClassResource(J9VMThread* currentThread, const void* romAdd
 	&& ((void*)J9SHR_RESOURCE_STORE_FULL != result)
 	&& ((void*)J9SHR_RESOURCE_STORE_ERROR != result)
 	&& _ccHead->isNewCache()
-	&& (false == _metadataReleased)
+	&& (_numTimesMetadataReleased < MAX_NUM_SCC_DISCLAIMS)
 	) {
 #if !defined(J9ZOS390) && !defined(AIXPPC)
 #if defined(LINUX)
@@ -3210,7 +3210,7 @@ SH_CacheMap::findCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* ro
 	result = (const U_8*)findROMClassResource(currentThread, romMethod, localCMM, &descriptor, true, NULL, flags);
 	if (NULL != result) {
 #if !defined(J9ZOS390) && !defined(AIXPPC)
-		if (_metadataReleased
+		if (_numTimesMetadataReleased >= MAX_NUM_SCC_DISCLAIMS
 #if defined(LINUX)
 		&& J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE)
 #endif
