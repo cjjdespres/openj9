@@ -243,8 +243,8 @@ class OMR_EXTENSIBLE Options : public OMR::OptionsConnector
    static int32_t _numDLTBufferMatchesToEagerlyIssueCompReq;
    static int32_t _dltPostponeThreshold;
 
-   static uint64_t _lateSCCDisclaimTime;
-   static uint64_t getLateSCCDisclaimTime() { return _lateSCCDisclaimTime; }
+   static int64_t _lateSCCDisclaimTime;
+   static int64_t getLateSCCDisclaimTime() { return _lateSCCDisclaimTime; }
 
    static int32_t _minSamplingPeriod;
    int32_t getMinSamplingPeriod() {return _minSamplingPeriod;}

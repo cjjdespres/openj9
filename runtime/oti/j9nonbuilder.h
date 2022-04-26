@@ -5631,7 +5631,6 @@ typedef struct J9JavaVM {
 	struct J9HashTable* ensureHashedClasses;
 } J9JavaVM;
 
-#define J9VM_PHASE_LATE_SCC_DISCLAIM 3
 #define J9VM_PHASE_NOT_STARTUP  2
 #define J9VM_DEBUG_ATTRIBUTE_CAN_POP_FRAMES  0x20000
 #define J9VM_PHASE_STARTUP  1

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2022 IBM Corp. and others
+ * Copyright (c) 2001, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -4914,9 +4914,9 @@ adjustCacheSizes(J9PortLibrary* portlib, UDATA verboseFlags, J9SharedClassPreini
 void
 j9shr_jvmPhaseChange(J9VMThread *currentThread, UDATA phase)
 {
-	J9JavaVM* vm = currentThread->javaVM;
-
 	if (J9VM_PHASE_NOT_STARTUP == phase) {
+		J9JavaVM* vm = currentThread->javaVM;
+
 		/* OpenJ9 issue; https://github.com/eclipse-openj9/openj9/issues/3743
 		 * GC decides whether to calls vm->sharedClassConfig->storeGCHints() to store the GC hints into the shared cache. */
 		storeStartupHintsToSharedCache(currentThread);
@@ -4924,8 +4924,6 @@ j9shr_jvmPhaseChange(J9VMThread *currentThread, UDATA phase)
 			((SH_CacheMap*)vm->sharedClassConfig->sharedClassCache)->protectPartiallyFilledPages(currentThread);
 		}
 		((SH_CacheMap*)vm->sharedClassConfig->sharedClassCache)->dontNeedMetadata(currentThread);
-	} else if (J9VM_PHASE_LATE_SCC_DISCLAIM == phase) {
-		((SH_CacheMap*)vm->sharedClassConfig->sharedClassCache)->forceDontNeedMetadata(currentThread);
 	}
 	return;
 }
