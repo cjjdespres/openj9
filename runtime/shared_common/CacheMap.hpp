@@ -39,6 +39,8 @@
 #define CM_CACHE_CORRUPT -2
 #define CM_CACHE_STORE_PREREQ_ID_FAILED -3
 
+#define MAX_NUM_SCC_DISCLAIMS 2
+
 /*
  * The maximum width of the hexadecimal representation of a value of type 'T'.
  */
@@ -322,7 +324,7 @@ private:
 	UDATA _bytesRead;
 	U_32 _actualSize;
 	J9Pool* _ccPool;
-	bool _metadataReleased;
+	int32_t _numTimesMetadataReleased;
 
 	bool _isAssertEnabled; /* flag to turn on/off assertion before acquiring local mutex */
 	
