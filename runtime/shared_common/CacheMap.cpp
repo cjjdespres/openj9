@@ -247,6 +247,8 @@ SH_CacheMap::dontNeedMetadata(J9VMThread* currentThread)
 void
 SH_CacheMap::forceDontNeedMetadata(J9VMThread* currentThread)
 {
+	Trc_SHR_CM_j9shr_forceDontNeedMetadata(currentThread);
+
 	SH_CompositeCacheImpl* ccToUse = _ccHead;
 
 	_numTimesMetadataReleased += 1;
