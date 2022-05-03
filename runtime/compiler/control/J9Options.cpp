@@ -261,7 +261,7 @@ int32_t J9::Options::_dataCacheMinQuanta = 2;
 
 int32_t J9::Options::_updateFreeMemoryMinPeriod = 500;  // 500 ms
 
-uint64_t J9::Options::_lateSCCDisclaimTime = 120000; // 2min (in ms)
+int64_t J9::Options::_lateSCCDisclaimTime = 120000000000; // 2min (in ns)
 
 size_t J9::Options::_scratchSpaceLimitKBWhenLowVirtualMemory = 64*1024; // 64MB; currently, only used on 32 bit Windows
 
@@ -2193,7 +2193,7 @@ J9::Options::fePreProcess(void * base)
       uint32_t disclaimMs=0;
       IDATA ret = GET_INTEGER_VALUE(xxLateSCCDisclaimTime, xxLateSCCDisclaimTimeOption, disclaimMs);
       if (ret == OPTION_OK)
-         _lateSCCDisclaimTime = disclaimMs;
+         _lateSCCDisclaimTime = disclaimMs * 1000000;
       }
 
   /* Using traps on z/OS for NullPointerException and ArrayIndexOutOfBound checks instead of the

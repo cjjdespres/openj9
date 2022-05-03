@@ -4456,8 +4456,7 @@ char* jitStateNames[]=
 static int32_t startupPhaseId = 0;
 static bool firstIdleStateAfterStartup = false;
 static uint64_t timeToAllocateTrackingHT = 0xffffffffffffffff; // never
-static bool alreadyIssuedLateDisclaim = false;
-static uint64_t timeNotInIdle = 0;
+static bool lateDisclaimNeeded = true;
 
 #define GCR_HYSTERESIS 100
 
@@ -5004,12 +5003,6 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
          } // if (interpreterProfilingWasOnAtStartup)
       } // if (javaVM->phase != J9VM_PHASE_NOT_STARTUP)
 
-
-   if (oldState != IDLE_STATE)
-      {
-      timeNotInIdle += diffTime;
-      }
-
    if (newState != oldState) // state changed
       {
       persistentInfo->setJitState(newState);
@@ -5093,14 +5086,22 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
             }
          }
       }
-   else if (!alreadyIssuedLateDisclaim
-            && (timeNotInIdle >= TR::Options::getLateSCCDisclaimTime()))
+   else if (lateDisclaimNeeded)
       {
-      javaVM->internalVMFunctions->jvmPhaseChange(javaVM, J9VM_PHASE_LATE_SCC_DISCLAIM);
-      alreadyIssuedLateDisclaim = true;
-      if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJitState))
+      j9thread_process_time_t vmCpuStats;
+      IDATA status = j9thread_get_process_times(&vmCpuStats);
+      if (0 != status)
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITSTATE, "t=%u JIT issuing late SCC disclaim", (uint32_t)crtElapsedTime);
+         lateDisclaimNeeded = false;
+         }
+      else if (vmCpuStats._systemTime >= TR::Options::getLateSCCDisclaimTime())
+         {
+         javaVM->internalVMFunctions->jvmPhaseChange(javaVM, J9VM_PHASE_LATE_SCC_DISCLAIM);
+         lateDisclaimNeeded = false;
+         if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJitState))
+            {
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITSTATE, "t=%u JIT issuing late SCC disclaim", (uint32_t)crtElapsedTime);
+            }
          }
       }
    if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJitState))
