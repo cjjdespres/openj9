@@ -5003,6 +5003,7 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
          } // if (interpreterProfilingWasOnAtStartup)
       } // if (javaVM->phase != J9VM_PHASE_NOT_STARTUP)
 
+
    if (newState != oldState) // state changed
       {
       persistentInfo->setJitState(newState);

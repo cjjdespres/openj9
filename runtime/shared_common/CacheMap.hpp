@@ -324,7 +324,7 @@ private:
 	UDATA _bytesRead;
 	U_32 _actualSize;
 	J9Pool* _ccPool;
-	int32_t _numTimesMetadataReleased;
+	int32_t _cacheMetadataReleaseCounter;
 
 	bool _isAssertEnabled; /* flag to turn on/off assertion before acquiring local mutex */
 	
