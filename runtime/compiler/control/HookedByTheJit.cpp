@@ -5088,13 +5088,9 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
       }
    else if (lateDisclaimNeeded)
       {
-      j9thread_process_time_t vmCpuStats;
-      IDATA status = j9thread_get_process_times(&vmCpuStats);
-      if (0 != status)
-         {
-         lateDisclaimNeeded = false;
-         }
-      else if (vmCpuStats._systemTime >= TR::Options::getLateSCCDisclaimTime())
+      CpuUtilization *cpuUtil = compInfo->getCpuUtil();
+      cpuUtil->updateCpuUtil(jitConfig);
+      if (cpuUtil->getVmTotalCpuTime() >= TR::Options::getLateSCCDisclaimTime())
          {
          javaVM->internalVMFunctions->jvmPhaseChange(javaVM, J9VM_PHASE_LATE_SCC_DISCLAIM);
          lateDisclaimNeeded = false;
