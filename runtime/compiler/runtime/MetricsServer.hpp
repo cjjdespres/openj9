@@ -194,7 +194,7 @@ public:
       INVALID_HTTP_PROTOCOL = -505,
       };
 
-   HttpGetRequest(int sockfd) : _sockfd(sockfd), _path(Path::Undefined), _msgLength(0), _responseBytesSent(0)
+   HttpGetRequest(int sockfd, BIO *ssl) : _sockfd(sockfd), _path(Path::Undefined), _msgLength(0), _ssl(ssl), _responseBytesSent(0)
       {}
    HttpGetRequest(const HttpGetRequest &other)
       {
@@ -203,6 +203,7 @@ public:
          _sockfd = other.getSockFd();
          _msgLength = other.getMsgLength();
          memcpy(_buf, other._buf, other.getMsgLength());
+         _ssl = other._ssl;
          _response = other._response;
          _responseBytesSent = other._responseBytesSent;
          // The following are not really needed
@@ -240,6 +241,7 @@ private:
    char _httpVersion[4]; // 1.0 1.1  2.0, etc
    size_t _msgLength; // How much of the buffer is filled
    char _buf[BUF_SZ]; // Buffer for holding incoming data
+   BIO *_ssl;
 
    std::string _response;
    size_t _responseBytesSent;
@@ -290,6 +292,7 @@ private:
    void reArmSocketForReading(int sockIndex);
    void reArmSocketForWriting(int sockIndex);
    void closeSocket(int sockIndex);
+   void freeSSLConnection(int sockIndex);
 
    J9VMThread *_metricsThread;
    TR::Monitor *_metricsMonitor;
@@ -300,7 +303,10 @@ private:
 
    nfds_t _numActiveSockets = 0;
    struct pollfd _pfd[1 + MAX_CONCURRENT_REQUESTS] = {{0}}; // poll file descriptors; first entry is for connection requests
+   BIO *_sslConnections[1 + MAX_CONCURRENT_REQUESTS] = {0};
    HttpGetRequest *_incompleteRequests[1 + MAX_CONCURRENT_REQUESTS] = {0};
+
+   SSL_CTX *_sslCtx;
    }; // class MetricsServer
 
 #endif // #ifndef METRICSSERVER_HPP

@@ -41,7 +41,138 @@
 #include "env/VMJ9.h"
 #include "runtime/MetricsServer.hpp"
 
+static bool useSSL(TR::CompilationInfo *compInfo)
+   {
+   return (compInfo->getJITServerMetricsSslKeys().size() || compInfo->getJITServerMetricsSslCerts().size());
+   }
 
+static SSL_CTX *
+createSSLContext(TR::CompilationInfo *compInfo)
+   {
+   SSL_CTX *ctx = (*OSSL_CTX_new)((*OSSLv23_server_method)());
+
+   if (!ctx)
+      {
+      perror("can't create SSL context");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+
+   const char *sessionIDContext = "MetricsServer";
+   (*OSSL_CTX_set_session_id_context)(ctx, (const unsigned char*)sessionIDContext, strlen(sessionIDContext));
+
+   if ((*OSSL_CTX_set_ecdh_auto)(ctx, 1) != 1)
+      {
+      perror("failed to configure SSL ecdh");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+
+   auto &sslKeys = compInfo->getJITServerSslKeys();
+   auto &sslCerts = compInfo->getJITServerSslCerts();
+   auto &sslRootCerts = compInfo->getJITServerSslRootCerts();
+
+   TR_ASSERT_FATAL(sslKeys.size() == 1 && sslCerts.size() == 1, "only one key and cert is supported for now");
+   TR_ASSERT_FATAL(sslRootCerts.size() == 0, "server does not understand root certs yet");
+
+   // Parse and set private key
+   BIO *keyMem = (*OBIO_new_mem_buf)(&sslKeys[0][0], sslKeys[0].size());
+   if (!keyMem)
+      {
+      perror("cannot create memory buffer for private key (OOM?)");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+   EVP_PKEY *privKey = (*OPEM_read_bio_PrivateKey)(keyMem, NULL, NULL, NULL);
+   if (!privKey)
+      {
+      perror("cannot parse private key");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+   if ((*OSSL_CTX_use_PrivateKey)(ctx, privKey) != 1)
+      {
+      perror("cannot use private key");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+
+   // Parse and set certificate
+   BIO *certMem = (*OBIO_new_mem_buf)(&sslCerts[0][0], sslCerts[0].size());
+   if (!certMem)
+      {
+      perror("cannot create memory buffer for cert (OOM?)");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+   X509 *certificate = (*OPEM_read_bio_X509)(certMem, NULL, NULL, NULL);
+   if (!certificate)
+      {
+      perror("cannot parse cert");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+   if ((*OSSL_CTX_use_certificate)(ctx, certificate) != 1)
+      {
+      perror("cannot use cert");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+
+   // Verify key and cert are valid
+   if ((*OSSL_CTX_check_private_key)(ctx) != 1)
+      {
+      perror("private key check failed");
+      (*OERR_print_errors_fp)(stderr);
+      exit(1);
+      }
+
+   // verify server identity using standard method
+   (*OSSL_CTX_set_verify)(ctx, SSL_VERIFY_PEER, NULL);
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Successfully initialized SSL context (%s)\n", (*OOpenSSL_version)(0));
+
+   return ctx;
+   }
+
+static bool
+handleOpenSSLConnectionError(int connfd, SSL *&ssl, BIO *&bio, const char *errMsg)
+   {
+   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "%s: errno=%d", errMsg, errno);
+   (*OERR_print_errors_fp)(stderr);
+
+   close(connfd);
+   if (bio)
+      {
+      (*OBIO_free_all)(bio);
+      bio = NULL;
+      }
+   return false;
+   }
+
+static bool acceptOpenSSLConnection(SSL_CTX *sslCtx, int connfd, BIO *bio)
+   {
+   SSL *ssl = NULL;
+   bio = (*OBIO_new_ssl)(sslCtx, false);
+   if (!bio)
+      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error creating new BIO");
+
+   if ((*OBIO_ctrl)(bio, BIO_C_GET_SSL, false, (char *) &ssl) != 1) // BIO_get_ssl(bio, &ssl)
+      return handleOpenSSLConnectionError(connfd, ssl, bio, "Failed to get BIO SSL");
+
+   if ((*OSSL_set_fd)(ssl, connfd) != 1)
+      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error setting SSL file descriptor");
+
+   if ((*OSSL_accept)(ssl) <= 0)
+      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error accepting SSL connection");
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "SSL connection on socket 0x%x, Version: %s, Cipher: %s\n",
+                                                     connfd, (*OSSL_get_version)(ssl), (*OSSL_get_cipher)(ssl));
+   return true;
+   }
 
 double CPUUtilMetric::computeValue(TR::CompilationInfo *compInfo)
    {
@@ -107,10 +238,23 @@ MetricsDatabase::serializeMetrics()
 HttpGetRequest::ReturnCodes
 HttpGetRequest::readHttpGetRequest()
    {
-   // Because we used 'poll' and we know there is some data available,
-   // the following read request will not block
    size_t capacityLeft = BUF_SZ - 1 - _msgLength; // subtract 1 for NULL terminator
-   int bytesRead = read(_sockfd, _buf + _msgLength, capacityLeft);
+   int bytesRead = 0;
+   if (_ssl)
+      {
+      bytesRead = (*OBIO_read)(_ssl, _buf + _msgLength, capacityLeft);
+      // Even though we waited with poll(), there may still not be enough data available in the SSL case
+      if ((bytesRead <= 0) && (*OBIO_should_retry)(_ssl))
+         {
+         return INCOMPLETE_REQUEST;
+         }
+      }
+   else
+      {
+      // Unlike the SSL case, there is guaranteed to be some data to read here because of poll()
+      bytesRead = read(_sockfd, _buf + _msgLength, capacityLeft);
+      }
+
    if (bytesRead <= 0)
       {
       fprintf(stderr, "Error reading from socket %d ", _sockfd);
@@ -223,8 +367,22 @@ HttpGetRequest::parseHttpGetRequest()
 HttpGetRequest::ReturnCodes
 HttpGetRequest::sendHttpResponse()
    {
+   int bytesWritten = 0;
    int remainingBytes = _response.length() - _responseBytesSent + 1;
-   int bytesWritten = write(_sockfd, _response.c_str() + _responseBytesSent, remainingBytes);
+   if (_ssl)
+      {
+      bytesWritten = (*OBIO_write)(_ssl, _response.c_str() + _responseBytesSent, remainingBytes);
+      // Even though we waited with poll(), we may still not be able to send any data in the SSL case
+      if ((bytesWritten <= 0) && (*OBIO_should_retry)(_ssl))
+         {
+         return INCOMPLETE_RESPONSE;
+         }
+      }
+   else
+      {
+      // Unlike the SSL case, there will always be capacity to write data because we waited with poll()
+      bytesWritten = write(_sockfd, _response.c_str() + _responseBytesSent, remainingBytes);
+      }
 
    if (remainingBytes == bytesWritten)
       {
@@ -245,7 +403,7 @@ HttpGetRequest::sendHttpResponse()
 
 MetricsServer::MetricsServer()
    : _metricsThread(NULL), _metricsMonitor(NULL), _metricsOSThread(NULL),
-   _metricsThreadAttachAttempted(false), _metricsThreadExitFlag(false), _jitConfig(NULL)
+   _metricsThreadAttachAttempted(false), _metricsThreadExitFlag(false), _jitConfig(NULL), _sslCtx(NULL)
    {
    for (int i = 0; i < 1 + MAX_CONCURRENT_REQUESTS; i++)
       _pfd[i].fd = -1; // invalid
@@ -330,7 +488,7 @@ MetricsServer::startMetricsThread(J9JavaVM *javaVM)
          _metricsMonitor->exit();
          if (!getMetricsThread())
             {
-            j9tty_printf(PORTLIB, "Error: JITServer Matrics Thread attach failed.\n");
+            j9tty_printf(PORTLIB, "Error: JITServer Metrics Thread attach failed.\n");
             }
          }
       }
@@ -435,12 +593,23 @@ MetricsServer::closeSocket(int sockIndex)
    _pfd[sockIndex].fd = -1;
    _pfd[sockIndex].revents = 0;
    _numActiveSockets--;
+   freeSSLConnection(sockIndex);
 
    if (_incompleteRequests[sockIndex])
       {
       // Delete the dynamically allocated data
       TR_Memory::jitPersistentFree(_incompleteRequests[sockIndex]);
       _incompleteRequests[sockIndex] = NULL;
+      }
+   }
+
+void
+MetricsServer::freeSSLConnection(int sockIndex)
+   {
+   if (_sslConnections[sockIndex])
+      {
+      (*OBIO_free_all)(_sslConnections[sockIndex]);
+      _sslConnections[sockIndex] = NULL;
       }
    }
 
@@ -461,6 +630,12 @@ MetricsServer::handleConnectionRequest()
          perror("MetricsServer error: Can't set option O_NONBLOCK on socket");
          exit(1);
          }
+      BIO *ssl = NULL;
+      if (_sslCtx && !acceptOpenSSLConnection(_sslCtx, sockfd, ssl))
+         {
+         perror("MetricsServer error: Can't open SSL connection on socket");
+         exit(1);
+         }
       // Add this socket to the list (if space available)
       nfds_t k;
       for (k=1; k < 1 + MAX_CONCURRENT_REQUESTS; k++)
@@ -476,6 +651,7 @@ MetricsServer::handleConnectionRequest()
                {
                TR_Memory::jitPersistentFree(_incompleteRequests[k]);
                _incompleteRequests[k] = NULL;
+               freeSSLConnection(k);
                }
             break;
             }
@@ -484,6 +660,7 @@ MetricsServer::handleConnectionRequest()
          {
          // We could not find any empty slot for our socket. Close it
          close(sockfd);
+         (*OBIO_free_all)(ssl);
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error: could not find an available socket to process a request");
          }
@@ -513,7 +690,7 @@ MetricsServer::handleDataForConnectedSocket(nfds_t sockIndex, MetricsDatabase &m
    else if ((_pfd[sockIndex].revents & POLLIN) && (_pfd[sockIndex].events == POLLIN)) // common case
       {
       // There is data ready to be read
-      HttpGetRequest httpRequest(_pfd[sockIndex].fd);
+      HttpGetRequest httpRequest(_pfd[sockIndex].fd, _sslConnections[sockIndex]);
       HttpGetRequest *httpReq = &httpRequest;
       // Check whether we need to continue a partially read request
       if (_incompleteRequests[sockIndex])
@@ -621,6 +798,11 @@ MetricsServer::serveMetricsRequests()
 
    MetricsDatabase metricsDatabase(compInfo);
 
+   if (useSSL(compInfo))
+      {
+      _sslCtx = createSSLContext(compInfo);
+      }
+
    if (TR::Options::getVerboseOption(TR_VerboseJITServer))
       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer waiting for http requests on port %u", port);
 
@@ -647,7 +829,7 @@ MetricsServer::serveMetricsRequests()
 
                   if (!_incompleteRequests[i])
                      {
-                     _incompleteRequests[i] = new (PERSISTENT_NEW) HttpGetRequest(_pfd[i].fd);
+                     _incompleteRequests[i] = new (PERSISTENT_NEW) HttpGetRequest(_pfd[i].fd, _sslConnections[i]);
                      }
                   _incompleteRequests[i]->setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
                   reArmSocketForWriting(i);
@@ -699,6 +881,11 @@ MetricsServer::serveMetricsRequests()
 
    // The following piece of code will be executed only if the server shuts down properly
    closeSocket(0);
+   if (_sslCtx)
+      {
+      (*OSSL_CTX_free)(_sslCtx);
+      (*OEVP_cleanup)();
+      }
    }
 
 std::string

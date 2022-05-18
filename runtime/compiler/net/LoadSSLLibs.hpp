@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 IBM Corp. and others
+ * Copyright (c) 2019, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -80,6 +80,8 @@ typedef void OBIO_free_all_t(BIO *a);
 typedef BIO * OBIO_new_ssl_t(SSL_CTX *ctx, int client);
 typedef int OBIO_write_t(BIO *b, const void *data, int dlen);
 typedef int OBIO_read_t(BIO *b, void *data, int dlen);
+typedef int OBIO_test_flags_t(const BIO *b, int flags);
+typedef int OBIO_should_retry_t(BIO *b);
 
 typedef EVP_PKEY * OPEM_read_bio_PrivateKey_t(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u);
 typedef X509 * OPEM_read_bio_X509_t(BIO *bp, X509 **x, pem_password_cb *cb, void *u);
@@ -147,6 +149,8 @@ extern "C" OBIO_free_all_t * OBIO_free_all;
 extern "C" OBIO_new_ssl_t * OBIO_new_ssl;
 extern "C" OBIO_write_t * OBIO_write;
 extern "C" OBIO_read_t * OBIO_read;
+extern "C" OBIO_test_flags_t * OBIO_test_flags;
+extern "C" OBIO_should_retry_t * OBIO_should_retry;
 
 extern "C" OPEM_read_bio_PrivateKey_t * OPEM_read_bio_PrivateKey;
 extern "C" OPEM_read_bio_X509_t * OPEM_read_bio_X509;

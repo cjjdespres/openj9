@@ -1141,6 +1141,8 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    const char *xxJITServerSSLKeyOption = "-XX:JITServerSSLKey=";
    const char *xxJITServerSSLCertOption = "-XX:JITServerSSLCert=";
    const char *xxJITServerSSLRootCertsOption = "-XX:JITServerSSLRootCerts=";
+   const char *xxJITServerMetricsSSLKeyOption = "-XX:JITServerMetricsSSLKey=";
+   const char *xxJITServerMetricsSSLCertOption = "-XX:JITServerMetricsSSLCert=";
    const char *xxJITServerUseAOTCacheOption = "-XX:+JITServerUseAOTCache";
    const char *xxDisableJITServerUseAOTCacheOption = "-XX:-JITServerUseAOTCache";
    const char *xxRequireJITServerOption = "-XX:+RequireJITServer";
@@ -1153,6 +1155,8 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    int32_t xxJITServerSSLKeyArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLKeyOption, 0);
    int32_t xxJITServerSSLCertArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLCertOption, 0);
    int32_t xxJITServerSSLRootCertsArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLRootCertsOption, 0);
+   int32_t xxJITServerMetricsSSLKeyArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerMetricsSSLKeyOption, 0);
+   int32_t xxJITServerMetricsSSLCertArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerMetricsSSLCertOption, 0);
    int32_t xxJITServerUseAOTCacheArgIndex = FIND_ARG_IN_VMARGS(EXACT_MATCH, xxJITServerUseAOTCacheOption, 0);
    int32_t xxDisableJITServerUseAOTCacheArgIndex = FIND_ARG_IN_VMARGS(EXACT_MATCH, xxDisableJITServerUseAOTCacheOption, 0);
    int32_t xxRequireJITServerArgIndex = FIND_ARG_IN_VMARGS(EXACT_MATCH, xxRequireJITServerOption, 0);
@@ -1215,6 +1219,27 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
          compInfo->setJITServerSslRootCerts(cert);
       else
          return false;
+      }
+
+   // key and cert have to be set as a pair for the metrics server
+   if ((xxJITServerMetricsSSLKeyArgIndex >= 0) && (xxJITServerMetricsSSLCertArgIndex >= 0))
+      {
+      char *keyFileName = NULL;
+      char *certFileName = NULL;
+      GET_OPTION_VALUE(xxJITServerMetricsSSLKeyArgIndex, '=', &keyFileName);
+      GET_OPTION_VALUE(xxJITServerMetricsSSLCertArgIndex, '=', &certFileName);
+      std::string key = readFileToString(keyFileName);
+      std::string cert = readFileToString(certFileName);
+
+      if (!key.empty() && !cert.empty())
+         {
+         compInfo->addJITServerMetricsSslKey(key);
+         compInfo->addJITServerMetricsSslCert(cert);
+         }
+      else
+         {
+         return false;
+         }
       }
 
    if (xxJITServerUseAOTCacheArgIndex > xxDisableJITServerUseAOTCacheArgIndex)
