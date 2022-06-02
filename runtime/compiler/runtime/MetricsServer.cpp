@@ -109,7 +109,7 @@ HttpGetRequest::readHttpGetRequest()
    {
    // Because we used 'poll' and we know there is some data available,
    // the following read request will not block
-   size_t capacityLeft = BUF_SZ - 1 - _msgLength; // substract 1 for NULL terminator
+   size_t capacityLeft = BUF_SZ - 1 - _msgLength; // subtract 1 for NULL terminator
    int bytesRead = read(_sockfd, _buf + _msgLength, capacityLeft);
    if (bytesRead <= 0)
       {
@@ -220,6 +220,28 @@ HttpGetRequest::parseHttpGetRequest()
    return HTTP_OK;
    }
 
+HttpGetRequest::ReturnCodes
+HttpGetRequest::sendHttpResponse()
+   {
+   int remainingBytes = _response.length() - _responseBytesSent + 1;
+   int bytesWritten = write(_sockfd, _response.c_str() + _responseBytesSent, remainingBytes);
+
+   if (remainingBytes == bytesWritten)
+      {
+      return FULL_RESPONSE_SENT;
+      }
+   else if (bytesWritten > 0)
+      {
+      _responseBytesSent += bytesWritten;
+      return INCOMPLETE_RESPONSE;
+      }
+   else
+      {
+      fprintf(stderr, "Error writing to socket %d ", _sockfd);
+      perror("");
+      return WRITE_ERROR;
+      }
+   }
 
 MetricsServer::MetricsServer()
    : _metricsThread(NULL), _metricsMonitor(NULL), _metricsOSThread(NULL),
@@ -400,6 +422,13 @@ MetricsServer::reArmSocketForReading(int sockIndex)
    }
 
 void
+MetricsServer::reArmSocketForWriting(int sockIndex)
+   {
+   _pfd[sockIndex].events = POLLOUT;
+   _pfd[sockIndex].revents = 0;
+   }
+
+void
 MetricsServer::closeSocket(int sockIndex)
    {
    close(_pfd[sockIndex].fd);
@@ -425,12 +454,11 @@ MetricsServer::handleConnectionRequest()
    int sockfd = accept(_pfd[LISTEN_SOCKET].fd, (struct sockaddr *)&cli_addr, &clilen);
    if (sockfd >= 0) // success
       {
-      // Connection was accepted; now set some timeouts for sending,
-      // because we use poll only for reading from the socket
-      struct timeval timeoutMsForConnection = {(SEND_TIMEOUT / 1000), ((SEND_TIMEOUT % 1000) * 1000)};
-      if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (void *)&timeoutMsForConnection, sizeof(timeoutMsForConnection)) < 0)
+      int sockFlags = fcntl(sockfd, F_GETFL, 0);
+      fcntl(sockfd, F_SETFL, sockFlags | O_NONBLOCK);
+      if (-1 == fcntl(sockfd, F_SETFL, sockFlags | O_NONBLOCK))
          {
-         perror("MetricsServer error: Can't set option SO_SNDTIMEO on socket");
+         perror("MetricsServer error: Can't set option O_NONBLOCK on socket");
          exit(1);
          }
       // Add this socket to the list (if space available)
@@ -473,16 +501,16 @@ MetricsServer::handleConnectionRequest()
    }
 
 void
-MetricsServer::handleIncomingDataForConnectedSocket(nfds_t sockIndex, MetricsDatabase &metricsDatabase)
+MetricsServer::handleDataForConnectedSocket(nfds_t sockIndex, MetricsDatabase &metricsDatabase)
    {
-   // Check for errors first; we only expect the POLLIN flag to be set
+   // Check for errors first; we only expect the POLLIN or POLLOUT flag to be set
    if (_pfd[sockIndex].revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error on socket %d revents=%d\n", _pfd[sockIndex].fd, _pfd[sockIndex].revents);
       closeSocket(sockIndex);
       }
-   else if (_pfd[sockIndex].revents & POLLIN) // common case
+   else if ((_pfd[sockIndex].revents & POLLIN) && (_pfd[sockIndex].events == POLLIN)) // common case
       {
       // There is data ready to be read
       HttpGetRequest httpRequest(_pfd[sockIndex].fd);
@@ -497,24 +525,20 @@ MetricsServer::handleIncomingDataForConnectedSocket(nfds_t sockIndex, MetricsDat
 
       if (rc == HttpGetRequest::HTTP_OK) // Common case
          {
-         // Send metric data to requestor and then close socket
-         std::string response;
+         // Save the metric data response and wait to send it to requestor
          if (httpReq->getPath() == HttpGetRequest::Path::Metrics)
             {
-            response = metricsDatabase.buildMetricHttpResponse();
+            httpReq->setResponse(metricsDatabase.buildMetricHttpResponse());
             }
          else // Valid, but unrecognized request type
             {
-            response = std::string("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+            httpReq->setResponse(std::string("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n"));
             }
-         int err = sendOneMsg(_pfd[sockIndex].fd, response.data(), response.size());
-         if (err != response.size())
+         if (!_incompleteRequests[sockIndex])
             {
-            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error %d. Could not send reply.", err);
+            _incompleteRequests[sockIndex] = new (PERSISTENT_NEW) HttpGetRequest(*httpReq);
             }
-
-         closeSocket(sockIndex);
+         reArmSocketForWriting(sockIndex);
          }
       else if (rc == HttpGetRequest::INCOMPLETE_REQUEST)
          {
@@ -532,13 +556,45 @@ MetricsServer::handleIncomingDataForConnectedSocket(nfds_t sockIndex, MetricsDat
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer experienced error code %d on socket index %u", rc, sockIndex);
 
-         sendErrorCode(_pfd[sockIndex].fd, rc);
+         if (!_incompleteRequests[sockIndex])
+            {
+            _incompleteRequests[sockIndex] = new (PERSISTENT_NEW) HttpGetRequest(*httpReq);
+            }
+         _incompleteRequests[sockIndex]->setResponse(messageForErrorCode(rc));
+         reArmSocketForWriting(sockIndex);
+         }
+      }
+   else if ((_pfd[sockIndex].revents & POLLOUT) && (_pfd[sockIndex].events == POLLOUT))
+      {
+      HttpGetRequest *httpReq = _incompleteRequests[sockIndex];
+      HttpGetRequest::ReturnCodes rc = httpReq->sendHttpResponse();
+      if (rc == HttpGetRequest::INCOMPLETE_RESPONSE)
+         {
+         reArmSocketForWriting(sockIndex);
+         }
+      else if (rc == HttpGetRequest::FULL_RESPONSE_SENT)
+         {
+         closeSocket(sockIndex);
+         }
+      else
+         {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+            {
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error. Could not send reply.");
+            }
          closeSocket(sockIndex);
          }
       }
-   else // Maybe POLLPRI was seen
+   else // Maybe POLLPRI or POLLWRBAND was seen
       {
-      reArmSocketForReading(sockIndex);
+      if (_pfd[sockIndex].events == POLLIN)
+         {
+         reArmSocketForReading(sockIndex);
+         }
+      else
+         {
+         reArmSocketForWriting(sockIndex);
+         }
       }
    }
 
@@ -584,11 +640,26 @@ MetricsServer::serveMetricsRequests()
             {
             if (_pfd[i].fd >= 0)
                {
-               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                  TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed-out while reading\n", _pfd[i].fd);
+               if (_pfd[i].events == POLLIN)
+                  {
+                  if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                     TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed-out while reading\n", _pfd[i].fd);
 
-               sendErrorCode(_pfd[i].fd, HttpGetRequest::REQUEST_TIMEOUT);
-               closeSocket(i);
+                  if (!_incompleteRequests[i])
+                     {
+                     _incompleteRequests[i] = new (PERSISTENT_NEW) HttpGetRequest(_pfd[i].fd);
+                     }
+                  _incompleteRequests[i]->setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
+                  reArmSocketForWriting(i);
+                  }
+               else
+                  {
+                  if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                     {
+                     TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed-out while writing\n", _pfd[i].fd);
+                     }
+                  closeSocket(i);
+                  }
                }
             }
          _numActiveSockets = 1; // All sockets are closed, but the first one
@@ -620,7 +691,7 @@ MetricsServer::serveMetricsRequests()
                }
             else // Socket 'i' has http data to read
                {
-               handleIncomingDataForConnectedSocket(i, metricsDatabase);
+               handleDataForConnectedSocket(i, metricsDatabase);
                }
             }
          } // end for
@@ -630,26 +701,8 @@ MetricsServer::serveMetricsRequests()
    closeSocket(0);
    }
 
-int
-MetricsServer::sendOneMsg(int sock, const char *buf, int len)
-   {
-   int left = len;
-   const char *ptr = buf;
-
-   while (left > 0)
-      {
-      int status;
-      if ((status = write(sock, ptr, left)) <= 0)
-         return status;
-      left -= status;
-      ptr += status;
-      }
-   return len;
-   }
-
-
-int
-MetricsServer::sendErrorCode(int sock, int err)
+std::string
+MetricsServer::messageForErrorCode(int err)
    {
    std::string response;
    switch (err)
@@ -678,5 +731,5 @@ MetricsServer::sendErrorCode(int sock, int err)
       default:
          response = std::string("HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\n\r\n");
       }
-   return sendOneMsg(sock, response.data(), response.size());
+   return response;
    }

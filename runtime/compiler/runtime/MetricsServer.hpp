@@ -178,7 +178,9 @@ public:
    enum ReturnCodes
       {
       FULL_REQUEST_RECEIVED = 0,
+      FULL_RESPONSE_SENT    = 0,
       INCOMPLETE_REQUEST    = -1,
+      INCOMPLETE_RESPONSE   = -1,
 
       HTTP_OK               = 0,
       MALFORMED_REQUEST     = -400,
@@ -188,10 +190,11 @@ public:
       REQUEST_TOO_LARGE     = -413,
       REQUEST_URI_TOO_LONG  = -414,
       READ_ERROR            = -500,
+      WRITE_ERROR           = -500,
       INVALID_HTTP_PROTOCOL = -505,
       };
 
-   HttpGetRequest(int sockfd) : _sockfd(sockfd), _path(Path::Undefined), _msgLength(0)
+   HttpGetRequest(int sockfd) : _sockfd(sockfd), _path(Path::Undefined), _msgLength(0), _responseBytesSent(0)
       {}
    HttpGetRequest(const HttpGetRequest &other)
       {
@@ -200,6 +203,8 @@ public:
          _sockfd = other.getSockFd();
          _msgLength = other.getMsgLength();
          memcpy(_buf, other._buf, other.getMsgLength());
+         _response = other._response;
+         _responseBytesSent = other._responseBytesSent;
          // The following are not really needed
          _path = other.getPath();
          memcpy(_httpVersion, other._httpVersion, 4);
@@ -208,6 +213,7 @@ public:
    int getSockFd() const { return _sockfd; }
    size_t getMsgLength() const { return _msgLength; }
    Path getPath() const { return _path; }
+   void setResponse(const std::string &response) { _response = response; _responseBytesSent = 0; }
 
    /**
       @brief Read from a socket and validate that the received data is a valid HTTP GET request
@@ -220,7 +226,11 @@ public:
       @return An error code: MALFORMED_REQUEST, REQUEST_URI_TOO_LONG, INVALID_PATH, INVALID_HTTP_PROTOCOL, HTTP_OK
    */
    ReturnCodes parseHttpGetRequest();
-
+   /**
+      @brief Write the response to the socket
+      @return An error code: INCOMPLETE_RESPONSE, FULL_RESPONSE_SENT
+   */
+   ReturnCodes sendHttpResponse();
 private:
    static const size_t BUF_SZ = 1024; // Size of internal buffer for receiving data
    static const size_t MAX_PATH_LENGTH = 16; // Max size of the URI received
@@ -230,6 +240,9 @@ private:
    char _httpVersion[4]; // 1.0 1.1  2.0, etc
    size_t _msgLength; // How much of the buffer is filled
    char _buf[BUF_SZ]; // Buffer for holding incoming data
+
+   std::string _response;
+   size_t _responseBytesSent;
    }; // class HttpRequest
 
 /**
@@ -271,11 +284,11 @@ public:
 
 private:
    int openSocketForListening(uint32_t port);
-   int sendOneMsg(int sock, const char *buf, int len);
-   int sendErrorCode(int sock, int err);
+   std::string messageForErrorCode(int err);
    void handleConnectionRequest();
-   void handleIncomingDataForConnectedSocket(nfds_t i, MetricsDatabase &metricsDatabase);
+   void handleDataForConnectedSocket(nfds_t i, MetricsDatabase &metricsDatabase);
    void reArmSocketForReading(int sockIndex);
+   void reArmSocketForWriting(int sockIndex);
    void closeSocket(int sockIndex);
 
    J9VMThread *_metricsThread;
