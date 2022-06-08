@@ -214,7 +214,7 @@ public:
    int getSockFd() const { return _sockfd; }
    size_t getMsgLength() const { return _msgLength; }
    Path getPath() const { return _path; }
-   void setResponse(const std::string &response) { _response = response; _responseBytesSent = 0; }
+   void setResponse(std::string response) { _response = response; _responseBytesSent = 0; }
 
    /**
       @brief Read from a socket and validate that the received data is a valid HTTP GET request
@@ -293,6 +293,7 @@ private:
    void reArmSocketForWriting(int sockIndex);
    void closeSocket(int sockIndex);
    void freeSSLConnection(int sockIndex);
+   bool useSSL(TR::CompilationInfo *compInfo);
 
    J9VMThread *_metricsThread;
    TR::Monitor *_metricsMonitor;

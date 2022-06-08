@@ -1136,6 +1136,8 @@ static std::string readFileToString(char *fileName)
 
 static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compInfo)
    {
+   PORT_ACCESS_FROM_PORT(TR::Compiler->portLib);
+
    const char *xxJITServerPortOption = "-XX:JITServerPort=";
    const char *xxJITServerTimeoutOption = "-XX:JITServerTimeout=";
    const char *xxJITServerSSLKeyOption = "-XX:JITServerSSLKey=";
@@ -1206,6 +1208,7 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
          }
       else
          {
+         j9tty_printf(PORTLIB, "Fatal Error: The JITServer SSL key and cert cannot be empty\n");
          return false;
          }
       }
@@ -1218,7 +1221,10 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
       if (!cert.empty())
          compInfo->setJITServerSslRootCerts(cert);
       else
+         {
+         j9tty_printf(PORTLIB, "Fatal Error: The JITServer SSL root cert cannot be empty\n");
          return false;
+         }
       }
 
    // key and cert have to be set as a pair for the metrics server
@@ -1238,6 +1244,7 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
          }
       else
          {
+         j9tty_printf(PORTLIB, "Fatal Error: The metrics server SSL key and cert cannot be empty\n");
          return false;
          }
       }

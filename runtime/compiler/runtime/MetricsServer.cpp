@@ -41,7 +41,7 @@
 #include "env/VMJ9.h"
 #include "runtime/MetricsServer.hpp"
 
-static bool useSSL(TR::CompilationInfo *compInfo)
+bool MetricsServer::useSSL(TR::CompilationInfo *compInfo)
    {
    return (compInfo->getJITServerMetricsSslKeys().size() || compInfo->getJITServerMetricsSslCerts().size());
    }
@@ -68,12 +68,10 @@ createSSLContext(TR::CompilationInfo *compInfo)
       exit(1);
       }
 
-   auto &sslKeys = compInfo->getJITServerSslKeys();
-   auto &sslCerts = compInfo->getJITServerSslCerts();
-   auto &sslRootCerts = compInfo->getJITServerSslRootCerts();
+   auto &sslKeys = compInfo->getJITServerMetricsSslKeys();
+   auto &sslCerts = compInfo->getJITServerMetricsSslCerts();
 
    TR_ASSERT_FATAL(sslKeys.size() == 1 && sslCerts.size() == 1, "only one key and cert is supported for now");
-   TR_ASSERT_FATAL(sslRootCerts.size() == 0, "server does not understand root certs yet");
 
    // Parse and set private key
    BIO *keyMem = (*OBIO_new_mem_buf)(&sslKeys[0][0], sslKeys[0].size());
@@ -368,7 +366,7 @@ HttpGetRequest::ReturnCodes
 HttpGetRequest::sendHttpResponse()
    {
    int bytesWritten = 0;
-   int remainingBytes = _response.length() - _responseBytesSent + 1;
+   int remainingBytes = _response.length() - _responseBytesSent + 1; // add one for NULL terminator
    if (_ssl)
       {
       bytesWritten = (*OBIO_write)(_ssl, _response.c_str() + _responseBytesSent, remainingBytes);
@@ -598,6 +596,7 @@ MetricsServer::closeSocket(int sockIndex)
    if (_incompleteRequests[sockIndex])
       {
       // Delete the dynamically allocated data
+      _incompleteRequests[sockIndex]->~HttpGetRequest();
       TR_Memory::jitPersistentFree(_incompleteRequests[sockIndex]);
       _incompleteRequests[sockIndex] = NULL;
       }
@@ -624,10 +623,9 @@ MetricsServer::handleConnectionRequest()
    if (sockfd >= 0) // success
       {
       int sockFlags = fcntl(sockfd, F_GETFL, 0);
-      fcntl(sockfd, F_SETFL, sockFlags | O_NONBLOCK);
       if (-1 == fcntl(sockfd, F_SETFL, sockFlags | O_NONBLOCK))
          {
-         perror("MetricsServer error: Can't set option O_NONBLOCK on socket");
+         perror("MetricsServer error: Can't set the socket to be non-blocking");
          exit(1);
          }
       BIO *ssl = NULL;
@@ -649,10 +647,12 @@ MetricsServer::handleConnectionRequest()
             // data from a previous connection (should not be any)
             if (_incompleteRequests[k])
                {
+               _incompleteRequests[k]->~HttpGetRequest();
                TR_Memory::jitPersistentFree(_incompleteRequests[k]);
                _incompleteRequests[k] = NULL;
                freeSSLConnection(k);
                }
+            _sslConnections[k] = ssl;
             break;
             }
          }
@@ -844,7 +844,6 @@ MetricsServer::serveMetricsRequests()
                   }
                }
             }
-         _numActiveSockets = 1; // All sockets are closed, but the first one
          continue; // Poll again waiting for a connection
          }
       else if (rc < 0) // Some error was encountered
@@ -871,7 +870,7 @@ MetricsServer::serveMetricsRequests()
                {
                handleConnectionRequest();
                }
-            else // Socket 'i' has http data to read
+            else // Socket 'i' has http data to read or write
                {
                handleDataForConnectedSocket(i, metricsDatabase);
                }
