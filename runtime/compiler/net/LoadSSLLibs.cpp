@@ -70,6 +70,7 @@ OSSL_accept_t * OSSL_accept = NULL;
 OSSL_connect_t * OSSL_connect = NULL;
 OSSL_get_peer_certificate_t * OSSL_get_peer_certificate = NULL;
 OSSL_get_verify_result_t * OSSL_get_verify_result = NULL;
+OSSL_get_error_t * OSSL_get_error = NULL;
 
 OSSL_CTX_new_t * OSSL_CTX_new = NULL;
 OSSL_CTX_set_session_id_context_t * OSSL_CTX_set_session_id_context = NULL;
@@ -87,6 +88,8 @@ OBIO_write_t * OBIO_write = NULL;
 OBIO_read_t * OBIO_read = NULL;
 OBIO_test_flags_t * OBIO_test_flags = NULL;
 OBIO_should_retry_t * OBIO_should_retry = NULL;
+OBIO_should_read_t * OBIO_should_read = NULL;
+OBIO_should_write_t * OBIO_should_write = NULL;
 
 OPEM_read_bio_PrivateKey_t * OPEM_read_bio_PrivateKey = NULL;
 OPEM_read_bio_X509_t * OPEM_read_bio_X509 = NULL;
@@ -206,11 +209,22 @@ void Osk110_X509_INFO_pop_free(STACK_OF(X509_INFO) *st, OX509_INFO_free_t *X509I
    (*Osk_pop_free)((_STACK *)st, (OPENSSL110_sk_freefunc)X509InfoFreeFunc);
    }
 
-#define BIO_FLAGS_SHOULD_RETRY  0x08
 int handle_BIO_should_retry(BIO *bio)
    {
    // # define BIO_should_retry(a)             BIO_test_flags(a, BIO_FLAGS_SHOULD_RETRY)
    return (*OBIO_test_flags)(bio, BIO_FLAGS_SHOULD_RETRY);
+   }
+
+int handle_BIO_should_read(BIO *bio)
+   {
+   // # define BIO_should_read(a)             BIO_test_flags(a, BIO_FLAGS_READ)
+   return (*OBIO_test_flags)(bio, BIO_FLAGS_READ);
+   }
+
+int handle_BIO_should_write(BIO *bio)
+   {
+   // # define BIO_should_retry(a)             BIO_test_flags(a, BIO_FLAGS_WRITE)
+   return (*OBIO_test_flags)(bio, BIO_FLAGS_WRITE);
    }
 
 namespace JITServer
@@ -332,6 +346,7 @@ void dbgPrintSymbols()
    printf(" SSL_connect %p\n", OSSL_connect);
    printf(" SSL_get_peer_certificate %p\n", OSSL_get_peer_certificate);
    printf(" SSL_get_verify_result %p\n", OSSL_get_verify_result);
+   printf(" SSL_get_error %p\n", OSSL_get_error);
 
    printf(" SSL_CTX_new %p\n", OSSL_CTX_new);
    printf(" SSL_CTX_set_session_id_context %p\n", OSSL_CTX_set_session_id_context);
@@ -460,6 +475,7 @@ bool loadLibsslAndFindSymbols()
    OSSL_accept = (OSSL_accept_t *)findLibsslSymbol(handle, "SSL_accept");
    OSSL_connect = (OSSL_connect_t *)findLibsslSymbol(handle, "SSL_connect");
    OSSL_get_verify_result = (OSSL_get_verify_result_t *)findLibsslSymbol(handle, "SSL_get_verify_result");
+   OSSL_get_error = (OSSL_get_error_t *)findLibsslSymbol(handle, "SSL_get_error");
 
    OSSL_CTX_new = (OSSL_CTX_new_t *)findLibsslSymbol(handle, "SSL_CTX_new");
    OSSL_CTX_set_session_id_context = (OSSL_CTX_set_session_id_context_t *)findLibsslSymbol(handle, "SSL_CTX_set_session_id_context");
@@ -477,6 +493,8 @@ bool loadLibsslAndFindSymbols()
    OBIO_read = (OBIO_read_t *)findLibsslSymbol(handle, "BIO_read");
    OBIO_test_flags = (OBIO_test_flags_t *)findLibsslSymbol(handle, "BIO_test_flags");
    OBIO_should_retry = &handle_BIO_should_retry;
+   OBIO_should_read = &handle_BIO_should_read;
+   OBIO_should_write = &handle_BIO_should_write;
 
    OPEM_read_bio_PrivateKey = (OPEM_read_bio_PrivateKey_t *)findLibsslSymbol(handle, "PEM_read_bio_PrivateKey");
    OPEM_read_bio_X509 = (OPEM_read_bio_X509_t *)findLibsslSymbol(handle, "PEM_read_bio_X509");
@@ -530,6 +548,7 @@ bool loadLibsslAndFindSymbols()
        (OSSL_connect == NULL) ||
        (OSSL_get_peer_certificate == NULL) ||
        (OSSL_get_verify_result == NULL) ||
+       (OSSL_get_error == NULL) ||
 
        (OSSL_CTX_new == NULL) ||
        (OSSL_CTX_set_session_id_context == NULL) ||
