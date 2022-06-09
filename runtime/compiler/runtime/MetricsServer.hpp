@@ -177,10 +177,12 @@ public:
       };
    enum ReturnCodes
       {
+      SSL_CONNECTION_ESTABLISHED = 0,
       FULL_REQUEST_RECEIVED = 0,
       FULL_RESPONSE_SENT    = 0,
-      INCOMPLETE_REQUEST    = -1,
-      INCOMPLETE_RESPONSE   = -1,
+      WANT_READ    = -1,
+      WANT_WRITE   = -2,
+      SSL_CONNECTION_ERROR = -3,
 
       HTTP_OK               = 0,
       MALFORMED_REQUEST     = -400,
@@ -193,32 +195,59 @@ public:
       WRITE_ERROR           = -500,
       INVALID_HTTP_PROTOCOL = -505,
       };
+   enum RequestState
+      {
+      Inactive = 0,
+      EstablishingSSLConnection,
+      ReadingRequest,
+      WritingResponse
+      };
 
-   HttpGetRequest(int sockfd, BIO *ssl) : _sockfd(sockfd), _path(Path::Undefined), _msgLength(0), _ssl(ssl), _responseBytesSent(0)
+   HttpGetRequest() : _sockfd(-1), _path(Path::Undefined), _msgLength(0), _ssl(0),
+                                          _incompleteSSLConnection(0), _responseBytesSent(0), _requestState(Inactive)
       {}
    HttpGetRequest(const HttpGetRequest &other)
       {
       if (this != &other)
          {
          _sockfd = other.getSockFd();
+         _requestState = other.getRequestState();
          _msgLength = other.getMsgLength();
          memcpy(_buf, other._buf, other.getMsgLength());
+         if (_ssl)
+            {
+            (*OBIO_free_all)(_ssl);
+            }
          _ssl = other._ssl;
          _response = other._response;
          _responseBytesSent = other._responseBytesSent;
+         _incompleteSSLConnection = other._incompleteSSLConnection;
          // The following are not really needed
          _path = other.getPath();
          memcpy(_httpVersion, other._httpVersion, 4);
          }
       }
+   ~HttpGetRequest();
+   RequestState getRequestState() const { return _requestState; }
+   void setRequestState(RequestState requestState) { _requestState = requestState; }
    int getSockFd() const { return _sockfd; }
+   void setSockFd(int sockfd) { _sockfd = sockfd; }
+   void setSSL(BIO *ssl) { _ssl = ssl; }
+   BIO *getSSL() { return _ssl; }
+   void setIncompleteSSLConnection(SSL *conn) { _incompleteSSLConnection = conn; }
    size_t getMsgLength() const { return _msgLength; }
    Path getPath() const { return _path; }
    void setResponse(std::string response) { _response = response; _responseBytesSent = 0; }
 
+   bool setupSSLConnection(SSL_CTX *sslCtx);
+   /**
+      @brief Accept an SSL connection
+      @return An error code: SSL_CONNECTION_ERROR, WANT_READ, WANT_WRITE, SSL_CONNECTION_ESTABLISHED
+   */
+   ReturnCodes acceptSSLConnection();
    /**
       @brief Read from a socket and validate that the received data is a valid HTTP GET request
-      @return An error code: READ_ERROR, REQUEST_TOO_LARGE, NO_GET_REQUEST, INCOMPLETE_REQUEST, FULL_REQUEST_RECEIVED
+      @return An error code: READ_ERROR, WANT_READ, WANT_WRITE, REQUEST_TOO_LARGE, NO_GET_REQUEST, FULL_REQUEST_RECEIVED
    */
    ReturnCodes readHttpGetRequest();
    /**
@@ -229,19 +258,23 @@ public:
    ReturnCodes parseHttpGetRequest();
    /**
       @brief Write the response to the socket
-      @return An error code: INCOMPLETE_RESPONSE, FULL_RESPONSE_SENT
+      @return An error code: WRITE_ERROR, WANT_READ, WANT_WRITE, FULL_RESPONSE_SENT
    */
    ReturnCodes sendHttpResponse();
 private:
    static const size_t BUF_SZ = 1024; // Size of internal buffer for receiving data
    static const size_t MAX_PATH_LENGTH = 16; // Max size of the URI received
 
+   bool handleSSLConnectionError(const char *errMsg);
+
+   RequestState _requestState;
    int _sockfd; // Socket descriptor for reading the data
    Path _path; // Enum that encodes well defined paths like "/metrics" or "/liveness" or "/readiness"
    char _httpVersion[4]; // 1.0 1.1  2.0, etc
    size_t _msgLength; // How much of the buffer is filled
    char _buf[BUF_SZ]; // Buffer for holding incoming data
    BIO *_ssl;
+   SSL *_incompleteSSLConnection; // Stored in _ssl, but kept separate for accepting an SSL connection
 
    std::string _response;
    size_t _responseBytesSent;
@@ -304,8 +337,7 @@ private:
 
    nfds_t _numActiveSockets = 0;
    struct pollfd _pfd[1 + MAX_CONCURRENT_REQUESTS] = {{0}}; // poll file descriptors; first entry is for connection requests
-   BIO *_sslConnections[1 + MAX_CONCURRENT_REQUESTS] = {0};
-   HttpGetRequest *_incompleteRequests[1 + MAX_CONCURRENT_REQUESTS] = {0};
+   HttpGetRequest _requests[1 + MAX_CONCURRENT_REQUESTS];
 
    SSL_CTX *_sslCtx;
    }; // class MetricsServer

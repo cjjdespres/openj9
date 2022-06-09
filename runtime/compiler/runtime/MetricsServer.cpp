@@ -134,42 +134,69 @@ createSSLContext(TR::CompilationInfo *compInfo)
    return ctx;
    }
 
-static bool
-handleOpenSSLConnectionError(int connfd, SSL *&ssl, BIO *&bio, const char *errMsg)
+bool HttpGetRequest::handleSSLConnectionError(const char *errMsg)
    {
    if (TR::Options::getVerboseOption(TR_VerboseJITServer))
        TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "%s: errno=%d", errMsg, errno);
    (*OERR_print_errors_fp)(stderr);
 
-   close(connfd);
-   if (bio)
+   if (_ssl)
       {
-      (*OBIO_free_all)(bio);
-      bio = NULL;
+      (*OBIO_free_all)(_ssl);
+      _ssl = NULL;
+      _incompleteSSLConnection = NULL;
       }
    return false;
    }
 
-static bool acceptOpenSSLConnection(SSL_CTX *sslCtx, int connfd, BIO *bio)
+bool HttpGetRequest::setupSSLConnection(SSL_CTX *sslCtx)
    {
-   SSL *ssl = NULL;
-   bio = (*OBIO_new_ssl)(sslCtx, false);
-   if (!bio)
-      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error creating new BIO");
+   _ssl = (*OBIO_new_ssl)(sslCtx, false);
+   if (!_ssl)
+      {
+      return handleSSLConnectionError("Error creating new BIO");
+      }
 
-   if ((*OBIO_ctrl)(bio, BIO_C_GET_SSL, false, (char *) &ssl) != 1) // BIO_get_ssl(bio, &ssl)
-      return handleOpenSSLConnectionError(connfd, ssl, bio, "Failed to get BIO SSL");
+   if ((*OBIO_ctrl)(_ssl, BIO_C_GET_SSL, false, (char *) &_incompleteSSLConnection) != 1) // BIO_get_ssl(bio, &ssl)
+      {
+      return handleSSLConnectionError("Failed to get BIO SSL");
+      }
 
-   if ((*OSSL_set_fd)(ssl, connfd) != 1)
-      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error setting SSL file descriptor");
+   if ((*OSSL_set_fd)(_incompleteSSLConnection, _sockfd) != 1)
+      {
+      return handleSSLConnectionError("Error setting SSL file descriptor");
+      }
 
-   if ((*OSSL_accept)(ssl) <= 0)
-      return handleOpenSSLConnectionError(connfd, ssl, bio, "Error accepting SSL connection");
-
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "SSL connection on socket 0x%x, Version: %s, Cipher: %s\n",
-                                                     connfd, (*OSSL_get_version)(ssl), (*OSSL_get_cipher)(ssl));
    return true;
+   }
+
+HttpGetRequest::ReturnCodes HttpGetRequest::acceptSSLConnection()
+   {
+   int ret = (*OSSL_accept)(_incompleteSSLConnection);
+   if (1 == ret)
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "SSL connection on socket 0x%x, Version: %s, Cipher: %s\n",
+                                        _sockfd, (*OSSL_get_version)(_incompleteSSLConnection), (*OSSL_get_cipher)(_incompleteSSLConnection));
+         }
+      return SSL_CONNECTION_ESTABLISHED;
+      }
+
+   int err = (*OSSL_get_error)(_incompleteSSLConnection, ret);
+   if (SSL_ERROR_WANT_READ == err)
+      {
+      return WANT_READ;
+      }
+   else if (SSL_ERROR_WANT_WRITE == err)
+      {
+      return WANT_WRITE;
+      }
+   else
+      {
+      handleSSLConnectionError("Error accepting SSL connection");
+      return SSL_CONNECTION_ERROR;
+      }
    }
 
 double CPUUtilMetric::computeValue(TR::CompilationInfo *compInfo)
@@ -233,6 +260,14 @@ MetricsDatabase::serializeMetrics()
    return output;
    }
 
+HttpGetRequest::~HttpGetRequest()
+   {
+   if (_ssl)
+      {
+      (*OBIO_free_all)(_ssl);
+      }
+   }
+
 HttpGetRequest::ReturnCodes
 HttpGetRequest::readHttpGetRequest()
    {
@@ -244,7 +279,14 @@ HttpGetRequest::readHttpGetRequest()
       // Even though we waited with poll(), there may still not be enough data available in the SSL case
       if ((bytesRead <= 0) && (*OBIO_should_retry)(_ssl))
          {
-         return INCOMPLETE_REQUEST;
+         if ((*OBIO_should_read)(_ssl))
+            {
+            return WANT_READ;
+            }
+         else if ((*OBIO_should_write)(_ssl))
+            {
+            return WANT_WRITE;
+            }
          }
       }
    else
@@ -282,7 +324,7 @@ HttpGetRequest::readHttpGetRequest()
       // Incomplete message
       if (_msgLength >= BUF_SZ-1) // No more space to read
          return REQUEST_TOO_LARGE;
-      return INCOMPLETE_REQUEST; // Will have to read more data
+      return WANT_READ; // Will have to read more data
       }
    return FULL_REQUEST_RECEIVED;
    }
@@ -373,7 +415,14 @@ HttpGetRequest::sendHttpResponse()
       // Even though we waited with poll(), we may still not be able to send any data in the SSL case
       if ((bytesWritten <= 0) && (*OBIO_should_retry)(_ssl))
          {
-         return INCOMPLETE_RESPONSE;
+         if ((*OBIO_should_read)(_ssl))
+            {
+            return WANT_READ;
+            }
+         else if ((*OBIO_should_write)(_ssl))
+            {
+            return WANT_WRITE;
+            }
          }
       }
    else
@@ -389,7 +438,7 @@ HttpGetRequest::sendHttpResponse()
    else if (bytesWritten > 0)
       {
       _responseBytesSent += bytesWritten;
-      return INCOMPLETE_RESPONSE;
+      return WANT_WRITE;
       }
    else
       {
@@ -591,25 +640,7 @@ MetricsServer::closeSocket(int sockIndex)
    _pfd[sockIndex].fd = -1;
    _pfd[sockIndex].revents = 0;
    _numActiveSockets--;
-   freeSSLConnection(sockIndex);
-
-   if (_incompleteRequests[sockIndex])
-      {
-      // Delete the dynamically allocated data
-      _incompleteRequests[sockIndex]->~HttpGetRequest();
-      TR_Memory::jitPersistentFree(_incompleteRequests[sockIndex]);
-      _incompleteRequests[sockIndex] = NULL;
-      }
-   }
-
-void
-MetricsServer::freeSSLConnection(int sockIndex)
-   {
-   if (_sslConnections[sockIndex])
-      {
-      (*OBIO_free_all)(_sslConnections[sockIndex]);
-      _sslConnections[sockIndex] = NULL;
-      }
+   _requests[sockIndex] = HttpGetRequest();
    }
 
 void
@@ -628,31 +659,34 @@ MetricsServer::handleConnectionRequest()
          perror("MetricsServer error: Can't set the socket to be non-blocking");
          exit(1);
          }
-      BIO *ssl = NULL;
-      if (_sslCtx && !acceptOpenSSLConnection(_sslCtx, sockfd, ssl))
-         {
-         perror("MetricsServer error: Can't open SSL connection on socket");
-         exit(1);
-         }
       // Add this socket to the list (if space available)
       nfds_t k;
       for (k=1; k < 1 + MAX_CONCURRENT_REQUESTS; k++)
          {
-         if (_pfd[k].fd < 0) // found empty slot
+         if (_requests[k].getRequestState() == HttpGetRequest::Inactive) // found empty slot
             {
             _pfd[k].fd = sockfd;
+            _requests[k].setSockFd(sockfd);
+            if (_sslCtx)
+               {
+               if (_requests[k].setupSSLConnection(_sslCtx))
+                  {
+                  _requests[k].setRequestState(HttpGetRequest::EstablishingSSLConnection);
+                  }
+               else
+                  {
+                  perror("MetricsServer error: Can't open SSL connection on socket");
+                  _requests[k] = HttpGetRequest();
+                  k = 1 + MAX_CONCURRENT_REQUESTS; // Give up trying to connect
+                  break;
+                  }
+               }
+            else
+               {
+               _requests[k].setRequestState(HttpGetRequest::ReadingRequest);
+               }
             reArmSocketForReading(k);
             _numActiveSockets++;
-            // As a safety measure against memory leaks, delete any stale
-            // data from a previous connection (should not be any)
-            if (_incompleteRequests[k])
-               {
-               _incompleteRequests[k]->~HttpGetRequest();
-               TR_Memory::jitPersistentFree(_incompleteRequests[k]);
-               _incompleteRequests[k] = NULL;
-               freeSSLConnection(k);
-               }
-            _sslConnections[k] = ssl;
             break;
             }
          }
@@ -660,7 +694,6 @@ MetricsServer::handleConnectionRequest()
          {
          // We could not find any empty slot for our socket. Close it
          close(sockfd);
-         (*OBIO_free_all)(ssl);
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error: could not find an available socket to process a request");
          }
@@ -687,90 +720,89 @@ MetricsServer::handleDataForConnectedSocket(nfds_t sockIndex, MetricsDatabase &m
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error on socket %d revents=%d\n", _pfd[sockIndex].fd, _pfd[sockIndex].revents);
       closeSocket(sockIndex);
       }
-   else if ((_pfd[sockIndex].revents & POLLIN) && (_pfd[sockIndex].events == POLLIN)) // common case
+   else if (_requests[sockIndex].getRequestState() == HttpGetRequest::EstablishingSSLConnection)
       {
-      // There is data ready to be read
-      HttpGetRequest httpRequest(_pfd[sockIndex].fd, _sslConnections[sockIndex]);
-      HttpGetRequest *httpReq = &httpRequest;
-      // Check whether we need to continue a partially read request
-      if (_incompleteRequests[sockIndex])
-         httpReq = _incompleteRequests[sockIndex];
-
-      HttpGetRequest::ReturnCodes rc = httpReq->readHttpGetRequest();
+      switch (_requests[sockIndex].acceptSSLConnection())
+         {
+         case HttpGetRequest::SSL_CONNECTION_ESTABLISHED:
+            _requests[sockIndex].setRequestState(HttpGetRequest::ReadingRequest);
+            reArmSocketForReading(sockIndex);
+            break;
+         case HttpGetRequest::WANT_READ:
+            reArmSocketForReading(sockIndex);
+            break;
+         case HttpGetRequest::WANT_WRITE:
+            reArmSocketForWriting(sockIndex);
+            break;
+         default: // An error occurred
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error on socket %d: Unable to establish SSL Connection", _pfd[sockIndex].fd);
+               }
+            closeSocket(sockIndex);
+            break;
+         }
+      }
+   else if (_requests[sockIndex].getRequestState() == HttpGetRequest::ReadingRequest)
+      {
+      HttpGetRequest::ReturnCodes rc = _requests[sockIndex].readHttpGetRequest();
       if (rc == HttpGetRequest::FULL_REQUEST_RECEIVED)
-         rc = httpReq->parseHttpGetRequest();
-
-      if (rc == HttpGetRequest::HTTP_OK) // Common case
          {
-         // Save the metric data response and wait to send it to requestor
-         if (httpReq->getPath() == HttpGetRequest::Path::Metrics)
-            {
-            httpReq->setResponse(metricsDatabase.buildMetricHttpResponse());
-            }
-         else // Valid, but unrecognized request type
-            {
-            httpReq->setResponse(std::string("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n"));
-            }
-         if (!_incompleteRequests[sockIndex])
-            {
-            _incompleteRequests[sockIndex] = new (PERSISTENT_NEW) HttpGetRequest(*httpReq);
-            }
-         reArmSocketForWriting(sockIndex);
+         rc = _requests[sockIndex].parseHttpGetRequest();
          }
-      else if (rc == HttpGetRequest::INCOMPLETE_REQUEST)
+      switch (rc)
          {
-         reArmSocketForReading(sockIndex);
-         // If needed, allocate a new HttpGetRequest object to maintain state
-         if (!_incompleteRequests[sockIndex])
-            {
-            // Copy this request into the list of incomplete requests
-            TR_ASSERT_FATAL(_incompleteRequests[sockIndex] == NULL, "_incompleteRequest[%u] should be NULL\n", sockIndex);
-            _incompleteRequests[sockIndex] = new (PERSISTENT_NEW) HttpGetRequest(*httpReq);
-            }
-         }
-      else // All error code come here
-         {
-         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer experienced error code %d on socket index %u", rc, sockIndex);
-
-         if (!_incompleteRequests[sockIndex])
-            {
-            _incompleteRequests[sockIndex] = new (PERSISTENT_NEW) HttpGetRequest(*httpReq);
-            }
-         _incompleteRequests[sockIndex]->setResponse(messageForErrorCode(rc));
-         reArmSocketForWriting(sockIndex);
+         case HttpGetRequest::HTTP_OK:
+            // Save the metric data response and wait to send it to requestor
+            if (_requests[sockIndex].getPath() == HttpGetRequest::Path::Metrics)
+               {
+               _requests[sockIndex].setResponse(metricsDatabase.buildMetricHttpResponse());
+               }
+            else // Valid, but unrecognized request type
+               {
+               _requests[sockIndex].setResponse(std::string("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n"));
+               }
+            _requests[sockIndex].setRequestState(HttpGetRequest::WritingResponse);
+            reArmSocketForWriting(sockIndex);
+            break;
+         case HttpGetRequest::WANT_READ:
+            reArmSocketForReading(sockIndex);
+            break;
+         case HttpGetRequest::WANT_WRITE:
+            reArmSocketForWriting(sockIndex);
+            break;
+         default: // An error occurred
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer experienced error code %d on socket index %u", rc, sockIndex);
+               }
+            _requests[sockIndex].setResponse(messageForErrorCode(rc));
+            _requests[sockIndex].setRequestState(HttpGetRequest::WritingResponse);
+            reArmSocketForWriting(sockIndex);
+            break;
          }
       }
-   else if ((_pfd[sockIndex].revents & POLLOUT) && (_pfd[sockIndex].events == POLLOUT))
+   else if (_requests[sockIndex].getRequestState() == HttpGetRequest::WritingResponse)
       {
-      HttpGetRequest *httpReq = _incompleteRequests[sockIndex];
-      HttpGetRequest::ReturnCodes rc = httpReq->sendHttpResponse();
-      if (rc == HttpGetRequest::INCOMPLETE_RESPONSE)
+      HttpGetRequest::ReturnCodes rc = _requests[sockIndex].sendHttpResponse();
+      switch (rc)
          {
-         reArmSocketForWriting(sockIndex);
-         }
-      else if (rc == HttpGetRequest::FULL_RESPONSE_SENT)
-         {
-         closeSocket(sockIndex);
-         }
-      else
-         {
-         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-            {
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error. Could not send reply.");
-            }
-         closeSocket(sockIndex);
-         }
-      }
-   else // Maybe POLLPRI or POLLWRBAND was seen
-      {
-      if (_pfd[sockIndex].events == POLLIN)
-         {
-         reArmSocketForReading(sockIndex);
-         }
-      else
-         {
-         reArmSocketForWriting(sockIndex);
+         case HttpGetRequest::FULL_RESPONSE_SENT:
+            closeSocket(sockIndex);
+            break;
+         case HttpGetRequest::WANT_READ:
+            reArmSocketForReading(sockIndex);
+            break;
+         case HttpGetRequest::WANT_WRITE:
+            reArmSocketForWriting(sockIndex);
+            break;
+         default: // An error occurred
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer error. Could not send reply.");
+               }
+            closeSocket(sockIndex);
+            break;
          }
       }
    }
@@ -820,28 +852,32 @@ MetricsServer::serveMetricsRequests()
          // Note that if we enable keep-alive, then we should not consider this as a timeout
          for (nfds_t i=1; i < 1 + MAX_CONCURRENT_REQUESTS; i++)
             {
-            if (_pfd[i].fd >= 0)
+            HttpGetRequest::RequestState st = _requests[i].getRequestState();
+            const char *logMessage;
+            if (st == HttpGetRequest::Inactive)
                {
-               if (_pfd[i].events == POLLIN)
-                  {
-                  if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                     TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed-out while reading\n", _pfd[i].fd);
-
-                  if (!_incompleteRequests[i])
-                     {
-                     _incompleteRequests[i] = new (PERSISTENT_NEW) HttpGetRequest(_pfd[i].fd, _sslConnections[i]);
-                     }
-                  _incompleteRequests[i]->setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
-                  reArmSocketForWriting(i);
-                  }
-               else
-                  {
-                  if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                     {
-                     TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed-out while writing\n", _pfd[i].fd);
-                     }
-                  closeSocket(i);
-                  }
+               continue;
+               }
+            else if (st == HttpGetRequest::EstablishingSSLConnection)
+               {
+               logMessage = "MetricsServer: Socket %d timed out while establishing SSL connection";
+               closeSocket(i);
+               }
+            else if (st == HttpGetRequest::ReadingRequest)
+               {
+               logMessage = "MetricsServer: Socket %d timed out while reading";
+               _requests[i].setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
+               _requests[i].setRequestState(HttpGetRequest::WritingResponse);
+               reArmSocketForWriting(i);
+               }
+            else
+               {
+               logMessage = "MetricsServer: Socket %d timed out while writing";
+               closeSocket(i);
+               }
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed out while reading\n", _pfd[i].fd);
                }
             }
          continue; // Poll again waiting for a connection
