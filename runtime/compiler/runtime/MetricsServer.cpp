@@ -853,31 +853,30 @@ MetricsServer::serveMetricsRequests()
          for (nfds_t i=1; i < 1 + MAX_CONCURRENT_REQUESTS; i++)
             {
             HttpGetRequest::RequestState st = _requests[i].getRequestState();
+            int sockfd = _pfd[i].fd;
             const char *logMessage;
-            if (st == HttpGetRequest::Inactive)
+            switch (_requests[i].getRequestState())
                {
-               continue;
-               }
-            else if (st == HttpGetRequest::EstablishingSSLConnection)
-               {
-               logMessage = "MetricsServer: Socket %d timed out while establishing SSL connection";
-               closeSocket(i);
-               }
-            else if (st == HttpGetRequest::ReadingRequest)
-               {
-               logMessage = "MetricsServer: Socket %d timed out while reading";
-               _requests[i].setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
-               _requests[i].setRequestState(HttpGetRequest::WritingResponse);
-               reArmSocketForWriting(i);
-               }
-            else
-               {
-               logMessage = "MetricsServer: Socket %d timed out while writing";
-               closeSocket(i);
+               case HttpGetRequest::Inactive:
+                  continue;
+               case HttpGetRequest::EstablishingSSLConnection:
+                  logMessage = "MetricsServer: Socket %d timed out while establishing SSL connection";
+                  closeSocket(i);
+                  break;
+               case HttpGetRequest::ReadingRequest:
+                  logMessage = "MetricsServer: Socket %d timed out while reading";
+                  _requests[i].setResponse(messageForErrorCode(HttpGetRequest::REQUEST_TIMEOUT));
+                  _requests[i].setRequestState(HttpGetRequest::WritingResponse);
+                  reArmSocketForWriting(i);
+                  break;
+               case HttpGetRequest::WritingResponse:
+                  logMessage = "MetricsServer: Socket %d timed out while writing";
+                  closeSocket(i);
+                  break;
                }
             if (TR::Options::getVerboseOption(TR_VerboseJITServer))
                {
-               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MetricsServer: Socket %d timed out while reading\n", _pfd[i].fd);
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, logMessage, sockfd);
                }
             }
          continue; // Poll again waiting for a connection
