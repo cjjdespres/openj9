@@ -204,7 +204,7 @@ public:
       };
 
    HttpGetRequest() : _sockfd(-1), _path(Path::Undefined), _msgLength(0), _ssl(0),
-                                          _incompleteSSLConnection(0), _responseBytesSent(0), _requestState(Inactive)
+                      _incompleteSSLConnection(0), _responseBytesSent(0), _requestState(Inactive)
       {}
    HttpGetRequest(const HttpGetRequest &other)
       {
