@@ -122,9 +122,13 @@ private:
          {
          while (totalBytesRead < size)
             {
+            OMRPORT_ACCESS_FROM_J9PORT(PORTLIB);
+            int startTime = j9time_current_time_millis();
             ssize_t bytesRead = read(_connfd, data + totalBytesRead, size - totalBytesRead);
+            int endTime = j9time_current_time_millis();
             if (bytesRead <= 0)
                {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Timed out read. START: %d. END: %d");
                throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                               (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
                }
@@ -147,9 +151,13 @@ private:
          }
       else
          {
+         OMRPORT_ACCESS_FROM_J9PORT(PORTLIB);
+         int startTime = j9time_current_time_millis();
          bytesRead = read(_connfd, data, size);
+         int endTime = j9time_current_time_millis();
          if (bytesRead <= 0)
             {
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Timed out read. START: %d. END: %d");
             throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                            (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
             }
