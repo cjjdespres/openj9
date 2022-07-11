@@ -110,10 +110,13 @@ private:
          {
          while (totalBytesRead < size)
             {
+            time_t start = time(0);
             int bytesRead = (*OBIO_read)(_ssl, data + totalBytesRead, size - totalBytesRead);
+            time_t end = time(0);
             if (bytesRead <= 0)
                {
                (*OERR_print_errors_fp)(stderr);
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read. Start: %ld. End: %ld", start, end);
                throw JITServer::StreamFailure("JITServer I/O error: read error");
                }
             totalBytesRead += bytesRead;
@@ -142,10 +145,13 @@ private:
       int32_t bytesRead = -1;
       if (_ssl)
          {
+         time_t start = time(0);
          bytesRead = (*OBIO_read)(_ssl, data, size);
+         time_t end = time(0);
          if (bytesRead <= 0)
             {
             (*OERR_print_errors_fp)(stderr);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read. Start: %ld. End: %ld", start, end);
             throw JITServer::StreamFailure("JITServer I/O error: read error");
             }
          }
