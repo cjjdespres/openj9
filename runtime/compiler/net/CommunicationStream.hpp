@@ -28,6 +28,7 @@
 #include "net/Message.hpp"
 #include "infra/Statistics.hpp"
 #include "env/VerboseLog.hpp"
+#include <time.h>
 
 namespace JITServer
 {
@@ -122,11 +123,12 @@ private:
          {
          while (totalBytesRead < size)
             {
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Read start");
+            time_t start = time(0);
             ssize_t bytesRead = read(_connfd, data + totalBytesRead, size - totalBytesRead);
+            time_t end = time(0);
             if (bytesRead <= 0)
                {
-               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read end");
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read. Start: %ld. End: %ld", start, end);
                throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                               (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
                }
@@ -149,11 +151,12 @@ private:
          }
       else
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Read start");
+         time_t start = time(0);
          bytesRead = read(_connfd, data, size);
+         time_t end = time(0);
          if (bytesRead <= 0)
             {
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read end");
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Failed read. Start: %ld. End: %ld", start, end);
             throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                            (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
             }
