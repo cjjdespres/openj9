@@ -37,6 +37,7 @@
 
 
 uint64_t     JITServerHelpers::_waitTimeMs = 0;
+bool         JITServerHelpers::_retryConnectionImmediately = false;
 bool         JITServerHelpers::_serverAvailable = true;
 uint64_t     JITServerHelpers::_nextConnectionRetryTime = 0;
 TR::Monitor *JITServerHelpers::_clientStreamMonitor = NULL;
@@ -889,11 +890,20 @@ JITServerHelpers::postStreamFailure(OMRPortLibrary *portLibrary, TR::Compilation
 
    OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
    uint64_t current_time = omrtime_current_time_millis();
-   if (!_waitTimeMs)
-      _waitTimeMs = TR::Options::_reconnectWaitTimeMs;
-   if (current_time >= _nextConnectionRetryTime)
-      _waitTimeMs *= 2; // Exponential backoff
-   _nextConnectionRetryTime = current_time + _waitTimeMs;
+   if (_retryConnectionImmediately)
+      {
+      _retryConnectionImmediately = false;
+      _nextConnectionRetryTime = current_time;
+      }
+   else
+      {
+      if (!_waitTimeMs)
+         _waitTimeMs = TR::Options::_reconnectWaitTimeMs;
+      if (current_time >= _nextConnectionRetryTime)
+         _waitTimeMs *= 2; // Exponential backoff
+      _nextConnectionRetryTime = current_time + _waitTimeMs;
+      }
+
 
    if (_serverAvailable && TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseJITServerConns))
       {

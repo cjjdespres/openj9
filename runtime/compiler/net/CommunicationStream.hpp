@@ -28,6 +28,7 @@
 #include "net/Message.hpp"
 #include "infra/Statistics.hpp"
 #include "env/VerboseLog.hpp"
+#include "control/JITServerHelpers.hpp"
 
 namespace JITServer
 {
@@ -112,6 +113,10 @@ private:
             int bytesRead = (*OBIO_read)(_ssl, data + totalBytesRead, size - totalBytesRead);
             if (bytesRead <= 0)
                {
+               if ((*OBIO_should_retry)(_ssl))
+                  {
+                  JITServerHelpers::setRetryConnectionImmediately(true);
+                  }
                (*OERR_print_errors_fp)(stderr);
                throw JITServer::StreamFailure("JITServer I/O error: read error");
                }
@@ -125,6 +130,10 @@ private:
             ssize_t bytesRead = read(_connfd, data + totalBytesRead, size - totalBytesRead);
             if (bytesRead <= 0)
                {
+               if (EAGAIN == errno)
+                  {
+                  JITServerHelpers::setRetryConnectionImmediately(true);
+                  }
                throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                               (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
                }
@@ -141,6 +150,10 @@ private:
          bytesRead = (*OBIO_read)(_ssl, data, size);
          if (bytesRead <= 0)
             {
+            if ((*OBIO_should_retry)(_ssl))
+               {
+               JITServerHelpers::setRetryConnectionImmediately(true);
+               }
             (*OERR_print_errors_fp)(stderr);
             throw JITServer::StreamFailure("JITServer I/O error: read error");
             }
@@ -150,6 +163,11 @@ private:
          bytesRead = read(_connfd, data, size);
          if (bytesRead <= 0)
             {
+            if (EAGAIN == errno)
+               {
+               JITServerHelpers::setRetryConnectionImmediately(true);
+               }
+
             throw JITServer::StreamFailure("JITServer I/O error: read error: " +
                                            (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"));
             }

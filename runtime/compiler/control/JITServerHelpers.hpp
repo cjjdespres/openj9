@@ -123,6 +123,8 @@ public:
    static void postStreamConnectionSuccess();
    static bool isServerAvailable() { return _serverAvailable; }
 
+   static void setRetryConnectionImmediately(bool b) { _retryConnectionImmediately = b; }
+
    static void printJITServerMsgStats(J9JITConfig *, TR::CompilationInfo *);
    static void printJITServerCHTableStats(J9JITConfig *, TR::CompilationInfo *);
    static void printJITServerCacheStats(J9JITConfig *, TR::CompilationInfo *);
@@ -153,6 +155,7 @@ private:
 
    static uint64_t _waitTimeMs;
    static uint64_t _nextConnectionRetryTime;
+   static bool _retryConnectionImmediately;
    static bool _serverAvailable;
    static TR::Monitor * _clientStreamMonitor;
    }; // class JITServerHelpers
