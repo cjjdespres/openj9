@@ -162,7 +162,7 @@ class PersistentInfo : public OMR::PersistentInfoConnector
 #if defined(J9VM_OPT_JITSERVER)
          _JITServerAddress("localhost"),
          _JITServerPort(38400),
-         _socketTimeoutMs(2000),
+         _socketTimeoutMs(0),
          _clientUID(0),
          _JITServerMetricsPort(38500),
          _JITServerUseAOTCache(false),
