@@ -37,7 +37,6 @@
 
 
 uint64_t     JITServerHelpers::_waitTimeMs = 0;
-bool         JITServerHelpers::_retryConnectionImmediately = false;
 bool         JITServerHelpers::_serverAvailable = true;
 uint64_t     JITServerHelpers::_nextConnectionRetryTime = 0;
 TR::Monitor *JITServerHelpers::_clientStreamMonitor = NULL;
@@ -884,15 +883,14 @@ JITServerHelpers::romMethodOfRamMethod(J9Method* method)
    }
 
 void
-JITServerHelpers::postStreamFailure(OMRPortLibrary *portLibrary, TR::CompilationInfo *compInfo)
+JITServerHelpers::postStreamFailure(OMRPortLibrary *portLibrary, TR::CompilationInfo *compInfo, bool retryConnectionImmediately)
    {
    OMR::CriticalSection postStreamFailure(getClientStreamMonitor());
 
    OMRPORT_ACCESS_FROM_OMRPORT(portLibrary);
    uint64_t current_time = omrtime_current_time_millis();
-   if (_retryConnectionImmediately)
+   if (retryConnectionImmediately)
       {
-      _retryConnectionImmediately = false;
       _nextConnectionRetryTime = current_time;
       }
    else

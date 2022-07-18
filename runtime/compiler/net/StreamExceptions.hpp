@@ -31,11 +31,14 @@ namespace JITServer
 class StreamFailure: public virtual std::exception
    {
 public:
-   StreamFailure() : _message("Generic stream failure") { }
-   StreamFailure(const std::string &message) : _message(message) { }
+   StreamFailure() : _message("Generic stream failure"), _retryConnectionImmediately(false) { }
+   StreamFailure(const std::string &message) : _message(message), _retryConnectionImmediately(false) { }
+   StreamFailure(const std::string &message, bool shouldRetry) : _message(message), _retryConnectionImmediately(shouldRetry) { }
    virtual const char* what() const throw() { return _message.c_str(); }
+   bool retryConnectionImmediately() const { return _retryConnectionImmediately; }
 private:
    std::string _message;
+   bool _retryConnectionImmediately;
    };
 
 class StreamInterrupted: public virtual std::exception
