@@ -6538,7 +6538,7 @@ void *TR::CompilationInfo::compileOnSeparateThread(J9VMThread * vmThread, TR::Il
 
             if (plan)
                {
-               TR_MethodToBeCompiled *entryRemoteCompReq = addMethodToBeCompiled(details, currOldStartPC, compPriority, isAsync,
+               TR_MethodToBeCompiled *entryRemoteCompReq = addMethodToBeCompiled(details, startPC, compPriority, isAsync,
                                                                                  plan, &queuedForRemote, mthInSharedCache);
 
                if (entryRemoteCompReq)
