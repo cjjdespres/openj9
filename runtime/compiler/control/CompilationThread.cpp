@@ -7159,13 +7159,6 @@ TR::CompilationInfoPerThreadBase::cannotPerformRemoteComp()
 bool
 TR::CompilationInfoPerThreadBase::preferLocalComp(const TR_MethodToBeCompiled *entry)
    {
-   if (_compInfo.getPersistentInfo()->isLocalSyncCompiles() &&
-       (entry->_optimizationPlan->getOptLevel() <= cold) &&
-       !entry->_async)
-      {
-      return true;
-      }
-
    // As a heuristic, cold compilations could be performed locally because
    // they are supposed to be cheap with respect to memory and CPU, but
    // only if we think we have enough resources
