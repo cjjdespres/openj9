@@ -78,7 +78,9 @@ public:
 
       bool isCountingMethodBody() { return (_word & CountingPrologue) != 0; }
       bool isSamplingMethodBody() { return (_word & SamplingPrologue) != 0; }
-      bool isRecompMethodBody() { return (_word & (SamplingPrologue | CountingPrologue)) != 0; }
+      bool isRecompMethodBody() {
+         fprintf(stderr, "Word: %u\n", _word);
+         return (_word & (SamplingPrologue | CountingPrologue)) != 0; }
       bool hasBeenRecompiled() { return (_word & HasBeenRecompiled) != 0; }
       bool hasFailedRecompilation() { return (_word & HasFailedRecompilation) != 0; }
       bool recompilationAttempted() { return hasBeenRecompiled() || hasFailedRecompilation(); }
