@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2021 IBM Corp. and others
+ * Copyright (c) 2021, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -409,16 +409,19 @@ JITServerAOTCache::getClassLoaderRecord(const uint8_t *name, size_t nameLength)
    if (it != _classLoaderMap.end())
       return it->second;
 
-   auto record = AOTCacheClassLoaderRecord::create(_nextClassLoaderId, name, nameLength);
-   addToMap(_classLoaderMap, it, { record->data().name(), record->data().nameLength() }, record);
-   ++_nextClassLoaderId;
+   AOTCacheClassLoaderRecord *record = NULL;
+   if (cacheHasSpace())
+      {
+      record = AOTCacheClassLoaderRecord::create(_nextClassLoaderId, name, nameLength);
+      addToMap(_classLoaderMap, it, { record->data().name(), record->data().nameLength() }, record);
+      ++_nextClassLoaderId;
 
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created class loader ID %zu -> %.*s",
-         _name.c_str(), record->data().id(), (int)nameLength, (const char *)name
-      );
-
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created class loader ID %zu -> %.*s",
+            _name.c_str(), record->data().id(), (int)nameLength, (const char *)name
+         );
+      }
    return record;
    }
 
@@ -437,20 +440,23 @@ JITServerAOTCache::getClassRecord(const AOTCacheClassLoaderRecord *classLoaderRe
    if (it != _classMap.end())
       return it->second;
 
-   auto record = AOTCacheClassRecord::create(_nextClassId, classLoaderRecord, hash, romClass);
-   addToMap(_classMap, it, { classLoaderRecord, &record->data().hash() }, record);
-   ++_nextClassId;
-
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+   AOTCacheClassRecord *record = NULL;
+   if (cacheHasSpace())
       {
-      const ClassSerializationRecord &c = record->data();
-      char buffer[ROMCLASS_HASH_BYTES * 2 + 1];
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created class ID %zu -> %.*s size %u hash %s",
-         _name.c_str(), c.id(), RECORD_NAME(c), romClass->romSize, hash.toString(buffer, sizeof(buffer))
-      );
-      }
+      record = AOTCacheClassRecord::create(_nextClassId, classLoaderRecord, hash, romClass);
+      addToMap(_classMap, it, { classLoaderRecord, &record->data().hash() }, record);
+      ++_nextClassId;
 
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         {
+         const ClassSerializationRecord &c = record->data();
+         char buffer[ROMCLASS_HASH_BYTES * 2 + 1];
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created class ID %zu -> %.*s size %u hash %s",
+            _name.c_str(), c.id(), RECORD_NAME(c), romClass->romSize, hash.toString(buffer, sizeof(buffer))
+         );
+         }
+      }
    return record;
    }
 
@@ -465,19 +471,22 @@ JITServerAOTCache::getMethodRecord(const AOTCacheClassRecord *definingClassRecor
    if (it != _methodMap.end())
       return it->second;
 
-   auto record = AOTCacheMethodRecord::create(_nextMethodId, definingClassRecord, index);
-   addToMap(_methodMap, it, key, record);
-   ++_nextMethodId;
-
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+   AOTCacheMethodRecord *record = NULL;
+   if (cacheHasSpace())
       {
-      const ClassSerializationRecord &c = definingClassRecord->data();
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created method ID %zu -> %.*s.%.*s%.*s index %u class ID %zu",
-         _name.c_str(), record->data().id(), RECORD_NAME(c), ROMMETHOD_NAS(romMethod), index, c.id()
-      );
-      }
+      auto record = AOTCacheMethodRecord::create(_nextMethodId, definingClassRecord, index);
+      addToMap(_methodMap, it, key, record);
+      ++_nextMethodId;
 
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         {
+         const ClassSerializationRecord &c = definingClassRecord->data();
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created method ID %zu -> %.*s.%.*s%.*s index %u class ID %zu",
+            _name.c_str(), record->data().id(), RECORD_NAME(c), ROMMETHOD_NAS(romMethod), index, c.id()
+         );
+         }
+      }
    return record;
    }
 
@@ -490,19 +499,22 @@ JITServerAOTCache::getClassChainRecord(const AOTCacheClassRecord *const *classRe
    if (it != _classChainMap.end())
       return it->second;
 
-   auto record = AOTCacheClassChainRecord::create(_nextClassChainId, classRecords, length);
-   addToMap(_classChainMap, it, { record->records(), length }, record);
-   ++_nextClassChainId;
-
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+   AOTCacheClassChainRecord *record = NULL;
+   if (cacheHasSpace())
       {
-      const ClassSerializationRecord &c = classRecords[0]->data();
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created class chain ID %zu -> %.*s ID %zu length %zu",
-         _name.c_str(), record->data().id(), RECORD_NAME(c), c.id(), length
-      );
-      }
+      record = AOTCacheClassChainRecord::create(_nextClassChainId, classRecords, length);
+      addToMap(_classChainMap, it, { record->records(), length }, record);
+      ++_nextClassChainId;
 
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         {
+         const ClassSerializationRecord &c = classRecords[0]->data();
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created class chain ID %zu -> %.*s ID %zu length %zu",
+            _name.c_str(), record->data().id(), RECORD_NAME(c), c.id(), length
+         );
+         }
+      }
    return record;
    }
 
@@ -516,16 +528,19 @@ JITServerAOTCache::getWellKnownClassesRecord(const AOTCacheClassChainRecord *con
    if (it != _wellKnownClassesMap.end())
       return it->second;
 
-   auto record = AOTCacheWellKnownClassesRecord::create(_nextWellKnownClassesId, chainRecords, length, includedClasses);
-   addToMap(_wellKnownClassesMap, it, { record->records(), length, includedClasses }, record);
-   ++_nextWellKnownClassesId;
+   AOTCacheWellKnownClassesRecord *record = NULL;
+   if (cacheHasSpace())
+      {
+      record = AOTCacheWellKnownClassesRecord::create(_nextWellKnownClassesId, chainRecords, length, includedClasses);
+      addToMap(_wellKnownClassesMap, it, { record->records(), length, includedClasses }, record);
+      ++_nextWellKnownClassesId;
 
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created well-known classes ID %zu -> length %zu includedClasses %zx",
-         _name.c_str(), record->data().id(), includedClasses, length
-      );
-
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created well-known classes ID %zu -> length %zu includedClasses %zx",
+            _name.c_str(), record->data().id(), includedClasses, length
+         );
+      }
    return record;
 }
 
@@ -545,16 +560,19 @@ JITServerAOTCache::getAOTHeaderRecord(const TR_AOTHeader *header, uint64_t clien
       return it->second;
       }
 
-   auto record = AOTCacheAOTHeaderRecord::create(_nextAOTHeaderId, header);
-   addToMap(_aotHeaderMap, it, { record->data().header() }, record);
-   ++_nextAOTHeaderId;
+   AOTCacheAOTHeaderRecord *record = NULL;
+   if (cacheHasSpace())
+      {
+      record = AOTCacheAOTHeaderRecord::create(_nextAOTHeaderId, header);
+      addToMap(_aotHeaderMap, it, { record->data().header() }, record);
+      ++_nextAOTHeaderId;
 
-   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-         "AOT cache %s: created AOT header ID %zu for clientUID %llu",
-         _name.c_str(), record->data().id(), (unsigned long long)clientUID
-      );
-
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+            "AOT cache %s: created AOT header ID %zu for clientUID %llu",
+            _name.c_str(), record->data().id(), (unsigned long long)clientUID
+         );
+      }
    return record;
    }
 
@@ -702,6 +720,14 @@ JITServerAOTCache::printStats(FILE *f) const
    );
    }
 
+bool
+JITServerAOTCache::cacheHasSpace() const
+   {
+   // The AOT cache record allocations are used as a stand-in for the total memory used by all AOT caches
+   auto aotTotalRecordAllocations = TR::Compiler->persistentGlobalMemory()->_totalPersistentAllocations[TR_Memory::JITServerAOTCache];
+   auto aotMaxBytes = TR::CompilationInfo::get()->getPersistentInfo()->getJITServerAOTMaxBytes();
+   return aotTotalRecordAllocations < aotMaxBytes;
+   }
 
 JITServerAOTCacheMap::JITServerAOTCacheMap() :
    _map(decltype(_map)::allocator_type(TR::Compiler->persistentGlobalAllocator())),

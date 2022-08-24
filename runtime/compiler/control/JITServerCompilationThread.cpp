@@ -867,7 +867,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       entry._stream = stream; // Add the stream to the entry
 
       auto aotCache = clientSession->getOrCreateAOTCache(stream);
-      _aotCacheStore = classChain && aotCache;
+      _aotCacheStore = classChain && aotCache && aotCache->cacheHasSpace();
       aotCacheLoad = aotCacheLoad && classChain && aotCache;
       if (aotCache && !aotCacheLoad)
          aotCache->incNumCacheBypasses();

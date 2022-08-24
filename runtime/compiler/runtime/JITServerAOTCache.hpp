@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2021 IBM Corp. and others
+ * Copyright (c) 2021, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -252,7 +252,8 @@ public:
    const std::string &name() const { return _name; }
 
    // Each get{Type}Record() method returns the record for given parameters (which fully identify
-   // the unique record), by either looking up the existing record or creating a new one.
+   // the unique record), by either looking up the existing record or creating a new one if there is sufficient
+   // space.
    const AOTCacheClassLoaderRecord *getClassLoaderRecord(const uint8_t *name, size_t nameLength);
    const AOTCacheClassRecord *getClassRecord(const AOTCacheClassLoaderRecord *loaderRecord, const J9ROMClass *romClass);
    const AOTCacheMethodRecord *getMethodRecord(const AOTCacheClassRecord *definingClassRecord,
@@ -296,6 +297,7 @@ public:
    void incNumDeserializationFailures() { ++_numDeserializationFailures; }
 
    void printStats(FILE *f) const;
+   bool cacheHasSpace() const;
 
 private:
    struct ClassLoaderKey

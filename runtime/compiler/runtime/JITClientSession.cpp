@@ -778,7 +778,15 @@ ClientSessionData::getOrCreateAOTCache(JITServer::ServerStream *stream)
       if (auto aotCacheMap = TR::CompilationInfo::get()->getJITServerAOTCacheMap())
          {
          _aotCache = aotCacheMap->get(_aotCacheName, _clientUID);
-         _aotHeaderRecord = _aotCache->getAOTHeaderRecord(&_vmInfo->_aotHeader, _clientUID);
+         auto record = _aotCache->getAOTHeaderRecord(&_vmInfo->_aotHeader, _clientUID);
+         if (record)
+            {
+            _aotHeaderRecord = record;
+            }
+         else
+            {
+            _vmInfo->_useAOTCache = false;
+            }
          }
       else
          {
