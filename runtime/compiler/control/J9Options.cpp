@@ -1232,9 +1232,11 @@ static bool JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    if (xxJITServerAOTmxArgIndex >= 0)
       {
       uint32_t aotMaxBytes = 0;
-      IDATA ret = GET_INTEGER_VALUE(xxJITServerTimeoutArgIndex, xxJITServerTimeoutOption, aotMaxBytes);
+      IDATA ret = GET_INTEGER_VALUE(xxJITServerAOTmxArgIndex, xxJITServerAOTmxOption, aotMaxBytes);
       if (ret == OPTION_OK)
-         compInfo->getPersistentInfo()->setJITServerAOTMaxBytes(aotMaxBytes);
+         {
+         JITServerAOTCacheMap::setCacheMaxBytes(aotMaxBytes);
+         }
       }
 
    return true;

@@ -786,6 +786,10 @@ ClientSessionData::getOrCreateAOTCache(JITServer::ServerStream *stream)
          else
             {
             _vmInfo->_useAOTCache = false;
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+                  "clientUID=%llu requested AOT cache while it is disabled at the server", (unsigned long long)_clientUID
+               );
             }
          }
       else

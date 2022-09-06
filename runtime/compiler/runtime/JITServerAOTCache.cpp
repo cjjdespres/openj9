@@ -26,6 +26,7 @@
 #include "runtime/JITServerAOTCache.hpp"
 #include "runtime/JITServerSharedROMClassCache.hpp"
 
+size_t JITServerAOTCacheMap::_cacheMaxBytes = 3*1024*2014;
 
 void *
 AOTCacheRecord::allocate(size_t size)
@@ -410,7 +411,7 @@ JITServerAOTCache::getClassLoaderRecord(const uint8_t *name, size_t nameLength)
       return it->second;
 
    AOTCacheClassLoaderRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       record = AOTCacheClassLoaderRecord::create(_nextClassLoaderId, name, nameLength);
       addToMap(_classLoaderMap, it, { record->data().name(), record->data().nameLength() }, record);
@@ -441,7 +442,7 @@ JITServerAOTCache::getClassRecord(const AOTCacheClassLoaderRecord *classLoaderRe
       return it->second;
 
    AOTCacheClassRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       record = AOTCacheClassRecord::create(_nextClassId, classLoaderRecord, hash, romClass);
       addToMap(_classMap, it, { classLoaderRecord, &record->data().hash() }, record);
@@ -472,7 +473,7 @@ JITServerAOTCache::getMethodRecord(const AOTCacheClassRecord *definingClassRecor
       return it->second;
 
    AOTCacheMethodRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       auto record = AOTCacheMethodRecord::create(_nextMethodId, definingClassRecord, index);
       addToMap(_methodMap, it, key, record);
@@ -500,7 +501,7 @@ JITServerAOTCache::getClassChainRecord(const AOTCacheClassRecord *const *classRe
       return it->second;
 
    AOTCacheClassChainRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       record = AOTCacheClassChainRecord::create(_nextClassChainId, classRecords, length);
       addToMap(_classChainMap, it, { record->records(), length }, record);
@@ -529,7 +530,7 @@ JITServerAOTCache::getWellKnownClassesRecord(const AOTCacheClassChainRecord *con
       return it->second;
 
    AOTCacheWellKnownClassesRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       record = AOTCacheWellKnownClassesRecord::create(_nextWellKnownClassesId, chainRecords, length, includedClasses);
       addToMap(_wellKnownClassesMap, it, { record->records(), length, includedClasses }, record);
@@ -561,7 +562,7 @@ JITServerAOTCache::getAOTHeaderRecord(const TR_AOTHeader *header, uint64_t clien
       }
 
    AOTCacheAOTHeaderRecord *record = NULL;
-   if (cacheHasSpace())
+   if (JITServerAOTCacheMap::cacheHasSpace())
       {
       record = AOTCacheAOTHeaderRecord::create(_nextAOTHeaderId, header);
       addToMap(_aotHeaderMap, it, { record->data().header() }, record);
@@ -721,12 +722,32 @@ JITServerAOTCache::printStats(FILE *f) const
    }
 
 bool
-JITServerAOTCache::cacheHasSpace() const
+JITServerAOTCacheMap::cacheHasSpace()
    {
+   static bool cacheFilled = false;
+
+   if (cacheFilled)
+      {
+      return true;
+      }
+   
    // The AOT cache record allocations are used as a stand-in for the total memory used by all AOT caches
    auto aotTotalRecordAllocations = TR::Compiler->persistentGlobalMemory()->_totalPersistentAllocations[TR_Memory::JITServerAOTCache];
-   auto aotMaxBytes = TR::CompilationInfo::get()->getPersistentInfo()->getJITServerAOTMaxBytes();
-   return aotTotalRecordAllocations < aotMaxBytes;
+   if (aotTotalRecordAllocations >= _cacheMaxBytes)
+      {
+      cacheFilled = true;
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+                                        "AOT cache allocations exceeded maximum of %u bytes, disabling future allocations",
+                                        _cacheMaxBytes);
+         }
+      return false;
+      }
+   else
+      {
+      return true;
+      }
    }
 
 JITServerAOTCacheMap::JITServerAOTCacheMap() :

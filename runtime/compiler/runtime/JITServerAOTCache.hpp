@@ -297,7 +297,6 @@ public:
    void incNumDeserializationFailures() { ++_numDeserializationFailures; }
 
    void printStats(FILE *f) const;
-   bool cacheHasSpace() const;
 
 private:
    struct ClassLoaderKey
@@ -408,11 +407,16 @@ public:
 
    size_t getNumDeserializedMethods() const;
 
+   static void setCacheMaxBytes(size_t bytes) { _cacheMaxBytes = bytes; }
+   static bool cacheHasSpace();
+
    void printStats(FILE *f) const;
 
 private:
    PersistentUnorderedMap<std::string, JITServerAOTCache *> _map;
    TR::Monitor *const _monitor;
+
+   static size_t _cacheMaxBytes;
    };
 
 

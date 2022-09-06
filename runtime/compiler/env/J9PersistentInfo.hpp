@@ -169,7 +169,6 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _requireJITServer(false),
          _localSyncCompiles(true),
          _JITServerAOTCacheName(),
-         _JITServerAOTMaxBytes(300000000), // 300M
 #endif /* defined(J9VM_OPT_JITSERVER) */
       OMR::PersistentInfoConnector(pm)
       {}
@@ -358,8 +357,6 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    void setJITServerUseAOTCache(bool use) { _JITServerUseAOTCache = use; }
    const std::string &getJITServerAOTCacheName() const { return _JITServerAOTCacheName; }
    void setJITServerAOTCacheName(const char *name) { _JITServerAOTCacheName = name; }
-   void setJITServerAOTMaxBytes(size_t bytes) { _JITServerAOTMaxBytes = bytes;}
-   size_t getJITServerAOTMaxBytes() const { return _JITServerAOTMaxBytes; }
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    private:
@@ -455,7 +452,6 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    bool        _localSyncCompiles;
    bool        _JITServerUseAOTCache;
    std::string _JITServerAOTCacheName; // Name of the server AOT cache that this client is using
-   size_t _JITServerAOTMaxBytes;
 #endif /* defined(J9VM_OPT_JITSERVER) */
    };
 
