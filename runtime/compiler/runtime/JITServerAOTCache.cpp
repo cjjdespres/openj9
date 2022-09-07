@@ -724,9 +724,7 @@ JITServerAOTCache::printStats(FILE *f) const
 bool
 JITServerAOTCacheMap::cacheHasSpace()
    {
-   static bool noSpaceRemaining = false;
-
-   if (noSpaceRemaining)
+   if (_cacheIsFull)
       {
       return false;
       }
@@ -735,7 +733,7 @@ JITServerAOTCacheMap::cacheHasSpace()
    auto aotTotalRecordAllocations = TR::Compiler->persistentGlobalMemory()->_totalPersistentAllocations[TR_Memory::JITServerAOTCache];
    if (aotTotalRecordAllocations >= _cacheMaxBytes)
       {
-      noSpaceRemaining = true;
+      _cacheIsFull = true;
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,

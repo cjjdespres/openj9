@@ -417,6 +417,7 @@ private:
    TR::Monitor *const _monitor;
 
    static size_t _cacheMaxBytes;
+   static bool _cacheIsFull;
    };
 
 
