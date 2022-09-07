@@ -27,6 +27,8 @@
 #include "runtime/JITServerSharedROMClassCache.hpp"
 
 size_t JITServerAOTCacheMap::_cacheMaxBytes = 3*1024*2014;
+size_t JITServerAOTCacheMap::_cacheIsFull = false;
+
 
 void *
 AOTCacheRecord::allocate(size_t size)
