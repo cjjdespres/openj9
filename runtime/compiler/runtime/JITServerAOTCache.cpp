@@ -724,18 +724,18 @@ JITServerAOTCache::printStats(FILE *f) const
 bool
 JITServerAOTCacheMap::cacheHasSpace()
    {
-   static bool cacheFilled = false;
+   static bool noSpaceRemaining = false;
 
-   if (cacheFilled)
+   if (noSpaceRemaining)
       {
-      return true;
+      return false;
       }
-   
+
    // The AOT cache record allocations are used as a stand-in for the total memory used by all AOT caches
    auto aotTotalRecordAllocations = TR::Compiler->persistentGlobalMemory()->_totalPersistentAllocations[TR_Memory::JITServerAOTCache];
    if (aotTotalRecordAllocations >= _cacheMaxBytes)
       {
-      cacheFilled = true;
+      noSpaceRemaining = true;
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
