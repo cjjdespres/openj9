@@ -1227,13 +1227,16 @@ JITServerAOTCache::readCache(FILE *f, const std::string &name, TR_Memory &trMemo
    if (!JITServerAOTCacheMap::cacheHasSpace())
       return NULL;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache Starting to read cache");
    JITServerAOTCacheHeader header = {0};
    if (1 != fread(&header, sizeof(JITServerAOTCacheHeader), 1, f))
       return NULL;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache Read header, checking version");
 
    if (!isCompatibleSnapshotVersion(header._version))
       return NULL;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache Allocating new cache");
    JITServerAOTCache *cache = NULL;
    try
       {
@@ -1250,6 +1253,7 @@ JITServerAOTCache::readCache(FILE *f, const std::string &name, TR_Memory &trMemo
    if (!cache)
       return NULL;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading the records");
    bool readSuccess = false;
    try
       {
@@ -1338,24 +1342,31 @@ JITServerAOTCache::readCache(FILE *f, const JITServerAOTCacheHeader &header, TR_
    Vector<AOTCacheWellKnownClassesRecord *> wellKnownClassesRecords(header._nextWellKnownClassesId, NULL, stackMemoryRegion);
    Vector<AOTCacheAOTHeaderRecord *> aotHeaderRecords(header._nextAOTHeaderId, NULL, stackMemoryRegion);
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class loader records");
    if (!readRecords(f, header._numClassLoaderRecords, _classLoaderMap, _classLoaderHead, _classLoaderTail, classLoaderRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class records");
    if (!readRecords(f, header._numClassRecords, _classMap, _classHead, _classTail, classRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading method records");
    if (!readRecords(f, header._numMethodRecords, _methodMap, _methodHead, _methodTail, methodRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class chain records");
    if (!readRecords(f, header._numClassChainRecords, _classChainMap, _classChainHead, _classChainTail, classChainRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading well known classes records");
    if (!readRecords(f, header._numWellKnownClassesRecords, _wellKnownClassesMap, _wellKnownClassesHead, _wellKnownClassesTail, wellKnownClassesRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading aot header records");
    if (!readRecords(f, header._numAOTHeaderRecords, _aotHeaderMap, _aotHeaderHead, _aotHeaderTail, aotHeaderRecords,
                     classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords))
       return false;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading cached aot methods");
 
    for (size_t i = 0; i < header._numCachedAOTMethods; ++i)
       {
