@@ -162,6 +162,7 @@ AOTCacheClassRecord::read(FILE *f,
    {
    TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class record header");
    ClassSerializationRecord header;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache freading class record header");
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
 
