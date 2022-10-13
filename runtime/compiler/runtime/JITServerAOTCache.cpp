@@ -1295,12 +1295,15 @@ JITServerAOTCache::readRecords(FILE *f,
    {
    for (size_t i = 0; i < numRecordsToRead; ++i)
       {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading record %zu", i);
       if (!JITServerAOTCacheMap::cacheHasSpace())
          return false;
 
       V *record = V::read(f, classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords);
       if (!record)
          return false;
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading checking and adding record to map");
 
       if ((record->data().id() >= records.size() ||
           records[record->data().id()]) ||
