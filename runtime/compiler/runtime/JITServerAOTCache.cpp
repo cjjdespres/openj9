@@ -160,15 +160,20 @@ AOTCacheClassRecord::read(FILE *f,
                           const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
    ClassSerializationRecord header;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class record header");
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading checking class record header validity");
    if (!header.isValid() ||
        (header.classLoaderId() >= classLoaderRecords.size()))
       return NULL;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading allocating class record");
    auto record = new (AOTCacheRecord::allocate(size(header.nameLength()))) AOTCacheClassRecord(classLoaderRecords[header.classLoaderId()]);
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading memcpy class record");
    memcpy((void *)record->dataAddr(), &header, sizeof(header));
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading fread class record");
    if (1 != fread((uint8_t *)record->dataAddr() + sizeof(header), header.AOTSerializationRecord::size() - sizeof(header), 1, f))
       {
       AOTCacheRecord::free(record);
