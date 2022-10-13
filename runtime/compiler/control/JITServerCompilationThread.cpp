@@ -884,6 +884,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       entry._weight = 0;
       entry._jitStateWhenQueued = compInfo->getPersistentInfo()->getJitState();
       entry._stream = stream; // Add the stream to the entry
+      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
 
       _aotCacheStore = classChain && aotCache && JITServerAOTCacheMap::cacheHasSpace();
       aotCacheLoad = aotCacheLoad && classChain && aotCache;
