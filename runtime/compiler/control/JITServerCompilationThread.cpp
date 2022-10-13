@@ -535,24 +535,6 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
    _methodIndex = (uint32_t)-1;
    _definingClassChainRecord = NULL;
    static bool needToWritePersistentCache = true;
-      if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime() >= 2*60*1000))
-         {
-      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
-         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
-         needToWritePersistentCache = false;
-         std::FILE *f = std::fopen("/tmp/aotcache/aotcache", "wb");
-         if (!aotCache->writeCache(f))
-            {
-            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't write the aot cache");
-            }
-         else
-            {
-            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote the aot cache");
-            }
-         }
 
    try
       {
@@ -885,6 +867,24 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       entry._jitStateWhenQueued = compInfo->getPersistentInfo()->getJitState();
       entry._stream = stream; // Add the stream to the entry
       auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
+      if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime() >= 2*60*1000))
+         {
+      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
+         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
+         needToWritePersistentCache = false;
+         std::FILE *f = std::fopen("/tmp/aotcache/aotcache", "wb");
+         if (!aotCache->writeCache(f))
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't write the aot cache");
+            }
+         else
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote the aot cache");
+            }
+         }
 
       _aotCacheStore = classChain && aotCache && JITServerAOTCacheMap::cacheHasSpace();
       aotCacheLoad = aotCacheLoad && classChain && aotCache;
