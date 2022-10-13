@@ -535,9 +535,9 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
    _methodIndex = (uint32_t)-1;
    _definingClassChainRecord = NULL;
    static bool needToWritePersistentCache = true;
-      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
       if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime() >= 2*60*1000))
          {
+      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
              TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
          needToWritePersistentCache = false;
