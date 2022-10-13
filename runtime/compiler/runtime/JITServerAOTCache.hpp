@@ -576,7 +576,7 @@ public:
    JITServerAOTCacheMap();
    ~JITServerAOTCacheMap();
 
-   JITServerAOTCache *get(const std::string &name, uint64_t clientUID);
+   JITServerAOTCache *get(const std::string &name, uint64_t clientUID, J9::J9SegmentProvider &scratchSegmentProvider);
 
    size_t getNumDeserializedMethods() const;
 

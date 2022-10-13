@@ -444,7 +444,7 @@ public:
    bool isInStartupPhase() const { return _isInStartupPhase; }
    void setIsInStartupPhase(bool isInStartupPhase) { _isInStartupPhase = isInStartupPhase; }
 
-   JITServerAOTCache *getOrCreateAOTCache(JITServer::ServerStream *stream);
+   JITServerAOTCache *getOrCreateAOTCache(JITServer::ServerStream *stream, J9::J9SegmentProvider &scratchSegmentProvider);
 
    bool usesAOTCache() const { return _aotCache != NULL; }
 

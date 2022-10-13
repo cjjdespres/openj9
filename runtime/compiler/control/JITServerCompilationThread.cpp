@@ -534,6 +534,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
    _aotCacheStore = false;
    _methodIndex = (uint32_t)-1;
    _definingClassChainRecord = NULL;
+   static bool needToWritePersistentCache = true;
 
    try
       {
@@ -866,7 +867,25 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       entry._jitStateWhenQueued = compInfo->getPersistentInfo()->getJitState();
       entry._stream = stream; // Add the stream to the entry
 
-      auto aotCache = clientSession->getOrCreateAOTCache(stream);
+      auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
+      if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime()>= 1000*1000*1000))
+         {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
+         needToWritePersistentCache = false;
+         std::FILE *f = std::fopen("/tmp/aotcache", "wb");
+         if (!aotCache->writeCache(f))
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't write the aot cache");
+            }
+         else
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote the aot cache");
+            }
+         }
+
       _aotCacheStore = classChain && aotCache && JITServerAOTCacheMap::cacheHasSpace();
       aotCacheLoad = aotCacheLoad && classChain && aotCache;
       if (aotCache && !aotCacheLoad)

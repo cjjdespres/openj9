@@ -21,7 +21,9 @@
  *******************************************************************************/
 
 #include "control/CompilationRuntime.hpp"
+#include "env/J9SegmentProvider.hpp"
 #include "env/StackMemoryRegion.hpp"
+#include "env/SystemSegmentProvider.hpp"
 #include "infra/CriticalSection.hpp"
 #include "runtime/JITServerAOTCache.hpp"
 #include "runtime/JITServerSharedROMClassCache.hpp"
@@ -1426,7 +1428,7 @@ JITServerAOTCacheMap::~JITServerAOTCacheMap()
 
 
 JITServerAOTCache *
-JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID)
+JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9SegmentProvider &scratchSegmentProvider)
    {
    OMR::CriticalSection cs(_monitor);
 
@@ -1442,6 +1444,26 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID)
    if (!JITServerAOTCacheMap::cacheHasSpace())
       {
       return NULL;
+      }
+
+   FILE *f = std::fopen("/tmp/aotcache", "rb");
+   if (f)
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Reading the persistent cache");
+      auto compInfo = TR::CompilationInfo::get();
+      TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
+      size_t          segmentSize = 1 << 24/*16 MB*/;
+      J9::SystemSegmentProvider segmentProvider(1 << 16/*64 KB*/, segmentSize, TR::Options::getScratchSpaceLimit(), scratchSegmentProvider, rawAllocator);
+      TR::Region region(segmentProvider, rawAllocator);
+      TR_Memory trMemory(*compInfo->persistentMemory(), region);
+
+      return JITServerAOTCache::readCache(f, name, trMemory);
+      }
+   else
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Didn't see persistent cache - reading normally");
       }
 
    auto cache = new (TR::Compiler->persistentGlobalMemory()) JITServerAOTCache(name);
