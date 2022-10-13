@@ -90,6 +90,7 @@ AOTCacheClassLoaderRecord::read(FILE *f,
                                 const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                                 const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class loader record header");
    ClassLoaderSerializationRecord header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
@@ -159,8 +160,8 @@ AOTCacheClassRecord::read(FILE *f,
                           const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                           const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
-   ClassSerializationRecord header;
    TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading class record header");
+   ClassSerializationRecord header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
 
@@ -229,6 +230,7 @@ AOTCacheMethodRecord::read(FILE *f,
                            const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                            const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading method record header");
    MethodSerializationRecord header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
@@ -263,6 +265,7 @@ AOTCacheListRecord<D, R, Args...>::subRecordsDo(const std::function<void(const A
 template<class D, class R, typename... Args> AOTCacheListRecord<D, R, Args...>*
 AOTCacheListRecord<D, R, Args...>::read(FILE *f, const Vector<R *> &cacheRecords)
    {
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading cache list record header");
    D header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
@@ -368,6 +371,7 @@ AOTCacheAOTHeaderRecord::read(FILE *f,
                               const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                               const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading aot header record header");
    AOTHeaderSerializationRecord header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
@@ -450,6 +454,7 @@ CachedAOTMethod::read(FILE *f,
                       const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                       const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
    {
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading cached aot method record header");
    SerializedAOTMethod header;
    if (1 != fread(&header, sizeof(header), 1, f))
       return NULL;
@@ -1300,10 +1305,11 @@ JITServerAOTCache::readRecords(FILE *f,
    {
    for (size_t i = 0; i < numRecordsToRead; ++i)
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading record %zu", i);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache reading record %zu, checking for space", i);
       if (!JITServerAOTCacheMap::cacheHasSpace())
          return false;
 
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "aot cache actually reading the record");
       V *record = V::read(f, classLoaderRecords, classRecords, methodRecords, classChainRecords, wellKnownClassesRecords, aotHeaderRecords);
       if (!record)
          return false;
