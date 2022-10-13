@@ -1446,7 +1446,7 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
       return NULL;
       }
 
-   FILE *f = std::fopen("/tmp/aotcache", "rb");
+   FILE *f = std::fopen("/tmp/aotcache/aotcache", "rb");
    if (f)
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))

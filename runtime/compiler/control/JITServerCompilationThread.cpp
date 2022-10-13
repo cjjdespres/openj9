@@ -873,7 +873,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
              TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
          needToWritePersistentCache = false;
-         std::FILE *f = std::fopen("/tmp/aotcache", "wb");
+         std::FILE *f = std::fopen("/tmp/aotcache/aotcache", "wb");
          if (!aotCache->writeCache(f))
             {
             if (TR::Options::getVerboseOption(TR_VerboseJITServer))
