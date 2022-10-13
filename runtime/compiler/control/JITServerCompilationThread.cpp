@@ -874,15 +874,23 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
              TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
          needToWritePersistentCache = false;
          std::FILE *f = std::fopen("/tmp/aotcache/aotcache", "wb");
-         if (!aotCache->writeCache(f))
+         if (f)
             {
-            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't write the aot cache");
+            if (!aotCache->writeCache(f))
+               {
+               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't write the aot cache");
+               }
+            else
+               {
+               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote the aot cache");
+               }
             }
          else
             {
-            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote the aot cache");
+               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open the correct file");
             }
          }
 
