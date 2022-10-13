@@ -1089,8 +1089,10 @@ writeAOTRecordList(FILE *f, const AOTCacheRecord *head, size_t numRecordsToWrite
    {
    const AOTCacheRecord *current = head;
    size_t recordsWritten = 0;
+
    while (current && (recordsWritten < numRecordsToWrite))
       {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Writing record %d", recordsWritten);
       const AOTSerializationRecord *record = current->dataAddr();
       if (1 != fwrite(record, record->size(), 1, f))
          {
@@ -1181,6 +1183,7 @@ JITServerAOTCache::writeCache(FILE *f) const
       header._numClassLoaderRecords = _classLoaderMap.size();
       header._nextClassLoaderId = _nextClassLoaderId;
       }
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Starting to write aot cache");
 
    if (1 != fwrite(&header, sizeof(JITServerAOTCacheHeader), 1, f))
       return false;
