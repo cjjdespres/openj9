@@ -120,7 +120,7 @@ ClassSerializationRecord::ClassSerializationRecord(uintptr_t id, uintptr_t class
 
 ClassSerializationRecord::ClassSerializationRecord() :
    AOTSerializationRecord(0, 0, AOTSerializationRecordType::Class),
-   _classLoaderId(0), _hash(NULL), _romClassSize(0),
+   _classLoaderId(0), _hash(), _romClassSize(0),
    _nameLength(0)
    {
    }
