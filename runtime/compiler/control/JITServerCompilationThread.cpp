@@ -868,7 +868,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       entry._stream = stream; // Add the stream to the entry
 
       auto aotCache = clientSession->getOrCreateAOTCache(stream, scratchSegmentProvider);
-      if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime()>= 1000*1000*1000))
+      if (needToWritePersistentCache && (compInfo->getPersistentInfo()->getElapsedTime()>= 2*60*1000))
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
              TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write the aot cache");
