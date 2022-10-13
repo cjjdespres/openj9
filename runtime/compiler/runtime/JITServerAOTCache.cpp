@@ -1188,6 +1188,7 @@ JITServerAOTCache::writeCache(FILE *f) const
    if (1 != fwrite(&header, sizeof(JITServerAOTCacheHeader), 1, f))
       return false;
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Starting to write aot record list");
    if (!writeAOTRecordList(f, _classLoaderHead, header._numClassLoaderRecords))
       return false;
    if (!writeAOTRecordList(f, _classHead, header._numClassRecords))
