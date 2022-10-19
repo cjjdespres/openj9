@@ -1708,6 +1708,8 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
          }
       auto cache = it->second;
 
+      cache->printStats(stderr);
+
       FILE *f = fopen("/tmp/aotcache/cache-roundtrip", "wb");
       if (!f)
          {
