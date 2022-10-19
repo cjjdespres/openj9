@@ -1693,6 +1693,9 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
       needToRoundTripCache = false;
 
       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write cache %s", name.c_str());
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "The cache map stats:");
+      for (auto &it : _map)
+         it.second->printStats(stderr);
 
       TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
       size_t segmentSize = 1 << 24/*16 MB*/;
