@@ -21,7 +21,9 @@
  *******************************************************************************/
 
 #include "control/CompilationRuntime.hpp"
+#include "env/J9SegmentProvider.hpp"
 #include "env/StackMemoryRegion.hpp"
+#include "env/SystemSegmentProvider.hpp"
 #include "infra/CriticalSection.hpp"
 #include "runtime/JITServerAOTCache.hpp"
 #include "runtime/JITServerSharedROMClassCache.hpp"
@@ -106,6 +108,27 @@ AOTCacheClassLoaderRecord::read(FILE *f,
    return record;
    }
 
+void
+AOTCacheClassLoaderRecord::displayDifference(const AOTCacheClassLoaderRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "Class loader record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+AOTCacheClassLoaderRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f, "%zu %zu %d %zu %s", _data.AOTSerializationRecord::size(), _data.id(), _data.type(), _data.nameLength(), _data.name());
+   }
+
+
 ClassSerializationRecord::ClassSerializationRecord(uintptr_t id, uintptr_t classLoaderId,
                                                    const JITServerROMClassHash &hash, const J9ROMClass *romClass) :
    AOTSerializationRecord(size(J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(romClass))), id, AOTSerializationRecordType::Class),
@@ -176,6 +199,36 @@ AOTCacheClassRecord::read(FILE *f,
    return record;
    }
 
+// TODO: check the _classLoaderRecord?
+void
+AOTCacheClassRecord::displayDifference(const AOTCacheClassRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "Class record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+AOTCacheClassRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %d %zu %u %zu %s",
+           _data.AOTSerializationRecord::size(),
+           _data.id(),
+           _data.type(),
+           _data.classLoaderId(),
+           // _data.hash(), TODO: display?
+           _data.romClassSize(),
+           _data.nameLength(),
+           _data.name());
+   }
+
 MethodSerializationRecord::MethodSerializationRecord(uintptr_t id, uintptr_t definingClassId, uint32_t index) :
    AOTSerializationRecord(sizeof(*this), id, AOTSerializationRecordType::Method),
    _definingClassId(definingClassId), _index(index)
@@ -235,6 +288,32 @@ AOTCacheMethodRecord::read(FILE *f,
    memcpy((void *)record->dataAddr(), &header, sizeof(header));
 
    return record;
+   }
+
+void
+AOTCacheMethodRecord::displayDifference(const AOTCacheMethodRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "Method record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+AOTCacheMethodRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %d %zu %u",
+           _data.AOTSerializationRecord::size(),
+           _data.id(),
+           _data.type(),
+           _data.definingClassId(),
+           _data.index());
    }
 
 template<class D, class R, typename... Args>
@@ -306,6 +385,33 @@ AOTCacheClassChainRecord::create(uintptr_t id, const AOTCacheClassRecord *const 
    return new (ptr) AOTCacheClassChainRecord(id, records, length);
    }
 
+void
+AOTCacheClassChainRecord::displayDifference(const AOTCacheClassChainRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "Class chain record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+AOTCacheClassChainRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %d %zu",
+           _data.AOTSerializationRecord::size(),
+           _data.id(),
+           _data.type(),
+           _data.list().length());
+
+   for (size_t i = 0; i < _data.list().length(); ++i)
+      fprintf(f, " %zu", _data.list().ids()[i]);
+   }
 
 WellKnownClassesSerializationRecord::WellKnownClassesSerializationRecord(uintptr_t id, size_t length,
                                                                          uintptr_t includedClasses) :
@@ -328,6 +434,34 @@ AOTCacheWellKnownClassesRecord::create(uintptr_t id, const AOTCacheClassChainRec
    return new (ptr) AOTCacheWellKnownClassesRecord(id, records, length, includedClasses);
    }
 
+void
+AOTCacheWellKnownClassesRecord::displayDifference(const AOTCacheWellKnownClassesRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "Well known classes record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+AOTCacheWellKnownClassesRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %d %zu %zu",
+           _data.AOTSerializationRecord::size(),
+           _data.id(),
+           _data.type(),
+           _data.includedClasses(),
+           _data.list().length());
+
+   for (size_t i = 0; i < _data.list().length(); ++i)
+      fprintf(f, " %zu", _data.list().ids()[i]);
+   }
 
 AOTHeaderSerializationRecord::AOTHeaderSerializationRecord(uintptr_t id, const TR_AOTHeader *header) :
    AOTSerializationRecord(sizeof(*this), id, AOTSerializationRecordType::AOTHeader),
@@ -373,6 +507,31 @@ AOTCacheAOTHeaderRecord::read(FILE *f,
    memcpy((void *)record->dataAddr(), &header, sizeof(header));
 
    return record;
+   }
+
+void
+AOTCacheAOTHeaderRecord::displayDifference(const AOTCacheAOTHeaderRecord &other, FILE *f) const
+   {
+   if ((dataAddr()->size() != other.dataAddr()->size()) ||
+       (0 != memcmp(dataAddr(), other.dataAddr(), dataAddr()->size())))
+      {
+      fprintf(f, "AOT header record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+// TODO: may want to print the header itself
+void
+AOTCacheAOTHeaderRecord::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %d",
+           _data.AOTSerializationRecord::size(),
+           _data.id(),
+           _data.type());
    }
 
 SerializedAOTMethod::SerializedAOTMethod(uintptr_t definingClassChainId, uint32_t index,
@@ -503,6 +662,36 @@ CachedAOTMethod::read(FILE *f,
 error:
    AOTCacheRecord::free(record);
    return NULL;
+   }
+
+
+void
+CachedAOTMethod::displayDifference(const CachedAOTMethod &other, FILE *f) const
+   {
+   if ((data().size() != other.data().size()) ||
+       (0 != memcmp(&data(), &other.data(), data().size())))
+      {
+      fprintf(f, "AOT header record difference:\n");
+      displayPrintable(f);
+      fprintf(f, "\n");
+      other.displayPrintable(f);
+      fprintf(f, "\n");
+      }
+   }
+
+void
+CachedAOTMethod::displayPrintable(FILE *f) const
+   {
+   fprintf(f,
+           "%zu %zu %u %d %zu %zu %zu %zu",
+           data().size(),
+           data().definingClassChainId(),
+           data().index(),
+           data().optLevel(),
+           data().aotHeaderId(),
+           data().numRecords(),
+           data().codeSize(),
+           data().dataSize());
    }
 
 bool
@@ -1382,6 +1571,67 @@ JITServerAOTCache::readCache(FILE *f, const JITServerAOTCacheHeader &header, TR_
    return true;
    }
 
+template<typename K> static void
+displayRecordListDifference(FILE *f, const char *typeString, const K *selfHead, const K *otherHead, size_t numRecordsExpected)
+   {
+   const K *selfCurrent = selfHead;
+   const K *otherCurrent = otherHead;
+   size_t recordsCompared = 0;
+   while (selfCurrent && otherCurrent && (recordsCompared < numRecordsExpected))
+      {
+      selfCurrent->displayDifference(*otherCurrent, f);
+      ++recordsCompared;
+      selfCurrent = (K *)selfCurrent->getNextRecord();
+      otherCurrent = (K *)otherCurrent->getNextRecord();
+      }
+
+   // We expect all three conditions to become false simultaneously
+   if (selfCurrent || otherCurrent || (recordsCompared < numRecordsExpected))
+      {
+      fprintf(f, "Unequal %s traversals: %d %d %zu %zu\n", typeString, selfCurrent == NULL, otherCurrent == NULL, recordsCompared, numRecordsExpected);
+      }
+   }
+
+void
+JITServerAOTCache::displayContentDifference(const JITServerAOTCache &other, FILE *f)
+   {
+   if (_classLoaderMap.size() != other._classLoaderMap.size())
+      fprintf(f, "class loader map size difference: %zu %zu\n", _classLoaderMap.size(), other._classLoaderMap.size());
+   if (_classMap.size() != other._classMap.size())
+      fprintf(f, "class map size difference: %zu %zu\n", _classMap.size(), other._classMap.size());
+   if (_methodMap.size() != other._methodMap.size())
+      fprintf(f, "method map size difference: %zu %zu\n", _methodMap.size(), other._methodMap.size());
+   if (_classChainMap.size() != other._classChainMap.size())
+      fprintf(f, "class chain map size difference: %zu %zu\n", _classChainMap.size(), other._classChainMap.size());
+   if (_wellKnownClassesMap.size() != other._wellKnownClassesMap.size())
+      fprintf(f, "well known classes map size difference: %zu %zu\n", _wellKnownClassesMap.size(), other._wellKnownClassesMap.size());
+   if (_aotHeaderMap.size() != other._aotHeaderMap.size())
+      fprintf(f, "aot header map size difference: %zu %zu\n", _aotHeaderMap.size(), other._aotHeaderMap.size());
+   if (_cachedMethodMap.size() != other._cachedMethodMap.size())
+      fprintf(f, "cached method map size difference: %zu %zu\n", _cachedMethodMap.size(), other._cachedMethodMap.size());
+
+   if (_nextClassLoaderId != other._nextClassLoaderId)
+      fprintf(f, "class loader next id difference: %zu %zu\n", _nextClassLoaderId, other._nextClassLoaderId);
+   if (_nextClassId != other._nextClassId)
+      fprintf(f, "class next id difference: %zu %zu\n", _nextClassId, other._nextClassId);
+   if (_nextMethodId != other._nextMethodId)
+      fprintf(f, "method next id difference: %zu %zu\n", _nextMethodId, other._nextMethodId);
+   if (_nextClassChainId != other._nextClassChainId)
+      fprintf(f, "class chain next id difference: %zu %zu\n", _nextClassChainId, other._nextClassChainId);
+   if (_nextWellKnownClassesId != other._nextWellKnownClassesId)
+      fprintf(f, "well known classes next id difference: %zu %zu\n", _nextWellKnownClassesId, other._nextWellKnownClassesId);
+   if (_nextAOTHeaderId != other._nextAOTHeaderId)
+      fprintf(f, "aot header next id difference: %zu %zu\n", _nextAOTHeaderId, other._nextAOTHeaderId);
+
+   displayRecordListDifference(f, "class loader", _classLoaderHead, other._classLoaderHead, _classLoaderMap.size());
+   displayRecordListDifference(f, "class", _classHead, other._classHead, _classMap.size());
+   displayRecordListDifference(f, "method", _methodHead, other._methodHead, _methodMap.size());
+   displayRecordListDifference(f, "class chain", _classChainHead, other._classChainHead, _classChainMap.size());
+   displayRecordListDifference(f, "well known classes", _wellKnownClassesHead, other._wellKnownClassesHead, _wellKnownClassesMap.size());
+   displayRecordListDifference(f, "aot header", _aotHeaderHead, other._aotHeaderHead, _aotHeaderMap.size());
+   displayRecordListDifference(f, "cached method", _cachedMethodHead, other._cachedMethodHead, _cachedMethodMap.size());
+   }
+
 bool
 JITServerAOTCacheMap::cacheHasSpace()
    {
@@ -1431,9 +1681,63 @@ JITServerAOTCacheMap::~JITServerAOTCacheMap()
 
 
 JITServerAOTCache *
-JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID)
+JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9SegmentProvider &scratchSegmentProvider)
    {
+   static bool needToRoundTripCache = true;
+
    OMR::CriticalSection cs(_monitor);
+
+   auto compInfo = TR::CompilationInfo::get();
+   if (needToRoundTripCache && (compInfo->getPersistentInfo()->getElapsedTime() >= 7 * 60 * 1000))
+      {
+      needToRoundTripCache = false;
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write cache %s", name.c_str());
+
+      TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
+      size_t segmentSize = 1 << 24/*16 MB*/;
+      J9::SystemSegmentProvider segmentProvider(1 << 16/*64 KB*/, segmentSize, TR::Options::getScratchSpaceLimit(), scratchSegmentProvider, rawAllocator);
+      TR::Region region(segmentProvider, rawAllocator);
+      TR_Memory trMemory(*compInfo->persistentMemory(), region);
+
+      auto it = _map.find(name);
+      if (it == _map.end())
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't find existing cache");
+         return NULL;
+         }
+      auto cache = it->second;
+
+      FILE *f = fopen("/tmp/aotcache/cache-roundtrip", "wb");
+      if (!f)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open cache file for writing");
+         return cache;
+         }
+      cache->writeCache(f);
+      fclose(f);
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote cache, trying to read cache");
+
+      f = fopen("/tmp/aotcache/cache-roundtrip", "rb");
+      if (!f)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open cache file for reading");
+         return cache;
+         }
+
+      auto otherCache = JITServerAOTCache::readCache(f, name, trMemory);
+      fclose(f);
+      if (!otherCache)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't read the cache");
+         return cache;
+         }
+      fprintf(stderr, "Showing any differences in the caches:\n");
+      cache->displayContentDifference(*otherCache, stderr);
+
+      return cache;
+      }
 
    auto it = _map.find(name);
    if (it != _map.end())

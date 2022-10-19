@@ -134,6 +134,9 @@ public:
                                           const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                                           const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords);
 
+   void displayDifference(const AOTCacheClassLoaderRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
+
 private:
    AOTCacheClassLoaderRecord(uintptr_t id, const uint8_t *name, size_t nameLength);
    AOTCacheClassLoaderRecord() {}
@@ -165,6 +168,9 @@ public:
                                     const Vector<AOTCacheClassChainRecord *> &classChainRecords,
                                     const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                                     const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords);
+
+   void displayDifference(const AOTCacheClassRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
 
 private:
    AOTCacheClassRecord(uintptr_t id, const AOTCacheClassLoaderRecord *classLoaderRecord,
@@ -198,6 +204,9 @@ public:
                                      const Vector<AOTCacheClassChainRecord *> &classChainRecords,
                                      const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                                      const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords);
+
+   void displayDifference(const AOTCacheMethodRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
 
 private:
    AOTCacheMethodRecord(uintptr_t id, const AOTCacheClassRecord *definingClassRecord, uint32_t index);
@@ -256,6 +265,9 @@ public:
                                          const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords)
       { return (AOTCacheClassChainRecord *)AOTCacheListRecord<ClassChainSerializationRecord, AOTCacheClassRecord>::read(f, classRecords); }
 
+   void displayDifference(const AOTCacheClassChainRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
+
 private:
    using AOTCacheListRecord::AOTCacheListRecord;
    };
@@ -278,6 +290,9 @@ public:
       { return (AOTCacheWellKnownClassesRecord *)
                AOTCacheListRecord<WellKnownClassesSerializationRecord, AOTCacheClassChainRecord>::read(f, classChainRecords); }
 
+   void displayDifference(const AOTCacheWellKnownClassesRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
+
 private:
    using AOTCacheListRecord::AOTCacheListRecord;
    };
@@ -298,6 +313,9 @@ public:
                                         const Vector<AOTCacheClassChainRecord *> &classChainRecords,
                                         const Vector<AOTCacheWellKnownClassesRecord *> &wellKnownClassesRecords,
                                         const Vector<AOTCacheAOTHeaderRecord *> &aotHeaderRecords);
+
+   void displayDifference(const AOTCacheAOTHeaderRecord &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
 
 private:
    AOTCacheAOTHeaderRecord(uintptr_t id, const TR_AOTHeader *header);
@@ -340,6 +358,9 @@ public:
 
    CachedAOTMethod *getNextRecord() const { return _nextRecord; }
    void setNextRecord(CachedAOTMethod *record) { _nextRecord = record; }
+
+   void displayDifference(const CachedAOTMethod &other, FILE *f) const;
+   void displayPrintable(FILE *f) const;
 
 private:
    CachedAOTMethod(const AOTCacheClassChainRecord *definingClassChainRecord, uint32_t index,
@@ -424,6 +445,9 @@ public:
 
    bool writeCache(FILE *f) const;
    static JITServerAOTCache *readCache(FILE *f, const std::string &name, TR_Memory &trMemory);
+
+   void displayContentDifference(const JITServerAOTCache &other, FILE *f);
+   void displayPrintable(FILE *f) const;
 
 private:
    struct ClassLoaderKey
@@ -576,7 +600,7 @@ public:
    JITServerAOTCacheMap();
    ~JITServerAOTCacheMap();
 
-   JITServerAOTCache *get(const std::string &name, uint64_t clientUID);
+   JITServerAOTCache *get(const std::string &name, uint64_t clientUID, J9::J9SegmentProvider &scratchSegmentProvider);
 
    size_t getNumDeserializedMethods() const;
 
