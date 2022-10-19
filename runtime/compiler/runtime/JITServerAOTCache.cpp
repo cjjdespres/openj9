@@ -1741,6 +1741,33 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
       return cache;
       }
 
+   FILE *f = fopen("/tmp/aotcache/aotcache", "rb");
+   if (f)
+      {
+      TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
+      size_t segmentSize = 1 << 24/*16 MB*/;
+      J9::SystemSegmentProvider segmentProvider(1 << 16/*64 KB*/, segmentSize, TR::Options::getScratchSpaceLimit(), scratchSegmentProvider, rawAllocator);
+      TR::Region region(segmentProvider, rawAllocator);
+      TR_Memory trMemory(*compInfo->persistentMemory(), region);
+
+      auto cache = JITServerAOTCache::readCache(f, name, trMemory);
+      fclose(f);
+      if (cache)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Successfully read the cache");
+         cache->printStats(stderr);
+         return cache;
+         }
+      else
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't read the cache");
+         }
+      }
+   else
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open existing cache file");
+      }
+
    auto it = _map.find(name);
    if (it != _map.end())
       {
