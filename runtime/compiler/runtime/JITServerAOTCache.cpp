@@ -1744,6 +1744,15 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
       return cache;
       }
 
+   auto it = _map.find(name);
+   if (it != _map.end())
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Using existing AOT cache %s for clientUID %llu",
+                                        name.c_str(), (unsigned long long)clientUID);
+      return it->second;
+      }
+
    FILE *f = fopen("/tmp/aotcache/aotcache", "rb");
    if (f)
       {
@@ -1770,15 +1779,6 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
    else
       {
       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open existing cache file");
-      }
-
-   auto it = _map.find(name);
-   if (it != _map.end())
-      {
-      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Using existing AOT cache %s for clientUID %llu",
-                                        name.c_str(), (unsigned long long)clientUID);
-      return it->second;
       }
 
    if (!JITServerAOTCacheMap::cacheHasSpace())
