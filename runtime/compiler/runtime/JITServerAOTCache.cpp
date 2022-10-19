@@ -1759,6 +1759,7 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9Seg
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Successfully read the cache");
          cache->printStats(stderr);
+         _map.insert({ name, cache });
          return cache;
          }
       else
