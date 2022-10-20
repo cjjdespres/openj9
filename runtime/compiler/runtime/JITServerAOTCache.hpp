@@ -527,7 +527,7 @@ private:
    bool readCache(FILE *f, const JITServerAOTCacheHeader &header, TR_Memory &trMemory);
 
    template<typename K, typename V, typename H>
-   static bool readRecords(FILE *f, size_t numRecordsToRead, PersistentUnorderedMap<K, V *, H> &map, V *&traversalHead, V *&traversalTail,
+   static bool readRecords(FILE *f, const char *typeMsg, size_t numRecordsToRead, PersistentUnorderedMap<K, V *, H> &map, V *&traversalHead, V *&traversalTail,
                            Vector<V *> &records,
                            const Vector<AOTCacheClassLoaderRecord *> &classLoaderRecords,
                            const Vector<AOTCacheClassRecord *> &classRecords,
