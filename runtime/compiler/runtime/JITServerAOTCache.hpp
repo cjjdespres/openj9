@@ -502,7 +502,7 @@ private:
       };
 
    static WellKnownClassesKey getRecordKey(const AOTCacheWellKnownClassesRecord *record)
-      { return { record->records(), record->data().list().length() }; }
+      { return { record->records(), record->data().list().length(), record->data().includedClasses() }; }
 
    struct AOTHeaderKey
       {
