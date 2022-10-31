@@ -21,7 +21,9 @@
  *******************************************************************************/
 
 #include "control/CompilationRuntime.hpp"
+#include "env/J9SegmentProvider.hpp"
 #include "env/StackMemoryRegion.hpp"
+#include "env/SystemSegmentProvider.hpp"
 #include "infra/CriticalSection.hpp"
 #include "runtime/JITServerAOTCache.hpp"
 #include "runtime/JITServerSharedROMClassCache.hpp"
@@ -1327,9 +1329,65 @@ JITServerAOTCacheMap::~JITServerAOTCacheMap()
 
 
 JITServerAOTCache *
-JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID)
+JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID, J9::J9SegmentProvider &scratchSegmentProvider)
    {
+   static bool needToRoundTripCache = true;
+
    OMR::CriticalSection cs(_monitor);
+   auto compInfo = TR::CompilationInfo::get();
+   if (needToRoundTripCache && (compInfo->getPersistentInfo()->getElapsedTime() >= 7 * 60 * 1000))
+      {
+      needToRoundTripCache = false;
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Trying to write cache %s", name.c_str());
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "The cache map stats:");
+      for (auto &it : _map)
+         it.second->printStats(stderr);
+
+      TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
+      size_t segmentSize = 1 << 24/*16 MB*/;
+      J9::SystemSegmentProvider segmentProvider(1 << 16/*64 KB*/, segmentSize, TR::Options::getScratchSpaceLimit(), scratchSegmentProvider, rawAllocator);
+      TR::Region region(segmentProvider, rawAllocator);
+      TR_Memory trMemory(*compInfo->persistentMemory(), region);
+
+      auto it = _map.find(name);
+      if (it == _map.end())
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't find existing cache");
+         return NULL;
+         }
+      auto cache = it->second;
+
+      cache->printStats(stderr);
+
+      FILE *f = fopen("/tmp/aotcache/cache-roundtrip", "wb");
+      if (!f)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open cache file for writing");
+         return cache;
+         }
+      cache->writeCache(f);
+      fclose(f);
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Wrote cache, trying to read cache");
+
+      f = fopen("/tmp/aotcache/cache-roundtrip", "rb");
+      if (!f)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open cache file for reading");
+         return cache;
+         }
+
+      auto otherCache = JITServerAOTCache::readCache(f, name, trMemory);
+      fclose(f);
+      if (!otherCache)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't read the cache");
+         return cache;
+         }
+
+      return cache;
+      }
 
    auto it = _map.find(name);
    if (it != _map.end())
@@ -1338,6 +1396,35 @@ JITServerAOTCacheMap::get(const std::string &name, uint64_t clientUID)
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Using existing AOT cache %s for clientUID %llu",
                                         name.c_str(), (unsigned long long)clientUID);
       return it->second;
+      }
+
+   FILE *f = fopen("/tmp/aotcache/aotcache", "rb");
+   if (f)
+      {
+      TR::RawAllocator rawAllocator(compInfo->getJITConfig()->javaVM);
+      size_t segmentSize = 1 << 24/*16 MB*/;
+      J9::SystemSegmentProvider segmentProvider(1 << 16/*64 KB*/, segmentSize, TR::Options::getScratchSpaceLimit(), scratchSegmentProvider, rawAllocator);
+      TR::Region region(segmentProvider, rawAllocator);
+      TR_Memory trMemory(*compInfo->persistentMemory(), region);
+
+      auto cache = JITServerAOTCache::readCache(f, name, trMemory);
+      fclose(f);
+      if (cache)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Successfully read the cache");
+         cache->printStats(stderr);
+         _map.insert({ name, cache });
+
+         return cache;
+         }
+      else
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't read the cache");
+         }
+      }
+   else
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Couldn't open existing cache file");
       }
 
    if (!JITServerAOTCacheMap::cacheHasSpace())

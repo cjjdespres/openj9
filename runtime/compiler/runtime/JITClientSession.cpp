@@ -768,7 +768,7 @@ ClientSessionData::cacheWellKnownClassChainOffsets(unsigned int includedClasses,
    }
 
 JITServerAOTCache *
-ClientSessionData::getOrCreateAOTCache(JITServer::ServerStream *stream)
+ClientSessionData::getOrCreateAOTCache(JITServer::ServerStream *stream, J9::J9SegmentProvider &scratchSegmentProvider)
    {
    if (!_vmInfo)
       getOrCacheVMInfo(stream);
@@ -777,7 +777,7 @@ ClientSessionData::getOrCreateAOTCache(JITServer::ServerStream *stream)
       {
       if (auto aotCacheMap = TR::CompilationInfo::get()->getJITServerAOTCacheMap())
          {
-         auto aotCache = aotCacheMap->get(_aotCacheName, _clientUID);
+         auto aotCache = aotCacheMap->get(_aotCacheName, _clientUID, scratchSegmentProvider);
          if (!aotCache)
             {
             _vmInfo->_useAOTCache = false;
