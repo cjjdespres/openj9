@@ -27,6 +27,7 @@
 #include "runtime/JITServerROMClassHash.hpp"
 #include "runtime/RelocationRuntime.hpp"
 
+struct JITServerAOTCacheReadContext;
 
 enum AOTSerializationRecordType
    {
@@ -111,9 +112,11 @@ struct ClassLoaderSerializationRecord : public AOTSerializationRecord
 public:
    size_t nameLength() const { return _nameLength; }
    const uint8_t *name() const { return _name; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::ClassLoader); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const
+      { return AOTSerializationRecord::isValid(AOTSerializationRecordType::ClassLoader); }
 
 private:
+   friend class AOTCacheRecord;
    friend class AOTCacheClassLoaderRecord;
 
    ClassLoaderSerializationRecord(uintptr_t id, const uint8_t *name, size_t nameLength);
@@ -138,9 +141,10 @@ public:
    uint32_t romClassSize() const { return _romClassSize; }
    size_t nameLength() const { return _nameLength; }
    const uint8_t *name() const { return _name; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::Class); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const;
 
 private:
+   friend class AOTCacheRecord;
    friend class AOTCacheClassRecord;
 
    ClassSerializationRecord(uintptr_t id, uintptr_t classLoaderId,
@@ -167,9 +171,10 @@ struct MethodSerializationRecord : public AOTSerializationRecord
 public:
    uintptr_t definingClassId() const { return _definingClassId; }
    uint32_t index() const { return _index; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::Method); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const;
 
 private:
+   friend class AOTCacheRecord;
    friend class AOTCacheMethodRecord;
 
    MethodSerializationRecord(uintptr_t id, uintptr_t definingClassId, uint32_t index);
@@ -202,9 +207,11 @@ struct ClassChainSerializationRecord : public AOTSerializationRecord
    {
 public:
    const IdList &list() const { return _list; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::ClassChain); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const
+      { return AOTSerializationRecord::isValid(AOTSerializationRecordType::ClassChain); }
 
 private:
+   friend class AOTCacheRecord;
    template<class D, class R, typename... Args> friend class AOTCacheListRecord;
 
    ClassChainSerializationRecord(uintptr_t id, size_t length);
@@ -227,9 +234,11 @@ struct WellKnownClassesSerializationRecord : public AOTSerializationRecord
 public:
    uintptr_t includedClasses() const { return _includedClasses; }
    const IdList &list() const { return _list; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::WellKnownClasses); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const
+      { return AOTSerializationRecord::isValid(AOTSerializationRecordType::WellKnownClasses); }
 
 private:
+   friend class AOTCacheRecord;
    template<class D, class R, typename... Args> friend class AOTCacheListRecord;
 
    WellKnownClassesSerializationRecord(uintptr_t id, size_t length, uintptr_t includedClasses);
@@ -253,9 +262,11 @@ struct AOTHeaderSerializationRecord : public AOTSerializationRecord
    {
 public:
    const TR_AOTHeader *header() const { return &_header; }
-   bool isValid() const { return AOTSerializationRecord::isValid(AOTSerializationRecordType::AOTHeader); }
+   bool isValid(const JITServerAOTCacheReadContext &context) const
+      { return AOTSerializationRecord::isValid(AOTSerializationRecordType::AOTHeader); }
 
 private:
+   friend class AOTCacheRecord;
    friend class AOTCacheAOTHeaderRecord;
 
    AOTHeaderSerializationRecord(uintptr_t id, const TR_AOTHeader *header);
@@ -307,7 +318,7 @@ public:
    const uint8_t *data() const { return code() + _codeSize; }
    uint8_t *data() { return (uint8_t *)(code() + _codeSize); }
    const uint8_t *end() const { return (const uint8_t *)this + size(); }
-   bool isValid() const;
+   bool isValid(const JITServerAOTCacheReadContext &context) const;
 
    static SerializedAOTMethod *get(std::string &str)
       {
@@ -317,6 +328,7 @@ public:
       }
 
 private:
+   friend class AOTCacheRecord;
    friend class CachedAOTMethod;
 
    SerializedAOTMethod(uintptr_t definingClassChainId, uint32_t index,
