@@ -52,19 +52,25 @@ AOTCacheRecord::free(void *ptr)
 template<class R> R *
 AOTCacheRecord::readRecord(JITServerAOTCacheReadContext &context)
    {
+   fprintf(stderr, "Reading header\n");
    typename R::SerializationRecord header;
    if (1 != fread(&header, sizeof(header), 1, context._f))
       return NULL;
 
+   fprintf(stderr, "Validating header\n");
+
    if (!header.isValid(context))
       return NULL;
 
+   fprintf(stderr, "Copying the header\n");
    R *record = new (AOTCacheRecord::allocate(R::size(header))) R(context, header);
    memcpy((void *)record->dataAddr(), &header, sizeof(header));
 
    size_t variableDataBytes = record->dataAddr()->size() - sizeof(header);
    if (0 != variableDataBytes)
       {
+      fprintf(stderr, "Reading the rest of the header\n");
+
       if (1 != fread((uint8_t *)record->dataAddr() + sizeof(header), variableDataBytes, 1, context._f))
          {
          AOTCacheRecord::free(record);
@@ -72,6 +78,7 @@ AOTCacheRecord::readRecord(JITServerAOTCacheReadContext &context)
          }
       }
 
+   fprintf(stderr, "Setting subrecord pointers\n");
    if (!record->setSubrecordPointers(context))
       {
       AOTCacheRecord::free(record);
@@ -1187,8 +1194,10 @@ JITServerAOTCache::readRecords(JITServerAOTCacheReadContext &context,
                                PersistentUnorderedMap<K, V *, H> &map,
                                V *&traversalHead,
                                V *&traversalTail,
-                               Vector<V *> &records)
+                               Vector<V *> &records,
+                               const char *tyname)
    {
+   fprintf(stderr, "Reading %s records\n", tyname);
    for (size_t i = 0; i < numRecordsToRead; ++i)
       {
       if (!JITServerAOTCacheMap::cacheHasSpace())
@@ -1241,20 +1250,21 @@ JITServerAOTCache::readCache(FILE *f, const JITServerAOTCacheHeader &header, TR_
    JITServerAOTCacheReadContext context(f, classLoaderRecords, classRecords, methodRecords,
                                         classChainRecords, wellKnownClassesRecords, aotHeaderRecords);
 
-   if (!readRecords(context, header._numClassLoaderRecords, _classLoaderMap, _classLoaderHead, _classLoaderTail, classLoaderRecords))
+   if (!readRecords(context, header._numClassLoaderRecords, _classLoaderMap, _classLoaderHead, _classLoaderTail, classLoaderRecords, "class loader"))
       return false;
-   if (!readRecords(context, header._numClassRecords, _classMap, _classHead, _classTail, classRecords))
+   if (!readRecords(context, header._numClassRecords, _classMap, _classHead, _classTail, classRecords, "class"))
       return false;
-   if (!readRecords(context, header._numMethodRecords, _methodMap, _methodHead, _methodTail, methodRecords))
+   if (!readRecords(context, header._numMethodRecords, _methodMap, _methodHead, _methodTail, methodRecords, "method"))
       return false;
-   if (!readRecords(context, header._numClassChainRecords, _classChainMap, _classChainHead, _classChainTail, classChainRecords))
+   if (!readRecords(context, header._numClassChainRecords, _classChainMap, _classChainHead, _classChainTail, classChainRecords, "class chain"))
       return false;
    if (!readRecords(context, header._numWellKnownClassesRecords, _wellKnownClassesMap, _wellKnownClassesHead,
-                    _wellKnownClassesTail, wellKnownClassesRecords))
+                    _wellKnownClassesTail, wellKnownClassesRecords, "well known classes"))
       return false;
-   if (!readRecords(context, header._numAOTHeaderRecords, _aotHeaderMap, _aotHeaderHead, _aotHeaderTail, aotHeaderRecords))
+   if (!readRecords(context, header._numAOTHeaderRecords, _aotHeaderMap, _aotHeaderHead, _aotHeaderTail, aotHeaderRecords, "aot header"))
       return false;
 
+   fprintf(stderr, "Reading cached aot methods");
    for (size_t i = 0; i < header._numCachedAOTMethods; ++i)
       {
       if (!JITServerAOTCacheMap::cacheHasSpace())

@@ -522,7 +522,7 @@ private:
 
    template<typename K, typename V, typename H>
    static bool readRecords(JITServerAOTCacheReadContext &context, size_t numRecordsToRead,
-                           PersistentUnorderedMap<K, V *, H> &map, V *&traversalHead, V *&traversalTail, Vector<V *> &records);
+                           PersistentUnorderedMap<K, V *, H> &map, V *&traversalHead, V *&traversalTail, Vector<V *> &records, const char *tyname);
 
    const std::string _name;
 
