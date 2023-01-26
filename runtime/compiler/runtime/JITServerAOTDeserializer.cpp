@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 IBM Corp. and others
+ * Copyright (c) 2021, 2023 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -284,6 +284,8 @@ JITServerAOTDeserializer::cacheRecord(const AOTSerializationRecord *record, TR::
          return cacheRecord((const ClassChainSerializationRecord *)record, comp, isNew, wasReset);
       case WellKnownClasses:
          return cacheRecord((const WellKnownClassesSerializationRecord *)record, comp, isNew, wasReset);
+      case Thunk:
+         return cacheRecord((const ThunkSerializationRecord *)record, comp, isNew, wasReset);
       default:
          TR_ASSERT_FATAL(false, "Invalid record type: %u", record->type());
          return false;
@@ -640,6 +642,28 @@ JITServerAOTDeserializer::cacheRecord(const WellKnownClassesSerializationRecord 
    }
 
 
+bool
+JITServerAOTDeserializer::cacheRecord(const ThunkSerializationRecord *record,
+                                      TR::Compilation *comp, bool &isNew, bool &wasReset)
+   {
+   if (isResetInProgress(wasReset))
+      return false;
+
+   auto fej9vm = comp->fej9vm();
+   void *thunk = fej9vm->getJ2IThunk((char *)record->signature(), record->signatureSize(), comp);
+   if (thunk)
+      return true;
+   isNew = true;
+
+   fej9vm->setJ2IThunk((char *)record->signature(), record->signatureSize(), record->thunkAddress(), comp);
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Cached thunk record ID %zu -> for thunk %.*s",
+                                     record->id(), record->signatureSize(), record->signature());
+   return true;
+   }
+
+
 J9ClassLoader *
 JITServerAOTDeserializer::getClassLoader(uintptr_t id, uintptr_t &loaderSCCOffset, bool &wasReset)
    {
@@ -853,24 +877,28 @@ JITServerAOTDeserializer::updateSCCOffsets(SerializedAOTMethod *method, TR::Comp
       {
       // Get the SCC offset of the corresponding entity in the local SCC
       const SerializedSCCOffset &serializedOffset = method->offsets()[i];
-      uintptr_t sccOffset = getSCCOffset(serializedOffset.recordType(), serializedOffset.recordId(), wasReset);
-      if (sccOffset == (uintptr_t)-1)
-         return false;
+      // Thunks do not use their SCC offset entries
+      if (serializedOffset.recordType() != Thunk)
+         {
+         uintptr_t sccOffset = getSCCOffset(serializedOffset.recordType(), serializedOffset.recordId(), wasReset);
+         if (sccOffset == (uintptr_t)-1)
+            return false;
 
-      // Update the SCC offset stored in AOT method relocation data
-      uint8_t *ptr = start + serializedOffset.reloDataOffset();
-      TR_ASSERT_FATAL((ptr >= start + sizeof(uintptr_t)/*skip the size word*/) && (ptr < end),
-                      "Out-of-bounds relocation data offset %zu in serialized method %s",
-                      serializedOffset.reloDataOffset(), comp->signature());
+         // Update the SCC offset stored in AOT method relocation data
+         uint8_t *ptr = start + serializedOffset.reloDataOffset();
+         TR_ASSERT_FATAL((ptr >= start + sizeof(uintptr_t)/*skip the size word*/) && (ptr < end),
+                         "Out-of-bounds relocation data offset %zu in serialized method %s",
+                         serializedOffset.reloDataOffset(), comp->signature());
 #if defined(DEBUG)
-      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-            "Updating SCC offset %zu -> %zu for record type %u ID %zu at relo data offset %zu in serialized method %s",
-            *(uintptr_t *)ptr, sccOffset, serializedOffset.recordType(), serializedOffset.recordId(),
-            serializedOffset.reloDataOffset(), comp->signature()
-         );
+         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+               "Updating SCC offset %zu -> %zu for record type %u ID %zu at relo data offset %zu in serialized method %s",
+               *(uintptr_t *)ptr, sccOffset, serializedOffset.recordType(), serializedOffset.recordId(),
+               serializedOffset.reloDataOffset(), comp->signature()
+            );
 #endif /* defined(DEBUG) */
-      *(uintptr_t *)ptr = sccOffset;
+         *(uintptr_t *)ptr = sccOffset;
+         }
       }
 
    return true;
