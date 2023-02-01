@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corp. and others
+ * Copyright (c) 2000, 2023 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -200,6 +200,7 @@ J9::Compilation::Compilation(int32_t id,
    _deserializedAOTMethodUsingSVM(false),
    _aotCacheStore(false),
    _serializationRecords(decltype(_serializationRecords)::allocator_type(heapMemoryRegion)),
+   _thunkRecords(decltype(_thunkRecords)::allocator_type(heapMemoryRegion)),
 #endif /* defined(J9VM_OPT_JITSERVER) */
    _osrProhibitedOverRangeOfTrees(false)
    {
@@ -1578,6 +1579,24 @@ J9::Compilation::addSerializationRecord(const AOTCacheRecord *record, uintptr_t 
    TR_ASSERT_FATAL(_aotCacheStore, "Trying to add serialization record for compilation that is not an AOT cache store");
    if (record)
       _serializationRecords.push_back({ record, reloDataOffset });
+   else
+      _aotCacheStore = false;// Serialization failed; method won't be stored in AOT cache
+   }
+
+void
+J9::Compilation::addThunkRecord(const AOTCacheThunkRecord *record)
+   {
+   TR_ASSERT_FATAL(_aotCacheStore, "Trying to add thunk record for compilation that is not an AOT cache store");
+   if (record)
+      {
+      auto it = _thunkRecords.find(record);
+      if (it == _thunkRecords.end())
+         {
+         _thunkRecords.insert(it, record);
+         // Thunk records do not need any offset handling, so we leave the offset as 0.
+         _serializationRecords.push_back({ record, 0 });
+         }
+      }
    else
       _aotCacheStore = false;// Serialization failed; method won't be stored in AOT cache
    }
