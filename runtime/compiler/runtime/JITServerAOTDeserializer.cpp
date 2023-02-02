@@ -649,7 +649,7 @@ JITServerAOTDeserializer::cacheRecord(const ThunkSerializationRecord *record,
    if (isResetInProgress(wasReset))
       return false;
 
-   TR_J9SharedCacheVM *fej9 = (TR_J9SharedCacheVM *)(comp->fe());
+   TR_J9VM *fej9 = (TR_J9VM *)(comp->fe());
    void *thunk = fej9->getJ2IThunk((char *)record->signature(), record->signatureSize(), comp);
    if (thunk)
       return true;
