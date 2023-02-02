@@ -649,13 +649,13 @@ JITServerAOTDeserializer::cacheRecord(const ThunkSerializationRecord *record,
    if (isResetInProgress(wasReset))
       return false;
 
-   TR_J9VM *fej9 = (TR_J9VM *)(comp->fe());
-   void *thunk = fej9->getJ2IThunk((char *)record->signature(), record->signatureSize(), comp);
+   auto fej9vm = comp->fej9vm();
+   void *thunk = fej9vm->getJ2IThunk((char *)record->signature(), record->signatureSize(), comp);
    if (thunk)
       return true;
    isNew = true;
 
-   fej9->setJ2IThunk((char *)record->signature(), record->signatureSize(), record->thunkAddress(), comp);
+   fej9vm->setJ2IThunk((char *)record->signature(), record->signatureSize(), record->thunkAddress(), comp);
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServer))
       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Cached thunk record ID %zu -> for thunk %.*s",
