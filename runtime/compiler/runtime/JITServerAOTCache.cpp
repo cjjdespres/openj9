@@ -1825,6 +1825,10 @@ JITServerAOTCacheMap::loadNextQueuedAOTCacheFromFile(J9::J9SegmentProvider &scra
             // My JITServerAOTCache was created and populated; now, insert it into the map
             OMR::CriticalSection cs(_monitor);
             _map.insert(std::make_pair(cacheName, cache));
+
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "AOT cache: t=%llu Loaded cache '%s' with %zu methods from file",
+                                              compInfo->getPersistentInfo()->getElapsedTime(), cacheName.c_str(), cache->getNumCachedMethods());
             }
          else // Failed to create the AOT cache from file
             {
