@@ -1499,9 +1499,9 @@ TR_J9ServerVM::getJ2IThunk(char *signatureChars, uint32_t signatureLength, TR::C
    }
 
 // Serialize thunk and send it to the client to be registered with the VM.
-// Also add this thunk to a per-client set of registered thunks, so that we don't
+// Also add the client thunk pointer to a per-client set of registered thunks, so that we don't
 // register duplicate thunks.
-void
+void *
 TR_J9ServerVM::sendJ2IThunkToClient(std::string signature, const uint8_t *thunkStart, const uint32_t thunkSize, TR::Compilation *comp)
    {
    std::string serializedThunk(reinterpret_cast<const char *>(thunkStart), thunkSize);
@@ -1515,6 +1515,7 @@ TR_J9ServerVM::sendJ2IThunkToClient(std::string signature, const uint8_t *thunkS
       auto &thunkMap = _compInfoPT->getClientData()->getRegisteredJ2IThunkMap();
       thunkMap.insert(std::make_pair(std::make_pair(signature, comp->compileRelocatableCode()), clientThunkPtr));
       }
+   return clientThunkPtr;
    }
 
 void *
@@ -1523,21 +1524,23 @@ TR_J9ServerVM::setJ2IThunk(char *signatureChars, uint32_t signatureLength, void 
    std::string signature(signatureChars, signatureLength);
    uint8_t *thunkStart = reinterpret_cast<uint8_t *>(thunkptr) - 8;
    uint32_t thunkSize = *reinterpret_cast<uint32_t *>(thunkStart) + 8;
+   void *cachedThunkPtr = NULL;
 
    if (comp->isAOTCacheStore())
       {
       auto record = comp->getClientData()->getAOTCache()->createAndStoreThunk((uint8_t *)signatureChars, signatureLength, thunkStart, thunkSize);
       comp->addThunkRecord(record);
+      cachedThunkPtr = record->data().thunkAddress();
 
       if (!getClientJ2IThunk(signature, comp))
          sendJ2IThunkToClient(signature, thunkStart, thunkSize, comp);
       }
    else
       {
-      sendJ2IThunkToClient(signature, thunkStart, thunkSize, comp);
+      cachedThunkPtr = sendJ2IThunkToClient(signature, thunkStart, thunkSize, comp);
       }
 
-   return thunkptr;
+   return cachedThunkPtr;
    }
 
 void
