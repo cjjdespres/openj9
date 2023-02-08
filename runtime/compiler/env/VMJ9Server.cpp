@@ -1484,10 +1484,10 @@ TR_J9ServerVM::getJ2IThunk(char *signatureChars, uint32_t signatureLength, TR::C
       if (record)
          {
          comp->addThunkRecord(record);
-         thunkPtr = record->data().thunkAddress();
+         thunkPtr = getClientJ2IThunk(signature, comp);
 
-         if (!getClientJ2IThunk(signature, comp))
-            sendJ2IThunkToClient(signature, record->data().thunkStart(), record->data().thunkSize(), comp);
+         if (!thunkPtr)
+            thunkPtr = sendJ2IThunkToClient(signature, record->data().thunkStart(), record->data().thunkSize(), comp);
          }
       }
    else
