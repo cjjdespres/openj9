@@ -9453,6 +9453,7 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
 
    TR_MethodMetaData * metaData = NULL;
 
+   bool isEDOCompilation = false;
    if (compiler)
       {
       if (compiler->getRecompilationInfo())
@@ -9464,6 +9465,7 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
             bodyInfo->setStartPCAfterPreviousCompile(that->_methodBeingCompiled->_oldStartPC);
             if (reducedWarm && options->getOptLevel() == warm)
                bodyInfo->setReducedWarm();
+            isEDOCompilation = bodyInfo->getMethodInfo()->getReasonForRecompilation() == TR_PersistentMethodInfo::RecompDueToEdo;
             }
          }
 
@@ -9488,13 +9490,8 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
          TR_J9VMBase *fej9 = (TR_J9VMBase *)(compiler->fej9());
          if (!fej9->isAOT_DEPRECATED_DO_NOT_USE())
             {
-            bool isEDOCompilation = false;
-            TR_CatchBlockProfileInfo * profileInfo = TR_CatchBlockProfileInfo::get(compiler);
-            if (profileInfo && profileInfo->getCatchCounter() >= TR_CatchBlockProfileInfo::EDOThreshold)
-               {
-               isEDOCompilation = true;
+            if (isEDOCompilation)
                sc->addHint(method, TR_HintEDO);
-               }
 
             // There is the possibility that a hot/scorching compilation happened outside
             // startup and with hints we move this expensive compilation during startup
