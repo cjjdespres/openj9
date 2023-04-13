@@ -2680,7 +2680,7 @@ TR_J9VMBase::shouldPerformEDO(
       && recomp->useSampling()
       && recomp->shouldBeCompiledAgain()
       && comp->getMethodHotness() < hot
-      && comp->getNodeCount() < TR::Options::_catchSamplingSizeThreshold)
+      && comp->getNodeCount() < (TR::Compiler->vm.isVMInStartupPhase(_jitConfig) ?  comp->getOptions()->getEdoRecompSizeThresholdInStartupMode() : comp->getOptions()->getEdoRecompSizeThreshold()))
       {
       return true;
       }
