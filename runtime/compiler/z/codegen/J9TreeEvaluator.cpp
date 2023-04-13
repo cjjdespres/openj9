@@ -13165,7 +13165,8 @@ VMgenerateCatchBlockBBStartPrologue(
       TR::Register * biAddrReg = cg->allocateRegister();
 
       // Load address of counter into biAddrReg
-      genLoadAddressConstant(cg, node, (uintptr_t) comp->getRecompilationInfo()->getCounterAddress(), biAddrReg);
+      generateRegLitRefInstruction(cg, TR::InstOpCode::getLoadOpCode(), node, biAddrReg,
+                                   (uintptr_t)comp->getRecompilationInfo()->getCounterAddress(), TR_BodyInfoAddress);
 
       // Counter is 32-bit, so only use 32-bit opcodes
       TR::MemoryReference * recompMR = generateS390MemoryReference(biAddrReg, 0, cg);
