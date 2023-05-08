@@ -13171,8 +13171,8 @@ TR::CompilationInfo::canRelocateMethod(TR::Compilation *comp)
    //
    //TODO: Avoid the overhead of rescheduling this compilation request by handling the deserialized AOT load as if
    //      the method came from the local SCC, rather than as if it was freshly AOT-compiled at the JITServer.
-   if (comp->isDeserializedAOTMethodUsingSVM())
-      return false;
+   // if (comp->isDeserializedAOTMethodUsingSVM())
+   //    return false;
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    TR_Debug *debug = TR::Options::getDebug();
