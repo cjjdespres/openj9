@@ -11950,9 +11950,9 @@ TR::CompilationInfo::replenishInvocationCount(J9Method *method, TR::Compilation 
       // Even if the option to disable AOT relocation delay was specified, we need to delay relocation of deserialized
       // AOT methods using SVM received from the JITServer AOT cache until the next interpreted invocation. Such methods
       // cannot be immediately relocated in the current implementation; see CompilationInfo::canRelocateMethod().
-      if (comp->isDeserializedAOTMethodUsingSVM() && comp->getOption(TR_DisableDelayRelocationForAOTCompilations))
-         count = 0;
-      else
+      // if (comp->isDeserializedAOTMethodUsingSVM() && comp->getOption(TR_DisableDelayRelocationForAOTCompilations))
+      //    count = 0;
+      // else
 #endif /* defined(J9VM_OPT_JITSERVER) */
       // We want to use high counts unless the user specified counts on the command line
       // or used useLowerMethodCounts (or -Xquickstart)
