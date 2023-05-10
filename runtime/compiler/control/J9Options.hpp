@@ -120,7 +120,9 @@ enum ExternalOptions
    XXminusJITServerAOTCachePersistenceOption   = 64,
    XXJITServerAOTCacheDirOption                = 65,
    XXJITServerAOTCacheNameOption               = 66,
-   TR_NumExternalOptions                       = 67
+   XXplusJITServerAOTCacheDelayMethodRelocation  = 67,
+   XXminusJITServerAOTCacheDelayMethodRelocation = 68,
+   TR_NumExternalOptions                         = 69
    };
 
 class OMR_EXTENSIBLE Options : public OMR::OptionsConnector

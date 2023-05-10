@@ -367,7 +367,9 @@ char * J9::Options::_externalOptionStrings[J9::ExternalOptions::TR_NumExternalOp
    "-XX:-JITServerAOTCachePersistence",   // = 64
    "-XX:JITServerAOTCacheDir=",           // = 65
    "-XX:JITServerAOTCacheName=",          // = 66
-   // TR_NumExternalOptions                  = 67
+   "-XX:+JITServerAOTCacheDelayMethodRelocation", // = 67
+   "-XX:-JITServerAOTCacheDelayMethodRelocation", // = 68
+   // TR_NumExternalOptions                  = 69
    };
 
 //************************************************************************
@@ -2358,6 +2360,20 @@ bool J9::Options::preProcessJitServer(J9JavaVM *vm, J9JITConfig *jitConfig)
                char *name = NULL;
                GET_OPTION_VALUE(xxJITServerAOTCacheNameArgIndex, '=', &name);
                compInfo->getPersistentInfo()->setJITServerAOTCacheName(name);
+               }
+
+            const char *xxJITServerAOTCacheDelayMethodRelocation =
+               J9::Options::_externalOptionStrings[J9::ExternalOptions::XXplusJITServerAOTCacheDelayMethodRelocation];
+            const char *xxDisableJITServerAOTCacheDelayMethodRelocation =
+               J9::Options::_externalOptionStrings[J9::ExternalOptions::XXminusJITServerAOTCacheDelayMethodRelocation];
+            int32_t xxJITServerAOTCacheDelayMethodRelocationArgIndex =
+               FIND_ARG_IN_VMARGS(EXACT_MATCH, xxJITServerAOTCacheDelayMethodRelocation, 0);
+            int32_t xxDisableJITServerAOTCacheDelayMethodRelocationArgIndex =
+               FIND_ARG_IN_VMARGS(EXACT_MATCH, xxDisableJITServerAOTCacheDelayMethodRelocation, 0);
+
+            if (xxJITServerAOTCacheDelayMethodRelocationArgIndex > xxDisableJITServerAOTCacheDelayMethodRelocationArgIndex)
+               {
+               compInfo->getPersistentInfo()->setJITServerAOTCacheDelayMethodRelocation(true);
                }
             }
 #if defined(J9VM_OPT_CRIU_SUPPORT)
