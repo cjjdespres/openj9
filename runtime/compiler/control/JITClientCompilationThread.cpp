@@ -2894,10 +2894,15 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
 
          Trc_JITServerApplyRemoteAOTRelocation(vmThread, comp->signature(), comp->getHotnessName());
 
+         TR_FrontEnd *oldFE = comp->fe();
+
          try
             {
             // Need to get a non-shared cache VM to relocate
             TR_J9VMBase *fe = TR_J9VMBase::get(jitConfig, vmThread);
+            // Additionally, we must set the compilation object's VM to the same non-shared cache
+            // so that this compilation does not appear to be a fresh local compilation
+            comp->setFE(fe);
             relocatedMetaData = entry->_compInfoPT->reloRuntime()->prepareRelocateAOTCodeAndData(
                vmThread, fe, comp->cg()->getCodeCache(), (J9JITDataCacheHeader *)dataCacheStr.data(),
                method, false, comp->getOptions(), comp, compilee, (uint8_t *)codeCacheStr.data()
@@ -2909,6 +2914,7 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
             // Relocation Failure
             returnCode = compilationAotRelocationInterrupted;
             }
+         comp->setFE(oldFE);
 
          if (relocatedMetaData)
             {

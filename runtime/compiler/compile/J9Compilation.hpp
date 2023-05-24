@@ -108,6 +108,8 @@ class OMR_EXTENSIBLE Compilation : public OMR::CompilationConnector
    TR_J9VMBase *fej9();
    TR_J9VM *fej9vm();
 
+   void setFE(TR_FrontEnd *fe) { _fe = fe; }
+
    static void allocateCompYieldStatsMatrix();
 
    static TR_Stats **_compYieldStatsMatrix;
