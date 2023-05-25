@@ -2924,6 +2924,7 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
 
          Trc_JITServerApplyRemoteAOTRelocation(vmThread, comp->signature(), comp->getHotnessName());
 
+         comp->enterHeuristicRegion();
          try
             {
             // Need to get a non-shared cache VM to relocate
@@ -2939,6 +2940,7 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
             // Relocation Failure
             returnCode = compilationAotRelocationInterrupted;
             }
+         comp->exitHeuristicRegion();
 
          if (relocatedMetaData)
             {
