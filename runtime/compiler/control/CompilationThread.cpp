@@ -8762,6 +8762,9 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
                options->setOption(TR_DisableOnDemandLiteralPoolRegister);
 
                options->setOption(TR_DisableIPA);
+#if defined(TR_HOST_POWER)
+               options->setOption(TR_DisableEDO); // Relo records for EDO not yet fully implemented on power
+#endif /* defied(TR_HOST_POWER) */
                options->setDisabled(OMR::invariantArgumentPreexistence, true);
                options->setOption(TR_DisableHierarchyInlining);
                options->setOption(TR_DisableKnownObjectTable);
