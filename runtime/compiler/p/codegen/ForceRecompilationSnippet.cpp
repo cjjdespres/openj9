@@ -49,7 +49,7 @@ uint8_t *TR::PPCForceRecompilationSnippet::emitSnippetBody()
    intptr_t startPC = (intptr_t)((uint8_t*)cg()->getCodeStart());
    // The relo runtime expects this kind of address to be zero in a relocatable binary, since it uses
    // |= to update the address chunks. See TR_PPC64RelocationTarget::storeAddressSequence.
-   intptr_t startPCRegValue = cg()->needRelocationsForCurrentMethodStartPC() ? 0 : startPC;
+   intptr_t startPCRegValue = cg()->canEmitDataForExternallyRelocatableInstructions() ? 0 : startPC;
 
    getSnippetLabel()->setCodeLocation(buffer);
 
