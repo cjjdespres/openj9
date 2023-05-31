@@ -144,8 +144,6 @@ J9::Power::CodeGenerator::canEmitDataForExternallyRelocatableInstructions()
    // Hence, for the relocation to be applied correctly, we must ensure that the data fields inside the instruction
    // initially are zero.
 #ifdef J9VM_OPT_JITSERVER
-   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "We're using the openj9 version of the method and isOOPC is %s",
-      self()->comp()->isOutOfProcessCompilation() ? "true" : "false");
    return !self()->comp()->compileRelocatableCode() && !self()->comp()->isOutOfProcessCompilation();
 #endif
    return !self()->comp()->compileRelocatableCode();

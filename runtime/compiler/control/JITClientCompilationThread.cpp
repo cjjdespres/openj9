@@ -2842,10 +2842,8 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
    const J9JITDataCacheHeader *storedCompiledMethod = NULL;
    PORT_ACCESS_FROM_JAVAVM(jitConfig->javaVM);
 
-   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Got to the point of relocation at least...");
    if (!fe->isAOT_DEPRECATED_DO_NOT_USE() && !comp->isDeserializedAOTMethod()) // For relocating received JIT compilations
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Relocating received JIT compilation");
       compInfoPT->reloRuntime()->setReloStartTime(compInfoPT->getTimeWhenCompStarted());
 
       relocatedMetaData = compInfoPT->reloRuntime()->prepareRelocateAOTCodeAndData(
