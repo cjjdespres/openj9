@@ -50,6 +50,9 @@ uint8_t *TR::PPCForceRecompilationSnippet::emitSnippetBody()
    // The relo runtime expects this kind of address to be zero in a relocatable binary, since it uses
    // |= to update the address chunks. See TR_PPC64RelocationTarget::storeAddressSequence.
    intptr_t startPCRegValue = cg()->canEmitDataForExternallyRelocatableInstructions() ? startPC : 0;
+   TR_VerboseLog::writeLineLocked("We're emitting a snippet under %s with startPCRegValue: %lu",
+                                  cg()->compileRelocatableCode() ? "AOT" : "non-AOT",
+                                  startPCRegValue);
 
    getSnippetLabel()->setCodeLocation(buffer);
 
