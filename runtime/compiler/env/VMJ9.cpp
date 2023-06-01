@@ -5966,6 +5966,7 @@ TR_J9VMBase::revertToInterpreted(TR_OpaqueMethodBlock * method)
 int32_t *
 TR_J9VMBase::getStringClassEnableCompressionFieldAddr(TR::Compilation *comp, bool isVettedForAOT)
    {
+   TR_ASSERT(!comp->compileRelocatableCode() || comp->reloRuntime()->isLoading(), "Function cannot be called during AOT method compilation");
    if (!TR_J9VMBase::staticStringEnableCompressionFieldAddr) // Not yet cached
       {
       int32_t *enableCompressionFieldAddr = NULL;
@@ -5975,7 +5976,7 @@ TR_J9VMBase::getStringClassEnableCompressionFieldAddr(TR::Compilation *comp, boo
          TR_PersistentClassInfo * classInfo = (comp->getPersistentInfo()->getPersistentCHTable() == NULL) ?
             NULL :
             comp->getPersistentInfo()->getPersistentCHTable()->findClassInfoAfterLocking(stringClass, comp, isVettedForAOT);
-         if (classInfo && classInfo->isInitialized())
+         if (classInfo && classInfo->isInitialized(false))
             {
             enableCompressionFieldAddr = (int32_t *)getStaticFieldAddress(stringClass,
                (unsigned char *)"COMPACT_STRINGS", 15, (unsigned char *)"Z", 1);
