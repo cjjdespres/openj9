@@ -3469,14 +3469,9 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
          for (TR_ResolvedJ9Method* mirror : resolvedMirrorMethodsPersistIPInfo)
             iProfiler->persistIprofileInfo(NULL, mirror, compiler);
 
-         if (compiler->getOption(TR_UseSymbolValidationManager))
-            {
-            // Compilation is done, now we need client to validate all of the records accumulated by the server,
-            // so need to exit heuristic region.
-            compiler->exitHeuristicRegion();
-            // Populate symbol to id map
-            compiler->getSymbolValidationManager()->deserializeValueToSymbolMap(svmValueToSymbolStr);
-            }
+         // Compilation is done, now we need client to validate all of the records accumulated by the server,
+         // so need to exit heuristic region.
+         compiler->exitHeuristicRegion();
 
          TR_ASSERT(codeCacheStr.size(), "must have code cache");
          TR_ASSERT(dataCacheStr.size(), "must have data cache");
