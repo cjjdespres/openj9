@@ -3241,7 +3241,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
          methodsRequiringTrampolines = std::get<11>(recv);
 
          double ratio = ((double) svmValueToSymbolStr.size()) / ((double) recvSerializedSize);
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "ratio: %f\ttotal size: %d\tsvm size: %lu", ratio, recvSerializedSize, svmValueToSymbolStr.size())
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "ratio: %f\ttotal size: %d\tsvm size: %lu", ratio, recvSerializedSize, svmValueToSymbolStr.size());
 
          updateCompThreadActivationPolicy(compInfoPT, nextMemoryState, nextActiveThreadState);
 
