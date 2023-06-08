@@ -6992,7 +6992,6 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
 
    if (_compInfo.getPersistentInfo()->isRuntimeInstrumentationEnabled())
       {
-      reloRuntime()->setIsLoading();
       reloRuntime()->initializeHWProfilerRecords(compiler);
       }
 
@@ -7013,11 +7012,6 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       TR_VerboseLog::writeLineLocked(TR_Vlog_DISPATCH,
          "prepareRelocateAOTCodeAndData results: j9method=%p metaData=%p returnCode=%d reloErrorCode=%s method=%s",
          method, metaData, returnCode, reloRuntime()->getReloErrorCodeName(reloErrorCode), compiler->signature());
-
-   if (_compInfo.getPersistentInfo()->isRuntimeInstrumentationEnabled())
-      {
-      reloRuntime()->resetIsLoading();
-      }
 
    if (metaData)
       {
@@ -8375,6 +8369,7 @@ TR::CompilationInfoPerThreadBase::compile(J9VMThread * vmThread,
    TR_RelocationRuntime *reloRuntime = NULL;
 #if defined(J9VM_INTERP_AOT_RUNTIME_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
    reloRuntime = entry->_compInfoPT->reloRuntime();
+   reloRuntime->resetIsLoading();
 #endif
 
    UDATA oldState = vmThread->omrVMThread->vmState;

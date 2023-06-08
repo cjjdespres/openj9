@@ -262,6 +262,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
    _options = options;
    TR_ASSERT(_options, "Options were not correctly initialized.");
    _reloLogger->setupOptions(_options);
+   setIsLoading();
 
    uint8_t *tempCodeStart, *tempDataStart;
    uint8_t *oldDataStart, *oldCodeStart, *newCodeStart;
@@ -270,7 +271,10 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
    // Check method header is valid
    _aotMethodHeaderEntry = (TR_AOTMethodHeader *)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
    if (!aotMethodHeaderVersionsMatch())
+      {
+      resetIsLoading();
       return NULL;
+      }
 
    // If we want to trace this method but the AOT body is not prepared to handle it
    // we must fail this AOT load with an error code that will force retrial
@@ -288,6 +292,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
       {
       setReloErrorCode(TR_RelocationErrorCode::methodEnterValidationFailure);
       setReturnCode(compilationRelocationFailure);
+      resetIsLoading();
       return NULL; // fail
       }
 
@@ -296,6 +301,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
       {
       setReloErrorCode(TR_RelocationErrorCode::exceptionHookValidationFailure);
       setReturnCode(compilationRelocationFailure);
+      resetIsLoading();
       return NULL;
       }
 
@@ -321,6 +327,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
          {
          setReloErrorCode(TR_RelocationErrorCode::stringCompressionValidationFailure);
          setReturnCode(compilationRelocationFailure);
+         resetIsLoading();
          return NULL;
          }
       }
@@ -333,6 +340,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
       {
       setReloErrorCode(TR_RelocationErrorCode::tmValidationFailure);
       setReturnCode(compilationRelocationFailure);
+      resetIsLoading();
       return NULL;
       }
 
@@ -347,6 +355,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
          {
          setReloErrorCode(TR_RelocationErrorCode::osrValidationFailure);
          setReturnCode(compilationRelocationFailure);
+         resetIsLoading();
          return NULL;
          }
       }
@@ -478,6 +487,7 @@ TR_RelocationRuntime::prepareRelocateAOTCodeAndData(J9VMThread* vmThread,
 
    if (haveReservedCodeCache())
       codeCache()->unreserve();
+   resetIsLoading();
    return _exceptionTable;
    }
 
