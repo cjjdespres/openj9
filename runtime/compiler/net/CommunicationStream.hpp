@@ -78,8 +78,8 @@ public:
       return (_numConsecutiveReadErrorsOfSameType < MAX_READ_RETRY);
       }
 
-   int clientMsgSize() const { return _cMsg.serializedSize(); }
-   int serverMsgSize() const { return _sMsg.serializedSize(); }
+   uint32_t clientMsgSize() { return _cMsg.serializedSize(); }
+   uint32_t serverMsgSize() { return _sMsg.serializedSize(); }
 
 protected:
    CommunicationStream() : _ssl(NULL), _connfd(-1) { }
