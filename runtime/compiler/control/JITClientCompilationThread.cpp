@@ -3220,6 +3220,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
 
       if (JITServer::MessageType::compilationCode == response)
          {
+         int recvSerializedSize = client->clientMsgSize();
          auto recv = client->getRecvData<
             std::string, std::string, CHTableCommitData, std::vector<TR_OpaqueClassBlock*>, std::string, std::string,
             std::vector<TR_ResolvedJ9Method*>, TR_OptimizationPlan, std::vector<SerializedRuntimeAssumption>,
@@ -3238,6 +3239,9 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
          JITServer::ServerMemoryState nextMemoryState = std::get<9>(recv);
          JITServer::ServerActiveThreadsState nextActiveThreadState = std::get<10>(recv);
          methodsRequiringTrampolines = std::get<11>(recv);
+
+         double ratio = ((double) symValueToSymbolStr.size()) / ((double) recvSerializedSize);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "ratio: %f\ttotal size: %d\tsvm size: %lu", ratio, recvSerializedSize, symValueToSymbolStr.size())
 
          updateCompThreadActivationPolicy(compInfoPT, nextMemoryState, nextActiveThreadState);
 
