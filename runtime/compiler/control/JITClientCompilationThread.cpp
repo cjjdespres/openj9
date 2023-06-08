@@ -3220,7 +3220,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
 
       if (JITServer::MessageType::compilationCode == response)
          {
-         uint32_t recvSerializedSize = client->clientMsgSize();
+         uint32_t recvSerializedSize = client->serverMsgSize();
          auto recv = client->getRecvData<
             std::string, std::string, CHTableCommitData, std::vector<TR_OpaqueClassBlock*>, std::string, std::string,
             std::vector<TR_ResolvedJ9Method*>, TR_OptimizationPlan, std::vector<SerializedRuntimeAssumption>,
