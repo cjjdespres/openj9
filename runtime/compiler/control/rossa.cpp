@@ -2100,13 +2100,18 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
          // the local SCC if it was started with -Xshareclasses:readonly, if possible
          if (javaVM->sharedClassConfig->runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_READONLY)
             {
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "attempting to adjust SCC");
             bool adjustedSCC = (javaVM->sharedClassConfig->runtimeFlags & J9SHR_RUNTIMEFLAG_CACHE_INITIALIZATION_COMPLETE) &&
                                javaVM->sharedClassConfig->createLateTopLayerForJITServer(curThread);
             if (!adjustedSCC)
                {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "didn't adjust SCC");
                // TODO: might want to free the deserializer at this point, or move the adjustment to before the deserializer
-               fprintf(stderr, "Disabling JITServer AOT cache since local SCC is read-only\n");
                persistentInfo->setJITServerUseAOTCache(false);
+               }
+            else
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "did indeed adjust SCC");
                }
             }
          }
