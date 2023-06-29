@@ -135,6 +135,8 @@ public:
 
 	void dontNeedMetadata(J9VMThread* currentThread);
 
+	bool createLateTopLayerForJITServer(J9VMThread* currentThread);
+
 	/**
 	 * This function is extremely hot.
 	 * Peeks to see whether compiled code exists for a given ROMMethod in the CompiledMethodManager hashtable

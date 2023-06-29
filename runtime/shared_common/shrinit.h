@@ -75,6 +75,7 @@ const U_8* storeStartupHintsToSharedCache(J9VMThread* currentThread);
 IDATA j9shr_getCacheDir(J9JavaVM* vm, const char* ctrlDirName, char* buffer, UDATA bufferSize, U_32 cacheType);
 U_32 getCacheTypeFromRuntimeFlags(U_64 runtimeFlags);
 void j9shr_disableSharedClassCacheForCriuRestore(J9JavaVM* vm);
+IDATA j9shr_createLateTopLayerForJITServer(J9VMThread* currentThread);
 
 typedef struct J9SharedClassesHelpText {
 	const char* option;
