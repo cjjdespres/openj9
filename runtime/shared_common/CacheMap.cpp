@@ -250,26 +250,32 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 	PORT_ACCESS_FROM_PORT(_portlib);
 	J9JavaVM* vm = currentThread->javaVM;
 	// TODO: move the state checking here?
+	// TODO: null check with _sharedClassConfig?
 
-	const char * cacheName = vm->sharedClassConfig->cacheName;
+	// const char *cacheName = vm->sharedClassConfig->cacheName;
 	I_32 cacheType = J9PORT_SHR_CACHE_TYPE_PERSISTENT;
-	I_8 preLayer = vm->sharedClassConfig->layer;
+	I_8 layer = vm->sharedClassConfig->layer + 1;
 	UDATA reqBytes = SH_CompositeCacheImpl::getRequiredConstrBytesWithCommonInfo(false, false);
 	J9SharedClassPreinitConfig* piconfig = vm->sharedClassPreinitConfig;
 	bool cacheHasIntegrity;
 	U_64 runtimeFlags = *_runtimeFlags & ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
 	SH_CompositeCacheImpl* allocPtr = (SH_CompositeCacheImpl*)j9mem_allocate_memory(reqBytes, J9MEM_CATEGORY_CLASSES);
-	SH_CompositeCacheImpl *ccNewHead = SH_CompositeCacheImpl::newInstance(vm, vm->sharedClassConfig, allocPtr, cacheName, cacheType, false, preLayer);
+	SH_CompositeCacheImpl *ccNewHead = SH_CompositeCacheImpl::newInstance(vm, vm->sharedClassConfig, allocPtr, _cacheName, cacheType, false, layer);
 	// TODO: no idea if, e.g., _runtimeFlags is correct here. does it need
 	// to be marked writable?
-	IDATA rc = ccNewHead->startup(currentThread, piconfig, NULL, &runtimeFlags, _verboseFlags, cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
+	fprintf(stderr, "XXX: Perms: %lu\n", vm->sharedCacheAPI->cacheDirPerm);
+	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT);
+	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT_GROUPACCESS);
+
+	IDATA rc = ccNewHead->startup(currentThread, piconfig, NULL, &runtimeFlags, _verboseFlags, _cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
 
 	if (rc == CC_STARTUP_OK)
 		{
 		_ccHead->setPrevious(ccNewHead);
 		ccNewHead->setNext(_ccHead);
 		_ccHead = ccNewHead;
-		fprintf(stderr, "Prelayer: %d\n", preLayer);
+		this->resetCacheDescriptorList(currentThread, _sharedClassConfig);
+		// fprintf(stderr, "Prelayer: %d\n", preLayer);
 		return true;
 		}
 	else
