@@ -271,11 +271,29 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 
 	if (rc == CC_STARTUP_OK)
 		{
+		// TODO: braces, make this a better error. also need to ensure that
+		// we clean up after ourselves if we fail, here and elsewhere
+		if (sanityWalkROMClassSegment(currentThread, ccNewHead) == 0) {
+			return false;
+		}
+
+
 		_ccHead->setPrevious(ccNewHead);
 		ccNewHead->setNext(_ccHead);
 		_ccHead = ccNewHead;
-		this->resetCacheDescriptorList(currentThread, _sharedClassConfig);
-		// fprintf(stderr, "Prelayer: %d\n", preLayer);
+		_cc = ccNewHead; // TODO: correct?
+
+		if (NULL == appendCacheDescriptorList(currentThread, vm->sharedClassConfig, ccNewHead))
+			return false;
+
+		// TODO: mutexes necessary - here and with all the other adjustments we make?
+		if (_sharedClassConfig->configMonitor) {
+			enterLocalMutex(currentThread, _sharedClassConfig->configMonitor, "config monitor", "foo");
+		}
+		_sharedClassConfig->cacheDescriptorList = _sharedClassConfig->cacheDescriptorList->next;
+		if (_sharedClassConfig->configMonitor) {
+			exitLocalMutex(currentThread, _sharedClassConfig->configMonitor, "config monitor", "foo");
+		}
 		return true;
 		}
 	else
