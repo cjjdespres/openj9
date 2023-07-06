@@ -365,6 +365,8 @@ private:
 	const char* attachedTypeString(UDATA type);
 
 	UDATA initializeROMSegmentList(J9VMThread* currentThread);
+	// TODO: guard by jitserver?
+	UDATA initializeLateLayerROMSegment(J9VMThread* currentThread);
 
 	IDATA checkForCrash(J9VMThread* currentThread, bool hasClassSegmentMutex);
 	

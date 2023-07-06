@@ -258,16 +258,18 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 	UDATA reqBytes = SH_CompositeCacheImpl::getRequiredConstrBytesWithCommonInfo(false, false);
 	J9SharedClassPreinitConfig* piconfig = vm->sharedClassPreinitConfig;
 	bool cacheHasIntegrity;
-	U_64 runtimeFlags = *_runtimeFlags & ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
+	// TODO: unsure if we need to create new var or update old...
+	// U_64 runtimeFlags = *_runtimeFlags & ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
+	*_runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
 	SH_CompositeCacheImpl* allocPtr = (SH_CompositeCacheImpl*)j9mem_allocate_memory(reqBytes, J9MEM_CATEGORY_CLASSES);
-	SH_CompositeCacheImpl *ccNewHead = SH_CompositeCacheImpl::newInstance(vm, vm->sharedClassConfig, allocPtr, _cacheName, cacheType, false, layer);
+	SH_CompositeCacheImpl *ccNewHead = SH_CompositeCacheImpl::newInstance(vm, _sharedClassConfig, allocPtr, _cacheName, cacheType, false, layer);
 	// TODO: no idea if, e.g., _runtimeFlags is correct here. does it need
 	// to be marked writable?
 	fprintf(stderr, "XXX: Perms: %lu\n", vm->sharedCacheAPI->cacheDirPerm);
 	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT);
 	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT_GROUPACCESS);
 
-	IDATA rc = ccNewHead->startup(currentThread, piconfig, NULL, &runtimeFlags, _verboseFlags, _cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
+	IDATA rc = ccNewHead->startup(currentThread, piconfig, NULL, _runtimeFlags, _verboseFlags, _cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
 
 	if (rc == CC_STARTUP_OK)
 		{
@@ -277,9 +279,9 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 			return false;
 		}
 
-
 		_ccHead->setPrevious(ccNewHead);
 		ccNewHead->setNext(_ccHead);
+		ccNewHead->setPrevious(NULL);
 		_ccHead = ccNewHead;
 		_cc = ccNewHead; // TODO: correct?
 
@@ -294,6 +296,15 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 		if (_sharedClassConfig->configMonitor) {
 			exitLocalMutex(currentThread, _sharedClassConfig->configMonitor, "config monitor", "foo");
 		}
+
+		setCacheAddressRangeArray();
+
+		if (0 == initializeLateLayerROMSegment(currentThread))
+			return false;
+
+		// in initialization, the below is false, false. unsure if we have
+		// to update the entire rom segment list.
+		updateROMSegmentList(currentThread, false);
 		return true;
 		}
 	else
@@ -1083,6 +1094,98 @@ SH_CacheMap::initializeROMSegmentList(J9VMThread* currentThread)
 		ccToUse = ccToUse->getNext();
 		cacheDesc = cacheDesc->next;
 	} while (NULL != ccToUse);
+	Trc_SHR_Assert_True(cacheDesc == config->cacheDescriptorList);
+
+#if defined(J9VM_THR_PREEMPTIVE)
+	if (memorySegmentMutex) {
+		exitLocalMutex(currentThread, memorySegmentMutex, "memory segment mutex", "initializeROMSegmentList");
+	}
+#endif
+
+	if (config->configMonitor) {
+		exitLocalMutex(currentThread, config->configMonitor, "config monitor", "initializeROMSegmentList");
+	}
+
+	Trc_SHR_CM_initializeROMSegmentList_Exit(currentThread, result);
+
+	return result;
+}
+
+/**
+ * Assume cc is initialized OK
+ * @retval 1 success
+ * @retval 0 failure
+ */
+UDATA
+SH_CacheMap::initializeLateLayerROMSegment(J9VMThread* currentThread)
+{
+	J9JavaVM* vm = currentThread->javaVM;
+	UDATA result = 1;
+	J9SharedClassConfig* config;
+	U_8 *cacheBase, *cacheDebugAreaStart;
+	BlockPtr firstROMClassAddress;
+	omrthread_monitor_t classSegmentMutex = vm->classMemorySegments->segmentMutex;
+	omrthread_monitor_t memorySegmentMutex = vm->memorySegments->segmentMutex;
+
+	Trc_SHR_Assert_ShouldNotHaveLocalMutex(classSegmentMutex);
+	Trc_SHR_Assert_True(_sharedClassConfig != NULL);
+	Trc_SHR_CM_initializeROMSegmentList_Entry(currentThread);
+
+	cacheBase = (U_8*)_ccHead->getBaseAddress();
+	firstROMClassAddress = _ccHead->getFirstROMClassAddress();
+	/* Subtract sizeof(ShcItemHdr) from end address, because when the cache is mapped
+	 * to the end of memory, and -Xscdmx0 is used, then cacheDebugAreaStart may equal NULL
+	 */
+	cacheDebugAreaStart = (U_8*)_ccHead->getClassDebugDataStartAddress() - sizeof(ShcItemHdr);
+	config = _sharedClassConfig;
+
+	if (config->configMonitor) {
+		enterLocalMutex(currentThread, config->configMonitor, "config monitor", "initializeROMSegmentList");
+	}
+
+	/* config->cacheDescriptorList always refers to the current supercache */
+	if (config->cacheDescriptorList->cacheStartAddress) {
+		Trc_SHR_Assert_True(config->cacheDescriptorList->cacheStartAddress == _ccHead->getCacheHeaderAddress());
+	} else {
+		config->cacheDescriptorList->cacheStartAddress = _ccHead->getCacheHeaderAddress();
+	}
+	Trc_SHR_Assert_True(config->cacheDescriptorList->cacheStartAddress != NULL);
+	config->cacheDescriptorList->romclassStartAddress = firstROMClassAddress;
+	config->cacheDescriptorList->metadataStartAddress = cacheDebugAreaStart;
+	config->cacheDescriptorList->cacheSizeBytes = _ccHead->getCacheMemorySize();
+
+#if defined(J9VM_THR_PREEMPTIVE)
+	if (memorySegmentMutex) {
+		enterLocalMutex(currentThread, memorySegmentMutex, "memory segment mutex", "initializeROMSegmentList");
+	}
+#endif
+
+	SH_CompositeCacheImpl* ccToUse = _ccHead;
+	J9SharedClassCacheDescriptor* cacheDesc = config->cacheDescriptorList;
+
+	U_8* cacheDebugAreaStartCC = (U_8*)ccToUse->getClassDebugDataStartAddress() - sizeof(ShcItemHdr);
+	Trc_SHR_Assert_True(cacheDebugAreaStartCC == cacheDesc->metadataStartAddress);
+	cacheBase = (U_8*)ccToUse->getBaseAddress();
+
+	J9MemorySegment* metaSegment = createNewSegment(currentThread, MEMORY_TYPE_SHARED_META, vm->memorySegments, cacheBase, (U_8*)ccToUse->getMetaAllocPtr(), cacheDebugAreaStartCC, cacheDebugAreaStartCC);
+	if (NULL == metaSegment) {
+		result = 0;
+		// TODO: there was originally a break here, so need to skip the junk
+		// until just before the Trc_SHR_Assert_True(cacheDesc == config->cacheDescriptorList);
+		// line, which I think just means releasing the mutexes we have, if
+		// we have them, then returning early?
+	}
+	if ((UnitTest::COMPILED_METHOD_TEST != UnitTest::unitTest)
+		&& (UnitTest::CACHE_FULL_TEST != UnitTest::unitTest)
+	) {
+		Trc_SHR_Assert_True(NULL == cacheDesc->metadataMemorySegment);
+	}
+	cacheDesc->metadataMemorySegment = metaSegment;
+	if (ccToUse == _ccHead) {
+		config->metadataMemorySegment = metaSegment;
+	} else {
+		ccToUse->setMetadataMemorySegment(&cacheDesc->metadataMemorySegment);
+	}
 	Trc_SHR_Assert_True(cacheDesc == config->cacheDescriptorList);
 
 #if defined(J9VM_THR_PREEMPTIVE)
