@@ -779,6 +779,7 @@ TR_J9SharedCache::isROMStructureInSharedCache(void *romStructure, uintptr_t *cac
    // The cache descriptor list is linked last to first and is circular, so last->previous == first.
    J9SharedClassCacheDescriptor *firstCache = getCacheDescriptorList()->previous;
    J9SharedClassCacheDescriptor *curCache = firstCache;
+   uintptr_t cacheNum = 0;
    do
       {
       if (isPointerInROMClassesSectionInCache(curCache, romStructure))
@@ -790,8 +791,10 @@ TR_J9SharedCache::isROMStructureInSharedCache(void *romStructure, uintptr_t *cac
             }
          return true;
          }
+      fprintf(stderr, "looked at cache %lu %lu %lu\n", cacheNum, offset, curCache->cacheSizeBytes);
       offset += curCache->cacheSizeBytes;
       curCache = curCache->previous;
+      cacheNum += 1;
       }
    while (curCache != firstCache);
 #else // !J9VM_OPT_MULTI_LAYER_SHARED_CLASS_CACHE

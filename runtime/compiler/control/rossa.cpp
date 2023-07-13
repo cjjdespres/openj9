@@ -2112,6 +2112,8 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
             else
                {
                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "did indeed adjust SCC. state: %d", TR_J9SharedCache::getSharedCacheDisabledReason());
+               // TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "JITServer AOT is still going to be disabled.");
+               // persistentInfo->setJITServerUseAOTCache(false);
                }
             }
          }

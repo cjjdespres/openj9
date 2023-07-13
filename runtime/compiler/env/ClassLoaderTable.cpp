@@ -168,6 +168,7 @@ void
 TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThread, void *loader,
                                                              TR_OpaqueClassBlock *clazz)
    {
+   static bool messageDisplayed = false;
    // Since current thread has shared VM access and holds the classTableMutex,
    // no other thread can be modifying the table at the same time.
    TR_ASSERT(hasSharedVMAccess(vmThread), "Must have shared VM access");
@@ -189,6 +190,11 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
    uint16_t nameLength = J9UTF8_LENGTH(nameStr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
+   if (!messageDisplayed)
+      {
+      fprintf(stderr, "AOT CACHE IS: %s\n", useAOTCache ? "enabled" : "disabled");
+      messageDisplayed = true;
+      }
    void *chain = _sharedCache->rememberClass(clazz);
    if (!chain)
       {

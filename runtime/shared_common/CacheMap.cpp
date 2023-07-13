@@ -257,10 +257,13 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 	I_8 layer = vm->sharedClassConfig->layer + 1;
 	UDATA reqBytes = SH_CompositeCacheImpl::getRequiredConstrBytesWithCommonInfo(false, false);
 	J9SharedClassPreinitConfig* piconfig = vm->sharedClassPreinitConfig;
+	J9SharedClassPreinitConfig piconfig2 = *piconfig; // TODO: get rid of the piconfig2 thing, of course
+	piconfig2.sharedClassCacheSize = 314572560 >> 1;
 	bool cacheHasIntegrity;
 	// TODO: unsure if we need to create new var or update old...
 	// U_64 runtimeFlags = *_runtimeFlags & ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
 	*_runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
+	vm->sharedClassConfig->runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
 	SH_CompositeCacheImpl* allocPtr = (SH_CompositeCacheImpl*)j9mem_allocate_memory(reqBytes, J9MEM_CATEGORY_CLASSES);
 	SH_CompositeCacheImpl *ccNewHead = SH_CompositeCacheImpl::newInstance(vm, _sharedClassConfig, allocPtr, _cacheName, cacheType, false, layer);
 	// TODO: no idea if, e.g., _runtimeFlags is correct here. does it need
@@ -268,9 +271,19 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 	fprintf(stderr, "XXX: Perms: %lu\n", vm->sharedCacheAPI->cacheDirPerm);
 	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT);
 	fprintf(stderr, "XXX: Absent: %lu\n", J9SH_DIRPERM_ABSENT_GROUPACCESS);
+	fprintf(stderr, "XXX: pidata: %lu %ld %ld %ld %ld %ld %ld %ld %ld\n",
+					piconfig->sharedClassCacheSize,
+					piconfig->sharedClassInternTableNodeCount,
+					piconfig->sharedClassMinAOTSize,
+					piconfig->sharedClassMaxAOTSize,
+					piconfig->sharedClassMinJITSize,
+					piconfig->sharedClassMaxJITSize,
+					piconfig->sharedClassReadWriteBytes,
+					piconfig->sharedClassDebugAreaBytes,
+					piconfig->sharedClassSoftMaxBytes);
+	IDATA rc = ccNewHead->startup(currentThread, &piconfig2, NULL, _runtimeFlags, _verboseFlags, _cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
 
-	IDATA rc = ccNewHead->startup(currentThread, piconfig, NULL, _runtimeFlags, _verboseFlags, _cacheName, _cacheDir, vm->sharedCacheAPI->cacheDirPerm, &_actualSize, &_localCrashCntr, true, &cacheHasIntegrity);
-
+	// TODO: might as well convert this to if (rc != startup ok) return false;
 	if (rc == CC_STARTUP_OK)
 		{
 		// TODO: braces, make this a better error. also need to ensure that
@@ -292,7 +305,7 @@ SH_CacheMap::createLateTopLayerForJITServer(J9VMThread* currentThread)
 		if (_sharedClassConfig->configMonitor) {
 			enterLocalMutex(currentThread, _sharedClassConfig->configMonitor, "config monitor", "foo");
 		}
-		_sharedClassConfig->cacheDescriptorList = _sharedClassConfig->cacheDescriptorList->next;
+		_sharedClassConfig->cacheDescriptorList = _sharedClassConfig->cacheDescriptorList->previous;
 		if (_sharedClassConfig->configMonitor) {
 			exitLocalMutex(currentThread, _sharedClassConfig->configMonitor, "config monitor", "foo");
 		}
