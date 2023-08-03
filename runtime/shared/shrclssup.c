@@ -203,6 +203,27 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void* reserved)
 				} else {
 					vm->sharedCacheAPI->cacheType = J9PORT_SHR_CACHE_TYPE_NONPERSISTENT;
 				}
+
+				/* Check if a new layer needs to be created for the JITServer AOT cache */
+				OMRPORT_ACCESS_FROM_J9PORT(vm->portLibrary);
+				BOOLEAN usingJITServerAOTCacheLayer = (runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_READONLY) &&
+												 omrsysinfo_is_running_in_container() &&
+												 (J9PORT_SHR_CACHE_TYPE_PERSISTENT == vm->sharedCacheAPI->cacheType);
+				if (usingJITServerAOTCacheLayer) {
+					argIndex1 = FIND_ARG_IN_VMARGS(EXACT_MATCH, "-XX:+UseJITServer", NULL);
+					argIndex2 = FIND_ARG_IN_VMARGS(EXACT_MATCH, "-XX:-UseJITServer", NULL);
+					usingJITServerAOTCacheLayer = usingJITServerAOTCacheLayer && argIndex1 > argIndex2;
+				}
+				if (usingJITServerAOTCacheLayer) {
+					argIndex1 = FIND_ARG_IN_VMARGS(EXACT_MATCH, "-XX:+JITServerUseAOTCache", NULL);
+					argIndex2 = FIND_ARG_IN_VMARGS(EXACT_MATCH, "-XX:-JITServerUseAOTCache", NULL);
+					usingJITServerAOTCacheLayer = usingJITServerAOTCacheLayer && argIndex1 > argIndex2;
+				}
+				if (usingJITServerAOTCacheLayer) {
+					runtimeFlags &= ~J9SHR_RUNTIMEFLAG_ENABLE_READONLY;
+					vm->sharedCacheAPI->usingJITServerAOTCacheLayer = TRUE;
+				}
+
 				/* set runtimeFlags and verboseFlags here as they will be used later in j9shr_getCacheDir() */
 				vm->sharedCacheAPI->runtimeFlags = runtimeFlags;
 				vm->sharedCacheAPI->verboseFlags = verboseFlags;

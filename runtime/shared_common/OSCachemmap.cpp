@@ -146,6 +146,7 @@ SH_OSCachemmap::finalise()
  * \args J9OSCACHE_OPEN_MODE_TRY_READONLY_ON_FAIL - if the cache could not be opened read/write - try readonly
  * \args J9OSCACHE_OPEN_MODE_GROUPACCESS - creates a cache with group access. Only applies when a cache is created
  * \args J9OSCACHE_OPEN_MODE_CHECK_NETWORK_CACHE - checks whether we are attempting to connect to a networked cache
+ * \args J9OSCACHE_OPEN_MODE_JITSERVER_AOT_LAYER - immediately unlink the underlying cache file after it is created
  * @param [in]  versionData Version data of the cache to connect to
  * @param [in]  initializer Pointer to an initializer to be used to initialize the data
  *              area of a new cache
@@ -214,6 +215,9 @@ SH_OSCachemmap::startup(J9JavaVM* vm, const char* ctrlDirName, UDATA cacheDirPer
 	}
 	Trc_SHR_OSC_Mmap_startup_goodfileopen(_cachePathName, _fileHandle);
 
+	if (openMode & J9OSCACHE_OPEN_MODE_JITSERVER_AOT_LAYER) {
+		j9file_unlink(_cachePathName);
+	}
 	/* Avoid any checks for cache file access if
 	 * - user has specified a cache directory, or
 	 * - destroying an existing cache (if SHR_STARTUP_REASON_DESTROY or SHR_STARTUP_REASON_EXPIRE or J9SH_OSCACHE_OPEXIST_DESTROY is set)
