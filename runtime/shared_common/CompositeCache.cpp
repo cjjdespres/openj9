@@ -4526,7 +4526,7 @@ SH_CompositeCacheImpl::getJavacoreData(J9JavaVM *vm, J9SharedClassJavacoreDataDe
 		descriptor->minJIT = _theca->minJIT;
 		descriptor->maxJIT = _theca->maxJIT;
 		descriptor->softMaxBytes = (UDATA)((U_32)-1 == _theca->softMaxBytes ? descriptor->cacheSize : _theca->softMaxBytes);
-
+		descriptor->usingJITServerAOTCacheLayer = vm->sharedCacheAPI->usingJITServerAOTCacheLayer;
 		if ((NULL != _debugData) && !_debugData->getJavacoreData(vm, descriptor, _theca)) {
 			return 0;
 		}

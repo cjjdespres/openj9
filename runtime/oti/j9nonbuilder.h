@@ -1109,6 +1109,7 @@ typedef struct J9SharedClassJavacoreDataDescriptor {
 	UDATA corruptValue;
 	UDATA softMaxBytes;
 	UDATA otherBytes;
+	UDATA usingJITServerAOTCacheLayer;
 	/* The fields above are stats for the top layer, and the fields below are the summary for all layers */
 	UDATA ccCount;
 	UDATA ccStartedCount;
