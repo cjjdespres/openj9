@@ -6004,7 +6004,16 @@ static int32_t J9THREAD_PROC samplerThreadProc(void * entryarg)
 #if defined(J9VM_OPT_JITSERVER)
          if (vm->sharedCacheAPI->usingJITServerAOTCacheLayer)
             {
-            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tUsing temporary top layer for JITServer AOT cache");
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tUsing temporary top SCC layer for JITServer AOT cache");
+            }
+#endif /* J9VM_OPT_JITSERVER */
+         }
+      else
+         {
+#if defined(J9VM_OPT_JITSERVER)
+         if (vm->sharedCacheAPI->usingJITServerAOTCacheLayer)
+            {
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "Using temporary top SCC layer for JITServer AOT cache");
             }
 #endif /* J9VM_OPT_JITSERVER */
          }
