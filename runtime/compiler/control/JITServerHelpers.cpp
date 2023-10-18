@@ -26,6 +26,7 @@
 #include "control/JITServerCompilationThread.hpp"
 #include "control/MethodToBeCompiled.hpp"
 #include "env/StackMemoryRegion.hpp"
+#include "env/ClassLoaderTable.hpp"
 #include "infra/CriticalSection.hpp"
 #include "infra/Statistics.hpp"
 #include "net/CommunicationStream.hpp"
@@ -34,7 +35,6 @@
 #include "runtime/JITServerSharedROMClassCache.hpp"
 #include "romclasswalk.h"
 #include "util_api.h"// for allSlotsInROMClassDo()
-
 
 uint64_t     JITServerHelpers::_waitTimeMs = 0;
 bool         JITServerHelpers::_serverAvailable = true;
@@ -610,7 +610,8 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
    // attempt validation and return NULL for many methods invoked here.
    // We do not want that, because these values will be cached and later used in non-AOT
    // compilations, where we always need a non-NULL result.
-   TR_J9VM *fe = (TR_J9VM *)TR_J9VMBase::get(vmThread->javaVM->jitConfig, vmThread);
+   TR_J9VMBase *fej9 = TR_J9VMBase::get(vmThread->javaVM->jitConfig, vmThread);
+   TR_J9VM *fe = (TR_J9VM *)fej9;
    J9Method *methodsOfClass = (J9Method *)fe->getMethods((TR_OpaqueClassBlock *)clazz);
    int32_t numDims = 0;
    TR_OpaqueClassBlock *baseClass = fe->getBaseComponentClass((TR_OpaqueClassBlock *)clazz, numDims);
@@ -647,10 +648,16 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
       sharedCache->getClassChainOffsetIdentifyingLoaderNoFail((TR_OpaqueClassBlock *)clazz, &classChainIdentifyingLoader) : 0;
 
    std::string classNameIdentifyingLoader;
-   if (fe->getPersistentInfo()->getJITServerUseAOTCache() && classChainIdentifyingLoader)
+   if (fe->getPersistentInfo()->getJITServerUseAOTCache())
       {
-      const J9UTF8 *name = J9ROMCLASS_CLASSNAME(sharedCache->startingROMClassOfClassChain(classChainIdentifyingLoader));
-      classNameIdentifyingLoader = std::string((const char *)J9UTF8_DATA(name), J9UTF8_LENGTH(name));
+      // The local SCC may not exist, and so we can't necessarily get to the loader table through the sharedCache.
+      // We also need to use the fej9 interface for this reason.
+      auto loader = fej9->getClassLoader((TR_OpaqueClassBlock *)clazz);
+      auto nameInfo = fej9->getPersistentInfo()->getPersistentClassLoaderTable()->lookupClassNameAssociatedWithClassLoader(loader);
+      if (nameInfo)
+         {
+         classNameIdentifyingLoader = std::string((const char *)J9UTF8_DATA(nameInfo), J9UTF8_LENGTH(nameInfo));
+         }
       }
 
    std::string packedROMClassStr;
