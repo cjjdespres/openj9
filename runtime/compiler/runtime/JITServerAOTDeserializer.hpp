@@ -59,7 +59,7 @@ class JITServerAOTDeserializer
 public:
    TR_PERSISTENT_ALLOC(TR_Memory::JITServerAOTCache)
 
-   JITServerAOTDeserializer(TR_PersistentClassLoaderTable *loaderTable);
+   JITServerAOTDeserializer(TR_J9SharedCache *sharedCache, TR_PersistentClassLoaderTable *loaderTable);
    ~JITServerAOTDeserializer();
 
    // Deserializes in place a serialized AOT method received from JITServer. Returns true on success.
