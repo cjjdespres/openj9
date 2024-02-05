@@ -2119,16 +2119,29 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
    // Create AOT deserializer at the client if using JITServer with AOT cache
    if ((persistentInfo->getRemoteCompilationMode() == JITServer::CLIENT) && persistentInfo->getJITServerUseAOTCache())
       {
-      if (TR::Options::sharedClassCache())
+      if (persistentInfo->getJITServerAOTCacheIgnoreLocalSCC())
          {
-         auto deserializer = new (PERSISTENT_NEW) JITServerAOTDeserializer(persistentInfo->getPersistentClassLoaderTable());
+         auto deserializer = new (PERSISTENT_NEW) JITServerAOTDeserializer(NULL, persistentInfo->getPersistentClassLoaderTable());
          if (!deserializer)
+            {
+            fprintf(stderr, "Could not create JITServer AOT deserializer\n");
             return -1;
+            }
+         }
+      else if (TR::Options::sharedClassCache())
+         {
+         auto loaderTable = persistentInfo->getPersistentClassLoaderTable();
+         auto deserializer = new (PERSISTENT_NEW) JITServerAOTDeserializer(loaderTable->getSharedCache(), loaderTable);
+         if (!deserializer)
+            {
+            fprintf(stderr, "Could not create JITServer AOT deserializer\n");
+            return -1;
+            }
          compInfo->setJITServerAOTDeserializer(deserializer);
          }
       else
          {
-         fprintf(stderr, "Disabling JITServer AOT cache since AOT compilation is disabled\n");
+         fprintf(stderr, "Disabling JITServer AOT cache since AOT compilation or server offsets are disabled\n");
          persistentInfo->setJITServerUseAOTCache(false);
          }
       }

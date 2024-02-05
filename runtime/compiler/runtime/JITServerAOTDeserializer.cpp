@@ -85,6 +85,14 @@ JITServerAOTDeserializer::deserialize(SerializedAOTMethod *method, const std::ve
    bool wasReset = false;
    bool failed = false;
 
+   // TODO: support this condition
+   if (!_sharedCache)
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Received AOT cache method %s but local SCC is unavailable", comp->signature());
+      return deserializationFailure(method, comp, wasReset);
+      }
+
    // Deserialize/validate and cache serialization records, keeping track of IDs of the new ones.
    // Since the records are sorted in "dependency order", by the time a given record is about
    // to be cached, all the records that it depends on are already successfully cached.
