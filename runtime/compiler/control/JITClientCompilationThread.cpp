@@ -3187,7 +3187,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
    if (aotCacheStore || aotCacheLoad)
       {
       // TODO: this check should omit the aotCacheStore part when we support ignoring the local SCC during AOT cache stores.
-      if (aotCacheStore || !comp->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
+      if (aotCacheStore || !compiler->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
          {
          classChainOffset = compiler->fej9vm()->sharedCache()->rememberClass(clazz);
          if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffset)
