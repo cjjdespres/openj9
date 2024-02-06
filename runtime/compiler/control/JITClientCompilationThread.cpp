@@ -533,6 +533,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
                vmInfo._aotHeader = *storedHeader;
                }
             }
+         vmInfo._aotCacheIgnoreLocalSCC = comp->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC();
          vmInfo._inSnapshotMode = fe->inSnapshotMode();
          vmInfo._isPortableRestoreMode = fe->isPortableRestoreModeEnabled();
          vmInfo._isSnapshotModeEnabled = fe->isSnapshotModeEnabled();
