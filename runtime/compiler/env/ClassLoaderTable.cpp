@@ -223,21 +223,12 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
                nameLength, (const char *)name, loader
             );
 #endif /* defined(J9VM_OPT_JITSERVER) */
-         // TODO: for now we bail out right here, but when we actually need to track names
-         // without the chains being present this return must be removed.
-         return;
          }
       else
          {
          chain = _sharedCache->pointerFromOffsetInSharedCache(chainOffset);
          TR_ASSERT(_sharedCache->isPointerInSharedCache(chain), "Class chain must be in SCC");
          }
-      }
-   else
-      {
-      // TODO: for now we bail out right here, but when we actually need to track names
-      // without an SCC being present at all this return must be removed.
-      return;
       }
 
    // If we are using the JITServer AOT cache, we need to remember the name of clazz with or without chain.
