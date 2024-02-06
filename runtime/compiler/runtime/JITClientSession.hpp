@@ -320,6 +320,7 @@ public:
       UDATA _vmindexOffset;
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
       bool _useAOTCache;
+      bool _aotCacheIgnoreLocalSCC;
       TR_AOTHeader _aotHeader;
       TR_OpaqueClassBlock *_JavaLangObject;
       TR_OpaqueClassBlock *_JavaStringObject;
