@@ -3331,6 +3331,15 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
          bool usesSVM = false;
          if (deserializer->deserialize(method, records, compiler, usesSVM))
             {
+            if (compiler->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
+               {
+               entry->_compErrCode = aotCacheDeserializationFailure;
+               entry->_doNotLoadFromJITServerAOTCache = true;
+               if (entry->_compilationAttemptsLeft > 0)
+                  entry->_tryCompilingAgain = true;
+               compiler->failCompilation<J9::AOTCacheDeserializationFailure>(
+                  "Deserialized AOT cache method %s but we can't relocate it", compiler->signature());
+               }
             compiler->setDeserializedAOTMethod(true);
             compiler->setDeserializedAOTMethodUsingSVM(usesSVM);
             statusCode = compilationOK;
