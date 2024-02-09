@@ -2319,6 +2319,7 @@ bool TR::CompilationInfo::shouldRetryCompilation(TR_MethodToBeCompiled *entry, T
             case compilationStreamVersionIncompatible:
             case compilationStreamLostMessage:
             case aotCacheDeserializationFailure:
+            case aotDeserializerReset:
 #endif
             case compilationInterrupted:
             case compilationCodeReservationFailure:
