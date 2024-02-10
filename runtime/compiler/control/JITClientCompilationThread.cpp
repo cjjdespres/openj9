@@ -2875,8 +2875,6 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
                      J9Method *method, TR::CompilationInfoPerThreadBase *compInfoPT,
                      const std::string &codeCacheStr, const std::string &dataCacheStr)
    {
-   static const bool shouldStoreRemoteAOTMethods = feGetEnv("TR_enableRemoteAOTMethodStorage");
-
    TR_MethodMetaData *metaData = NULL;
    TR_J9VM *fe = comp->fej9vm();
    TR_MethodToBeCompiled *entry = compInfoPT->getMethodBeingCompiled();
@@ -2936,9 +2934,12 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
             {
             // Need to get a non-shared cache VM to relocate
             TR_J9VMBase *fe = TR_J9VMBase::get(jitConfig, vmThread);
+            TR_J9SharedCache *cacheOverride = NULL;
+            if (comp->isDeserializedAOTMethod() && compInfo->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
+               cacheOverride = compInfo->getDeserializerSharedCache();
             metaData = entry->_compInfoPT->reloRuntime()->prepareRelocateAOTCodeAndData(
                vmThread, fe, comp->cg()->getCodeCache(), (J9JITDataCacheHeader *)dataCacheStr.data(),
-               method, false, comp->getOptions(), comp, compilee, (uint8_t *)codeCacheStr.data()
+               method, false, comp->getOptions(), comp, compilee, (uint8_t *)codeCacheStr.data(), cacheOverride
             );
             returnCode = entry->_compInfoPT->reloRuntime()->returnCode();
             }
@@ -3006,9 +3007,9 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
       // If we're not using the AOT cache, we still store by default. This avoids certain test failures in the short term.
       // Also, if we've explicitly been requested by the user to delay method relocations then we need to store methods
       // in the SCC to support that option.
-      if (comp->getPersistentInfo()->getJITServerAOTCacheDelayMethodRelocation() ||
-          !compInfo->getPersistentInfo()->getJITServerUseAOTCache() ||
-          shouldStoreRemoteAOTMethods)
+      auto persistentInfo = compInfo->getPersistentInfo();
+      if ((persistentInfo->getJITServerAOTCacheDelayMethodRelocation() && !persistentInfo->getJITServerAOTCacheIgnoreLocalSCC()) ||
+          !compInfo->getPersistentInfo()->getJITServerUseAOTCache())
          {
          J9ROMMethod *romMethod = comp->fej9()->getROMMethodFromRAMMethod(method);
          TR::CompilationInfo::storeAOTInSharedCache(
@@ -3331,15 +3332,6 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
          bool usesSVM = false;
          if (deserializer->deserialize(method, records, compiler, usesSVM))
             {
-            if (compiler->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
-               {
-               entry->_compErrCode = aotCacheDeserializationFailure;
-               entry->_doNotLoadFromJITServerAOTCache = true;
-               if (entry->_compilationAttemptsLeft > 0)
-                  entry->_tryCompilingAgain = true;
-               compiler->failCompilation<J9::AOTCacheDeserializationFailure>(
-                  "Deserialized AOT cache method %s but we can't relocate it", compiler->signature());
-               }
             compiler->setDeserializedAOTMethod(true);
             compiler->setDeserializedAOTMethodUsingSVM(usesSVM);
             statusCode = compilationOK;
