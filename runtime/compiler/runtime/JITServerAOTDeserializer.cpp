@@ -296,10 +296,7 @@ JITServerAOTDeserializer::findInMap(const PersistentUnorderedMap<uintptr_t, V> &
    if (it != map.end())
       return it->second;
 
-   // This record ID can only be missing from the cache if it was removed by a concurrent reset
-   // TODO: is this true any more? The deserializerWasReset above should guarantee that we haven't
-   // reset by this point.
-   wasReset = true;
+   // TODO: assert here that the record ID must have been found?
    return V();
    }
 
