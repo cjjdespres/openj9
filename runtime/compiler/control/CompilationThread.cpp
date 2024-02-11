@@ -7882,13 +7882,11 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
       else
          {
          TR::IlGeneratorMethodDetails & details = entry->getMethodDetails();
-         eligibleForRelocatableCompile =
-
-            // Shared Classes Enabled
-            TR::Options::sharedClassCache()
-
+         // Test for this method's suitability for a relocatable compile, ignoring any
+         // local SCC criteria.
+         bool withoutSCCEligibleForRelocatableCompile =
             // Unsupported compilations
-            && !entry->isJNINative()
+            !entry->isJNINative()
             && !details.isNewInstanceThunk()
             && !details.isMethodHandleThunk()
             && !entry->isDLTCompile()
@@ -7896,30 +7894,41 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
             // Only generate AOT compilations for first time compiles
             && !TR::CompilationInfo::isCompiled(method)
 
-            // If using a loadLimit/loadLimitFile, don't do an AOT compilation
-            // for a method body that's already in the SCC
-            && entry->_methodIsInSharedCache != TR_yes
-
             // See eclipse-openj9/openj9#11879 for details
             && (!TR::Options::getCmdLineOptions()->getOption(TR_FullSpeedDebug)
                 || !entry->_oldStartPC)
 
             // Eligibility checks
-            && !entry->_doNotUseAotCodeFromSharedCache
-            && fe->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(method))
             && !_compInfo.isMethodIneligibleForAot(method)
             && (!TR::Options::getAOTCmdLineOptions()->getOption(TR_AOTCompileOnlyFromBootstrap)
                 || fe->isClassLibraryMethod((TR_OpaqueMethodBlock *)method), true)
-
-            // Ensure we can generate a class chain for the class of the
-            // method to be compiled
-            && (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != fe->sharedCache()->rememberClass(J9_CLASS_FROM_METHOD(method)))
 
             // Do not perform AOT compilation if field watch is enabled; there
             // is no benefit to having an AOT body with field watch as it increases
             // the validation complexity, and in case the fields being watched changes,
             // the AOT body cannot be loaded
             && !_jitConfig->inlineFieldWatches;
+
+#if defined(J9VM_OPT_JITSERVER)
+         entry->_useAotCacheCompilation = withoutSCCEligibleForRelocatableCompile;
+#endif /* defined(J9VM_OPT_JITSERVER) */
+         eligibleForRelocatableCompile =
+            withoutSCCEligibleForRelocatableCompile
+
+            // Shared Classes Enabled
+            && TR::Options::sharedClassCache()
+
+            // If using a loadLimit/loadLimitFile, don't do an AOT compilation
+            // for a method body that's already in the SCC
+            && entry->_methodIsInSharedCache != TR_yes
+
+            // Eligibility checks
+            && !entry->_doNotUseAotCodeFromSharedCache
+            && fe->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(method))
+
+            // Ensure we can generate a class chain for the class of the
+            // method to be compiled
+            && (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != fe->sharedCache()->rememberClass(J9_CLASS_FROM_METHOD(method)));
          }
 
 #if defined(J9VM_OPT_CRIU_SUPPORT)
