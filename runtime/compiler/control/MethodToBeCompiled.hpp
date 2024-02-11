@@ -160,6 +160,8 @@ struct TR_MethodToBeCompiled
    bool _shouldUpgradeOutOfProcessCompilation;
    // Set at the client after a failed AOT deserialization or load to bypass AOT cache on the next compilation attempt
    bool _doNotLoadFromJITServerAOTCache;
+   // Set at the client if this method is eligible for remote AOT cache compilation
+   bool _useAotCacheCompilation;
    // Cache original optLevel when transforming a remote sync compilation to a local cheap one
    TR_Hotness _origOptLevel;
    // A non-NULL field denotes an out-of-process compilation request
