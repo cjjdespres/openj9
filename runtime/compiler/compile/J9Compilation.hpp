@@ -506,8 +506,10 @@ private:
    // True if this deserialized AOT method received from the
    // JITServer AOT cache uses SVM; always false at the server
    bool _deserializedAOTMethodUsingSVM;
-   // True if the result of this out-of-process compilation will be
-   // stored in JITServer AOT cache; always false at the client
+   // True at the server if the result of this out-of-process compilation will be
+   // stored in JITServer AOT cache; true at the client if a remote compilation request
+   // resulted in a successful AOT cache store at the server and subsequent deserialization
+   // at the client
    bool _aotCacheStore;
    // List of AOT cache records and corresponding offsets into AOT relocation data that will
    // be used to store the result of this compilation in AOT cache; always empty at the client

@@ -1010,7 +1010,7 @@ JITServerAOTCache::storeMethod(const AOTCacheClassChainRecord *definingClassChai
                                TR_Hotness optLevel, const AOTCacheAOTHeaderRecord *aotHeaderRecord,
                                const Vector<std::pair<const AOTCacheRecord *, uintptr_t/*reloDataOffset*/>> &records,
                                const void *code, size_t codeSize, const void *data, size_t dataSize,
-                               const char *signature, uint64_t clientUID)
+                               const char *signature, uint64_t clientUID, const CachedAOTMethod *&methodRecord)
    {
    uintptr_t definingClassId = definingClassChainRecord->records()[0]->data().id();
    const char *levelName = TR::Compilation::getHotnessName(optLevel);
@@ -1044,6 +1044,7 @@ JITServerAOTCache::storeMethod(const AOTCacheClassChainRecord *definingClassChai
 
    auto method = CachedAOTMethod::create(definingClassChainRecord, index, optLevel, aotHeaderRecord,
                                          records, code, codeSize, data, dataSize);
+   methodRecord = method;
    addToMap(_cachedMethodMap, _cachedMethodHead, _cachedMethodTail, it, key, method);
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServer))
