@@ -7910,7 +7910,10 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
             && !_jitConfig->inlineFieldWatches;
 
 #if defined(J9VM_OPT_JITSERVER)
-         entry->_useAotCacheCompilation = withoutSCCEligibleForRelocatableCompile;
+         entry->_useAotCacheCompilation =
+            withoutSCCEligibleForRelocatableCompile
+            && persistentInfo->getRemoteCompilationMode() == JITServer::CLIENT &&
+            && persistentInfo->getJITServerUseAOTCache();
 #endif /* defined(J9VM_OPT_JITSERVER) */
          eligibleForRelocatableCompile =
             withoutSCCEligibleForRelocatableCompile
