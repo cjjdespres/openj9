@@ -7913,7 +7913,8 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
          entry->_useAotCacheCompilation =
             withoutSCCEligibleForRelocatableCompile
             && persistentInfo->getRemoteCompilationMode() == JITServer::CLIENT &&
-            && persistentInfo->getJITServerUseAOTCache();
+            && persistentInfo->getJITServerUseAOTCache()
+            && !cannotDoRemoteCompilation;
 #endif /* defined(J9VM_OPT_JITSERVER) */
          eligibleForRelocatableCompile =
             withoutSCCEligibleForRelocatableCompile
