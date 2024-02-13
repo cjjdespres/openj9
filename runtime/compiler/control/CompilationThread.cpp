@@ -7937,11 +7937,16 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
       _compInfo.releaseCompMonitor(vmThread);
 #endif
 
+      bool allowAOTStorage = !TR::Options::getAOTCmdLineOptions()->getOption(TR_NoStoreAOT);
+#if defined(J9VM_OPT_JITSERVER)
+      allowAOTStorage = allowAOTStorage || entry->_useAotCacheCompilation;
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
       bool sharedClassTest = eligibleForRelocatableCompile
 #if defined(J9VM_OPT_CRIU_SUPPORT)
                              && !checkpointInProgress
 #endif
-                             && !TR::Options::getAOTCmdLineOptions()->getOption(TR_NoStoreAOT);
+                             && allowAOTStorage;
 
       bool isSecondAOTRun =
          !TR::Options::getAOTCmdLineOptions()->getOption(TR_NoAotSecondRunDetection) &&
