@@ -225,7 +225,7 @@ public:
       {
       try
          {
-         write(MessageType::compilationCode, args...);
+         write(MessageType::AOTCache_storedAOTMethod, args...);
          }
       catch (std::exception &e)
          {
