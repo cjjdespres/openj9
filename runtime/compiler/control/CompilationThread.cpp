@@ -8012,9 +8012,9 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
                }
             }
          }
-      }
 #if defined(J9VM_OPT_JITSERVER)
       else if (eligibleForRemoteAOTNoSCCCompile)
+         {
                // We also want AOT compilations for JITServer clients that are attached to a
                // JITServer with an AOT cache, because those can be served relatively fast
                if (persistentInfo->getRemoteCompilationMode() == JITServer::CLIENT &&
@@ -8038,7 +8038,9 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
                         }
                      }
                   }
+         }
 #endif /* defined(J9VM_OPT_JITSERVER) */
+      }
 
 #endif // defined(J9VM_INTERP_AOT_COMPILE_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
 
