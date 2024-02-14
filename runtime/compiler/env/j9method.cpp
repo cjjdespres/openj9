@@ -993,7 +993,7 @@ TR_ResolvedRelocatableJ9Method::TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBl
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
    TR::Compilation *comp = TR::comp();
 #if defined(J9VM_OPT_JITSERVER)
-   if (comp->ignoringLocalSCC())
+   if (comp && comp->ignoringLocalSCC())
       {
       return;
       }
