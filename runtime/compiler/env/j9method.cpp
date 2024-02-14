@@ -992,11 +992,14 @@ TR_ResolvedRelocatableJ9Method::TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBl
    {
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
    TR::Compilation *comp = TR::comp();
+#if defined(J9VM_OPT_JITSERVER)
    if (comp->ignoringLocalSCC())
       {
       return;
       }
-   else if (comp && this->TR_ResolvedMethod::getRecognizedMethod() != TR::unknownMethod)
+   else
+#endif /* defined(J9VM_OPT_JITSERVER) */
+   if (comp && this->TR_ResolvedMethod::getRecognizedMethod() != TR::unknownMethod)
       {
       if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != fej9->sharedCache()->rememberClass(containingClass()))
          {
@@ -1848,7 +1851,11 @@ TR_ResolvedRelocatableJ9Method::createResolvedMethodFromJ9Method(TR::Compilation
          isSystemClassLoader = ((void*)_fe->vmThread()->javaVM->systemClassLoader->classLoaderObject ==  (void*)_fe->getClassLoader(clazzOfInlinedMethod));
          }
 
-      bool methodInSCC = comp->ignoringLocalSCC() || _fe->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method));
+      bool ignoringLocalSCC = false;
+#if defined(J9VM_OPT_JITSERVER)
+      ignoringLocalSCC = comp->ignoringLocalSCC();
+#endif /* defined(J9VM_OPT_JITSERVER) */
+      bool methodInSCC = ignoringLocalSCC || _fe->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method));
       if (methodInSCC)
          {
          bool sameLoaders = false;
@@ -1858,7 +1865,7 @@ TR_ResolvedRelocatableJ9Method::createResolvedMethodFromJ9Method(TR::Compilation
              isSystemClassLoader)
             {
             resolvedMethod = new (comp->trHeapMemory()) TR_ResolvedRelocatableJ9Method((TR_OpaqueMethodBlock *) j9method, _fe, comp->trMemory(), this, vTableSlot);
-            if (!comp->ignoringLocalSCC() && comp->getOption(TR_UseSymbolValidationManager))
+            if (!ignoringLocalSCC && comp->getOption(TR_UseSymbolValidationManager))
                {
                TR::SymbolValidationManager *svm = comp->getSymbolValidationManager();
                if (!svm->isAlreadyValidated(resolvedMethod->containingClass()))
