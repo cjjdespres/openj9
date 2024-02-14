@@ -3111,13 +3111,24 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
    TR::PersistentInfo *persistentInfo = compInfo->getPersistentInfo();
    bool useAotCompilation = entry->_useAotCompilation;
 
-   bool aotCacheStore = entry->_useAotCacheCompilation &&
-                        persistentInfo->getJITServerUseAOTCache() &&
-                        compInfo->methodCanBeJITServerAOTCacheStored(compiler->signature(), compilee->convertToMethod()->methodType());
-   bool aotCacheLoad = persistentInfo->getJITServerUseAOTCache() &&
-                       !TR::CompilationInfo::isCompiled(method) &&
-                       !entry->_doNotLoadFromJITServerAOTCache &&
-                       compInfo->methodCanBeJITServerAOTCacheLoaded(compiler->signature(), compilee->convertToMethod()->methodType());
+   bool aotCacheStore = false;
+   bool aotCacheLoad = false;
+   if (persistentInfo->getJITServerAOTCacheIgnoreLocalSCC())
+      {
+      aotCacheStore = entry->_useAotCacheCompilation &&
+                      compInfo->methodCanBeJITServerAOTCacheStored(compiler->signature(), compilee->convertToMethod()->methodType());
+      aotCacheLoad = persistentInfo->getJITServerUseAOTCache() &&
+                     !TR::CompilationInfo::isCompiled(method) &&
+                     !entry->_doNotLoadFromJITServerAOTCache &&
+                     compInfo->methodCanBeJITServerAOTCacheLoaded(compiler->signature(), compilee->convertToMethod()->methodType());
+      }
+   else
+      {
+      aotCacheStore = useAotCompilation && persistentInfo->getJITServerUseAOTCache() &&
+                      compInfo->methodCanBeJITServerAOTCacheStored(compiler->signature(), compilee->convertToMethod()->methodType());
+      aotCacheLoad = aotCacheStore && !entry->_doNotLoadFromJITServerAOTCache &&
+                     compInfo->methodCanBeJITServerAOTCacheLoaded(compiler->signature(), compilee->convertToMethod()->methodType());
+      }
    auto deserializer = compInfo->getJITServerAOTDeserializer();
    if (!aotCacheLoad && deserializer)
       deserializer->incNumCacheBypasses();

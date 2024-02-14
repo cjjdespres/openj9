@@ -7971,6 +7971,9 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
          {
          if (TR::Options::getAOTCmdLineOptions()->getOption(TR_ForceAOT) || entry->isOutOfProcessCompReq())
             {
+#if defined(J9VM_OPT_JITSERVER)
+            entry->_useAotCacheCompilation = true;
+#endif /* defined(J9VM_OPT_JITSERVER)*/
             canDoRelocatableCompile = true;
             }
          else // Use AOT heuristics
