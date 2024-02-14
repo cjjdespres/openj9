@@ -3570,6 +3570,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
       }
    catch (const J9::AOTCacheDeserializationFailure &e)
       {
+      entry->_doNotLoadFromJITServerAOTCache = true;
       throw;
       }
    catch (...)
