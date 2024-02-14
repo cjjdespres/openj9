@@ -1341,15 +1341,15 @@ TR_ResolvedJ9JITServerMethod::getCallerWeight(TR_ResolvedJ9Method *caller, uint3
    }
 
 void
-TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory, bool useServerOffsets)
+TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory, bool ignoringLocalSCC)
    {
    // Create resolved method mirror on the client.
    // Should be called to mirror a call to resolved method constructor,
    // will work when method doesn't have an owning method (compilee method).
    // Resolved method should not be NULL
    TR_ResolvedJ9Method *resolvedMethod = NULL;
-   if (((TR_J9VMBase *) fe)->isAOT_DEPRECATED_DO_NOT_USE() || useServerOffsets)
-      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedRelocatableJ9Method(method, fe, trMemory, useServerOffsets, owningMethod, vTableSlot);
+   if (((TR_J9VMBase *) fe)->isAOT_DEPRECATED_DO_NOT_USE() || ignoringLocalSCC)
+      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedRelocatableJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
    else
       resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
    if (!resolvedMethod) throw std::bad_alloc();
@@ -1358,7 +1358,7 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(TR_ResolvedJ9JITServerM
    }
 
 void
-TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory, bool useServerOffsets)
+TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory)
    {
    // Create resolved method mirror on the client.
    // Should be called to mirror a call to TR_Resolved(Relocatable)MethodFromJ9Method::createResolvedMethodFromJ9Method.
@@ -1372,7 +1372,8 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
    // Maybe we should make it public, but that would require changing baseline.
    // For now, I'll have to do with mostly copy-pasting code from that method.
    TR_J9VMBase *fej9 = (TR_J9VMBase *) fe;
-   if (fej9->isAOT_DEPRECATED_DO_NOT_USE() || useServerOffsets)
+   TR::Compilation *comp = TR::comp();
+   if (fej9->isAOT_DEPRECATED_DO_NOT_USE() || comp->ignoringLocalSCC())
       {
       // Do the same thing createResolvedMethodFromJ9Method does, but without collecting stats
       TR::Compilation *comp = TR::comp();
@@ -1393,7 +1394,7 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
             isSystemClassLoader = ((void*)fej9->vmThread()->javaVM->systemClassLoader->classLoaderObject ==  (void*)fej9->getClassLoader(clazzOfInlinedMethod));
             }
 
-         if (useServerOffsets || fej9->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method)))
+         if (comp->ignoringLocalSCC() || fej9->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method)))
             {
             bool sameLoaders = false;
             TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
@@ -1401,7 +1402,7 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
                 (sameLoaders = fej9->sameClassLoaders(clazzOfInlinedMethod, clazzOfCompiledMethod)) ||
                 isSystemClassLoader)
                {
-               resolvedMethod = new (comp->trHeapMemory()) TR_ResolvedRelocatableJ9Method((TR_OpaqueMethodBlock *) j9method, fe, comp->trMemory(), useServerOffsets, owningMethod, vTableSlot);
+               resolvedMethod = new (comp->trHeapMemory()) TR_ResolvedRelocatableJ9Method((TR_OpaqueMethodBlock *) j9method, fe, comp->trMemory(), owningMethod, vTableSlot);
                if (!resolvedMethod) throw std::bad_alloc();
                }
             }

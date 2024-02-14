@@ -412,7 +412,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          for (int i = 0; i < numMethods; ++i)
             {
             TR_ResolvedJ9JITServerMethodInfo methodInfo;
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, (TR_OpaqueMethodBlock *) &(methods[i]), 0, 0, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, (TR_OpaqueMethodBlock *) &(methods[i]), 0, 0, fe, trMemory, comp->ignoringLocalSCC());
             methodsInfo.push_back(methodInfo);
             }
          client->write(response, methods, methodsInfo);
@@ -1238,7 +1238,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          bool useServerOffsets = std::get<4>(recv);
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          // if in AOT mode, create a relocatable method mirror
-         TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, method, vTableSlot, owningMethod, fe, trMemory, useServerOffsets);
+         TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, method, vTableSlot, owningMethod, fe, trMemory, comp->ignoringLocalSCC());
 
          client->write(response, methodInfo);
          }
@@ -1342,7 +1342,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (ramMethod)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory);
 
          client->write(response, ramMethod, methodInfo, unresolvedInCP);
          }
@@ -1363,7 +1363,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             ramMethod = jitResolveSpecialMethodRef(fe->vmThread(), method->cp(), cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
 
             if (ramMethod)
-               TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory, useServerOffsets);
+               TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory);
             }
 
          client->write(response, ramMethod, methodInfo);
@@ -1414,7 +1414,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             TR_OpaqueMethodBlock *method = (TR_OpaqueMethodBlock *) ramMethod;
 
             TR_ResolvedJ9JITServerMethodInfo methodInfo;
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, (uint32_t) vTableIndex, owningMethod, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, (uint32_t) vTableIndex, owningMethod, fe, trMemory);
 
             client->write(response, ramMethod, vTableIndex, unresolvedInCP, methodInfo);
             }
@@ -1435,7 +1435,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          TR_OpaqueMethodBlock *ramMethod = fe->getResolvedVirtualMethod(clazz, offset, ignoreRTResolve);
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (ramMethod)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, ramMethod, 0, owningMethod, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, ramMethod, 0, owningMethod, fe, trMemory, comp->ignoringLocalSCC());
          client->write(response, ramMethod, methodInfo);
          }
          break;
@@ -1505,7 +1505,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (resolved)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, owningMethod, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, owningMethod, fe, trMemory);
 
          client->write(response, resolved, ramMethod, methodInfo);
          }
@@ -1535,7 +1535,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (j9method)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, (uint32_t)vtableOffset, mirror, fe, trMemory, useServerOffsets);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, (uint32_t)vtableOffset, mirror, fe, trMemory);
 
          client->write(response, j9method, methodInfo, vtableOffset);
          }
@@ -1911,7 +1911,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
 
          // Create mirror, if possible
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
-         TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, vTableSlot, mirror, fe, trMemory, useServerOffsets);
+         TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, vTableSlot, mirror, fe, trMemory);
 
          // Collect AOT stats
          TR_ResolvedJ9Method *resolvedMethod = std::get<0>(methodInfo).remoteMirror;
@@ -3223,6 +3223,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
       ramClassChain = JITServerHelpers::getRAMClassChain(clazz, numClasses, vmThread, compiler->trMemory(),
                                                          compInfo, uncachedRAMClasses, uncachedClassInfos);
       }
+   compiler->setIgnoringLocalSCC(aotCacheStore && compiler->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC());
 
    // This thread may have been notified at some point in the past that the deserializer was reset.
    // Since this is the start of a new compilation, we must clear the reset flag in order to detect

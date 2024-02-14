@@ -372,6 +372,9 @@ class OMR_EXTENSIBLE Compilation : public OMR::CompilationConnector
    bool isAOTCacheStore() const { return _aotCacheStore; }
    void setAOTCacheStore(bool store) { _aotCacheStore = store; }
 
+   bool ignoringLocalSCC() const { return _ignoringLocalSCC; }
+   void setIgnoringLocalSCC(bool ignoringLocalSCC) { _ignoringLocalSCC = ignoringLocalSCC; }
+
    Vector<std::pair<const AOTCacheRecord *, uintptr_t>> &getSerializationRecords() { return _serializationRecords; }
    // Adds an AOT cache record and the corresponding offset into AOT relocation data to the list that
    // will be used when the result of this out-of-process compilation is serialized and stored in
@@ -511,6 +514,9 @@ private:
    // resulted in a successful AOT cache store at the server and subsequent deserialization
    // at the client
    bool _aotCacheStore;
+   // True at the client if the compilation is to be stored in the AOT cache at the server and the
+   // client is ignoring the local SCC; false at the server.
+   bool _ignoringLocalSCC;
    // List of AOT cache records and corresponding offsets into AOT relocation data that will
    // be used to store the result of this compilation in AOT cache; always empty at the client
    Vector<std::pair<const AOTCacheRecord *, uintptr_t>> _serializationRecords;
