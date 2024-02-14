@@ -58,14 +58,14 @@ TR_ResolvedJ9JITServerMethod::TR_ResolvedJ9JITServerMethod(TR_OpaqueMethodBlock 
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
    TR::CompilationInfo *compInfo = TR::CompilationInfo::get(fej9->getJ9JITConfig());
    TR::CompilationInfoPerThread *threadCompInfo = compInfo->getCompInfoForThread(fej9->vmThread());
-   _stream = threadCompInfo->getMethodBeingCompiled()->_stream;
+   TR_MethodToBeCompiled *entry = threadCompInfo->getMethodBeingCompiled();
+   _stream = entry->_stream;
 
    // Create client side mirror of this object to use for calls involving RAM data
    TR_ResolvedJ9Method* owningMethodMirror = owningMethod ? ((TR_ResolvedJ9JITServerMethod*) owningMethod)->_remoteMirror : NULL;
 
    // If in AOT mode, will actually create relocatable version of resolved method on the client
-   TR::Compilation *comp = threadCompInfo->getCompilation();
-   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+   bool useServerOffsets = entry->_useAotCacheCompilation && threadCompInfo->getClientData()->useServerOffsets(_stream);
    _stream->write(JITServer::MessageType::mirrorResolvedJ9Method, aMethod, owningMethodMirror, vTableSlot, fej9->isAOT_DEPRECATED_DO_NOT_USE(), useServerOffsets);
    auto recv = _stream->read<TR_ResolvedJ9JITServerMethodInfo>();
    auto &methodInfo = std::get<0>(recv);
