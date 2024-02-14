@@ -1260,6 +1260,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          int32_t cpIndex = std::get<1>(recv);
          int32_t isStore = std::get<2>(recv);
          int32_t needAOTValidation = std::get<3>(recv);
+         needAOTValidation = needAOTValidation && !comp->ignoringLocalSCC();
          void *address;
          TR::DataType type = TR::NoType;
          bool volatileP = true;
@@ -1313,6 +1314,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          I_32 cpIndex = std::get<1>(recv);
          bool isStore = std::get<2>(recv);
          bool needAOTValidation = std::get<3>(recv);
+         needAOTValidation = needAOTValidation && !comp->ignoringLocalSCC();
          U_32 fieldOffset;
          TR::DataType type = TR::NoType;
          bool volatileP = true;
@@ -1945,6 +1947,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          I_32 cpIndex = std::get<1>(recv);
          bool isStore = std::get<2>(recv);
          bool needAOTValidation = std::get<3>(recv);
+         needAOTValidation = needAOTValidation && !comp->ignoringLocalSCC();
          U_32 fieldOffset;
          TR::DataType type = TR::NoType;
          bool volatileP = true;
@@ -1968,6 +1971,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          int32_t cpIndex = std::get<1>(recv);
          int32_t isStore = std::get<2>(recv);
          int32_t needAOTValidation = std::get<3>(recv);
+         needAOTValidation = needAOTValidation && !comp->ignoringLocalSCC();
          void *address;
          TR::DataType type = TR::NoType;
          bool volatileP = true;
