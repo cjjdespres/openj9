@@ -1351,6 +1351,13 @@ TR_ResolvedRelocatableJ9Method::storeValidationRecordIfNecessary(TR::Compilation
    TR_AOTStats *aotStats = ((TR_JitPrivateConfig *)fej9->_jitConfig->privateConfig)->aotStats;
    bool isStatic = false;
 
+#if defined(J9VM_OPT_JITSERVER)
+   // If this compilation is tied to a remote compilation that is ignoring the client's SCC, none of the below is necessary, as
+   // all of it will be done at the server.
+   if (comp->ignoringLocalSCC())
+      return true;
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
    TR::CompilationInfo *compInfo = TR::CompilationInfo::get(fej9->_jitConfig);
 
    isStatic = (reloKind == TR_ValidateStaticField);
