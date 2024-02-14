@@ -568,6 +568,10 @@ class TR_ResolvedRelocatableJ9Method : public TR_ResolvedJ9Method
 public:
    TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBlock * aMethod, TR_FrontEnd *, TR_Memory *, TR_ResolvedMethod * owningMethod = 0, uint32_t vTableSlot = 0);
 
+#if defined(J9VM_OPT_JITSERVER)
+   TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBlock * aMethod, TR_FrontEnd *, TR_Memory *, bool useServerOffsets, TR_ResolvedMethod * owningMethod = 0, uint32_t vTableSlot = 0);
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
    virtual TR::Method *            convertToMethod();
 
    virtual void *                  constantPool();

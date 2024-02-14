@@ -64,7 +64,9 @@ TR_ResolvedJ9JITServerMethod::TR_ResolvedJ9JITServerMethod(TR_OpaqueMethodBlock 
    TR_ResolvedJ9Method* owningMethodMirror = owningMethod ? ((TR_ResolvedJ9JITServerMethod*) owningMethod)->_remoteMirror : NULL;
 
    // If in AOT mode, will actually create relocatable version of resolved method on the client
-   _stream->write(JITServer::MessageType::mirrorResolvedJ9Method, aMethod, owningMethodMirror, vTableSlot, fej9->isAOT_DEPRECATED_DO_NOT_USE());
+   TR::Compilation *comp = threadCompInfo->getCompilation();
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+   _stream->write(JITServer::MessageType::mirrorResolvedJ9Method, aMethod, owningMethodMirror, vTableSlot, fej9->isAOT_DEPRECATED_DO_NOT_USE(), useServerOffsets);
    auto recv = _stream->read<TR_ResolvedJ9JITServerMethodInfo>();
    auto &methodInfo = std::get<0>(recv);
 
@@ -358,7 +360,8 @@ TR_ResolvedJ9JITServerMethod::getResolvedPossiblyPrivateVirtualMethod(TR::Compil
          return resolvedMethod;
          }
 
-      _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedPossiblyPrivateVirtualMethodAndMirror, (TR_ResolvedMethod *) _remoteMirror, literals(), cpIndex);
+      bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+      _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedPossiblyPrivateVirtualMethodAndMirror, (TR_ResolvedMethod *) _remoteMirror, literals(), cpIndex, useServerOffsets);
       auto recv = _stream->read<J9Method *, UDATA, bool, TR_ResolvedJ9JITServerMethodInfo>();
       J9Method *ramMethod = std::get<0>(recv);
       UDATA vTableIndex = std::get<1>(recv);
@@ -647,7 +650,8 @@ TR_ResolvedJ9JITServerMethod::getResolvedStaticMethod(TR::Compilation * comp, I_
       return resolvedMethod;
       }
 
-   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedStaticMethodAndMirror, _remoteMirror, cpIndex);
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedStaticMethodAndMirror, _remoteMirror, cpIndex, useServerOffsets);
    auto recv = _stream->read<J9Method *, TR_ResolvedJ9JITServerMethodInfo, bool>();
    J9Method * ramMethod = std::get<0>(recv);
    bool isUnresolvedInCP = std::get<2>(recv);
@@ -722,7 +726,8 @@ TR_ResolvedJ9JITServerMethod::getResolvedSpecialMethod(TR::Compilation * comp, I
    if (unresolvedInCP)
       *unresolvedInCP = true;
 
-   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedSpecialMethodAndMirror, _remoteMirror, cpIndex);
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedSpecialMethodAndMirror, _remoteMirror, cpIndex, useServerOffsets);
    auto recv = _stream->read<J9Method *, TR_ResolvedJ9JITServerMethodInfo>();
    J9Method * ramMethod = std::get<0>(recv);
    auto &methodInfo = std::get<1>(recv);
@@ -838,7 +843,8 @@ TR_ResolvedJ9JITServerMethod::getResolvedInterfaceMethod(TR::Compilation * comp,
    if (compInfoPT->getCachedResolvedMethod(compInfoPT->getResolvedMethodKey(TR_ResolvedMethodType::Interface, clazz, cpIndex, classObject), this, &resolvedMethod))
       return resolvedMethod;
 
-   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedInterfaceMethodAndMirror_3, getPersistentIdentifier(), classObject, cpIndex, _remoteMirror);
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
+   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedInterfaceMethodAndMirror_3, getPersistentIdentifier(), classObject, cpIndex, _remoteMirror, useServerOffsets);
    auto recv = _stream->read<bool, J9Method*, TR_ResolvedJ9JITServerMethodInfo>();
    bool resolved = std::get<0>(recv);
    J9Method *ramMethod = std::get<1>(recv);
@@ -919,8 +925,9 @@ TR_ResolvedJ9JITServerMethod::getResolvedImproperInterfaceMethod(TR::Compilation
       if (compInfoPT->getCachedResolvedMethod(compInfoPT->getResolvedMethodKey(TR_ResolvedMethodType::ImproperInterface, (TR_OpaqueClassBlock *) _ramClass, cpIndex), this, &resolvedMethod))
          return resolvedMethod;
 
+      bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
       // query for resolved method and create its mirror at the same time
-      _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedImproperInterfaceMethodAndMirror, _remoteMirror, cpIndex);
+      _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedImproperInterfaceMethodAndMirror, _remoteMirror, cpIndex, useServerOffsets);
       auto recv = _stream->read<J9Method *, TR_ResolvedJ9JITServerMethodInfo, UDATA>();
       auto j9method = std::get<0>(recv);
       auto &methodInfo = std::get<1>(recv);
@@ -975,8 +982,9 @@ TR_ResolvedJ9JITServerMethod::getResolvedVirtualMethod(TR::Compilation * comp, T
    if (compInfoPT->getCachedResolvedMethod(compInfoPT->getResolvedMethodKey(TR_ResolvedMethodType::VirtualFromOffset, clazz, virtualCallOffset, classObject), this, &resolvedMethod))
       return resolvedMethod;
 
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
    // Remote call finds RAM method at offset and creates a resolved method at the client
-   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedVirtualMethod, classObject, virtualCallOffset, ignoreRtResolve, (TR_ResolvedJ9Method *) getRemoteMirror());
+   _stream->write(JITServer::MessageType::ResolvedMethod_getResolvedVirtualMethod, classObject, virtualCallOffset, ignoreRtResolve, (TR_ResolvedJ9Method *) getRemoteMirror(), useServerOffsets);
    auto recv = _stream->read<TR_OpaqueMethodBlock *, TR_ResolvedJ9JITServerMethodInfo>();
    auto ramMethod = std::get<0>(recv);
    auto &methodInfo = std::get<1>(recv);
@@ -1333,24 +1341,24 @@ TR_ResolvedJ9JITServerMethod::getCallerWeight(TR_ResolvedJ9Method *caller, uint3
    }
 
 void
-TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory)
+TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory, bool useServerOffsets)
    {
    // Create resolved method mirror on the client.
    // Should be called to mirror a call to resolved method constructor,
    // will work when method doesn't have an owning method (compilee method).
    // Resolved method should not be NULL
    TR_ResolvedJ9Method *resolvedMethod = NULL;
-   if (!((TR_J9VMBase *) fe)->isAOT_DEPRECATED_DO_NOT_USE())
-      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
+   if (((TR_J9VMBase *) fe)->isAOT_DEPRECATED_DO_NOT_USE() || useServerOffsets)
+      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedRelocatableJ9Method(method, fe, trMemory, useServerOffsets, owningMethod, vTableSlot);
    else
-      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedRelocatableJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
+      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
    if (!resolvedMethod) throw std::bad_alloc();
 
    packMethodInfo(methodInfo, resolvedMethod, fe);
    }
 
 void
-TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory)
+TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_ResolvedJ9JITServerMethodInfo &methodInfo, TR_OpaqueMethodBlock *method, uint32_t vTableSlot, TR_ResolvedMethod *owningMethod, TR_FrontEnd *fe, TR_Memory *trMemory, bool useServerOffsets)
    {
    // Create resolved method mirror on the client.
    // Should be called to mirror a call to TR_Resolved(Relocatable)MethodFromJ9Method::createResolvedMethodFromJ9Method.
@@ -1364,12 +1372,7 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
    // Maybe we should make it public, but that would require changing baseline.
    // For now, I'll have to do with mostly copy-pasting code from that method.
    TR_J9VMBase *fej9 = (TR_J9VMBase *) fe;
-   if (!fej9->isAOT_DEPRECATED_DO_NOT_USE())
-      {
-      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
-      if (!resolvedMethod) throw std::bad_alloc();
-      }
-   else
+   if (fej9->isAOT_DEPRECATED_DO_NOT_USE() || useServerOffsets)
       {
       // Do the same thing createResolvedMethodFromJ9Method does, but without collecting stats
       TR::Compilation *comp = TR::comp();
@@ -1390,7 +1393,7 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
             isSystemClassLoader = ((void*)fej9->vmThread()->javaVM->systemClassLoader->classLoaderObject ==  (void*)fej9->getClassLoader(clazzOfInlinedMethod));
             }
 
-         if (fej9->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method)))
+         if (useServerOffsets || fej9->sharedCache()->isClassInSharedCache(J9_CLASS_FROM_METHOD(j9method)))
             {
             bool sameLoaders = false;
             TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
@@ -1398,13 +1401,18 @@ TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(TR_Resolved
                 (sameLoaders = fej9->sameClassLoaders(clazzOfInlinedMethod, clazzOfCompiledMethod)) ||
                 isSystemClassLoader)
                {
-               resolvedMethod = new (comp->trHeapMemory()) TR_ResolvedRelocatableJ9Method((TR_OpaqueMethodBlock *) j9method, fe, comp->trMemory(), owningMethod, vTableSlot);
+               resolvedMethod = new (comp->trHeapMemory()) TR_ResolvedRelocatableJ9Method((TR_OpaqueMethodBlock *) j9method, fe, comp->trMemory(), useServerOffsets, owningMethod, vTableSlot);
                if (!resolvedMethod) throw std::bad_alloc();
                }
             }
          }
 
 #endif
+      }
+   else
+      {
+      resolvedMethod = new (trMemory->trHeapMemory()) TR_ResolvedJ9Method(method, fe, trMemory, owningMethod, vTableSlot);
+      if (!resolvedMethod) throw std::bad_alloc();
       }
 
    packMethodInfo(methodInfo, resolvedMethod, fe);
@@ -2151,9 +2159,10 @@ TR_ResolvedRelocatableJ9JITServerMethod::createResolvedMethodFromJ9Method(TR::Co
    if (dontInline)
       return NULL;
 
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(_stream);
    // This message will create a remote mirror.
    // Calling constructor would be simpler, but we would have to make another message to update stats
-   _stream->write(JITServer::MessageType::ResolvedRelocatableMethod_createResolvedRelocatableJ9Method, getRemoteMirror(), j9method, cpIndex, vTableSlot);
+   _stream->write(JITServer::MessageType::ResolvedRelocatableMethod_createResolvedRelocatableJ9Method, getRemoteMirror(), j9method, cpIndex, vTableSlot, useServerOffsets);
    auto recv = _stream->read<TR_ResolvedJ9JITServerMethodInfo, bool, bool, bool>();
    auto &methodInfo = std::get<0>(recv);
    // These parameters are only needed to update AOT stats.

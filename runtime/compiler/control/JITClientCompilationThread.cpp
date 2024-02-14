@@ -400,7 +400,9 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::VM_getResolvedMethodsAndMirror:
          {
-         TR_OpaqueClassBlock *clazz = std::get<0>(client->getRecvData<TR_OpaqueClassBlock *>());
+         auto recv = client->getRecvData<TR_OpaqueClassBlock *, bool>();
+         TR_OpaqueClassBlock *clazz = std::get<0>(recv);
+         bool useServerOffsets = std::get<1>(recv);
          uint32_t numMethods = fe->getNumMethods(clazz);
          J9Method *methods = (J9Method *) fe->getMethods(clazz);
 
@@ -410,7 +412,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          for (int i = 0; i < numMethods; ++i)
             {
             TR_ResolvedJ9JITServerMethodInfo methodInfo;
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, (TR_OpaqueMethodBlock *) &(methods[i]), 0, 0, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, (TR_OpaqueMethodBlock *) &(methods[i]), 0, 0, fe, trMemory, useServerOffsets);
             methodsInfo.push_back(methodInfo);
             }
          client->write(response, methods, methodsInfo);
@@ -1228,14 +1230,15 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          {
          // allocate a new TR_ResolvedJ9Method on the heap, to be used as a mirror for performing actions which are only
          // easily done on the client side.
-         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_ResolvedJ9Method *, uint32_t, bool>();
+         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_ResolvedJ9Method *, uint32_t, bool, bool>();
          TR_OpaqueMethodBlock *method = std::get<0>(recv);
          auto *owningMethod = std::get<1>(recv);
          uint32_t vTableSlot = std::get<2>(recv);
          bool isAOT = std::get<3>(recv);
+         bool useServerOffsets = std::get<4>(recv);
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          // if in AOT mode, create a relocatable method mirror
-         TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, method, vTableSlot, owningMethod, fe, trMemory);
+         TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, method, vTableSlot, owningMethod, fe, trMemory, useServerOffsets);
 
          client->write(response, methodInfo);
          }
@@ -1323,9 +1326,10 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::ResolvedMethod_getResolvedStaticMethodAndMirror:
          {
-         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32>();
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32, bool>();
          auto *method = std::get<0>(recv);
          int32_t cpIndex = std::get<1>(recv);
+         bool useServerOffsets = std::get<2>(recv);
          bool unresolvedInCP;
          J9Method *ramMethod = jitGetJ9MethodUsingIndex(fe->vmThread(), method->cp(), cpIndex);
          unresolvedInCP = !ramMethod || !J9_BYTECODE_START_FROM_RAM_METHOD(ramMethod);
@@ -1338,16 +1342,17 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (ramMethod)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory, useServerOffsets);
 
          client->write(response, ramMethod, methodInfo, unresolvedInCP);
          }
          break;
       case MessageType::ResolvedMethod_getResolvedSpecialMethodAndMirror:
          {
-         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32>();
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32, bool>();
          TR_ResolvedJ9Method *method = std::get<0>(recv);
          int32_t cpIndex = std::get<1>(recv);
+         bool useServerOffsets = std::get<2>(recv);
          J9Method *ramMethod = NULL;
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (!((fe->_jitConfig->runtimeFlags & J9JIT_RUNTIME_RESOLVE) &&
@@ -1358,7 +1363,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             ramMethod = jitResolveSpecialMethodRef(fe->vmThread(), method->cp(), cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
 
             if (ramMethod)
-               TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory);
+               TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, method, fe, trMemory, useServerOffsets);
             }
 
          client->write(response, ramMethod, methodInfo);
@@ -1373,11 +1378,12 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
       case MessageType::ResolvedMethod_getResolvedPossiblyPrivateVirtualMethodAndMirror:
          {
          // 1. Resolve method
-         auto recv = client->getRecvData<TR_ResolvedMethod *, J9RAMConstantPoolItem *, I_32>();
+         auto recv = client->getRecvData<TR_ResolvedMethod *, J9RAMConstantPoolItem *, I_32, bool>();
          auto *owningMethod = std::get<0>(recv);
          auto literals = std::get<1>(recv);
          J9ConstantPool *cp = (J9ConstantPool*)literals;
          I_32 cpIndex = std::get<2>(recv);
+         bool useServerOffsets = std::get<3>(recv);
          bool unresolvedInCP = true;
 
          // Only call the resolve if unresolved
@@ -1408,7 +1414,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             TR_OpaqueMethodBlock *method = (TR_OpaqueMethodBlock *) ramMethod;
 
             TR_ResolvedJ9JITServerMethodInfo methodInfo;
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, (uint32_t) vTableIndex, owningMethod, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, (uint32_t) vTableIndex, owningMethod, fe, trMemory, useServerOffsets);
 
             client->write(response, ramMethod, vTableIndex, unresolvedInCP, methodInfo);
             }
@@ -1420,15 +1426,16 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::ResolvedMethod_getResolvedVirtualMethod:
          {
-         auto recv = client->getRecvData<TR_OpaqueClassBlock *, I_32, bool, TR_ResolvedJ9Method *>();
+         auto recv = client->getRecvData<TR_OpaqueClassBlock *, I_32, bool, TR_ResolvedJ9Method *, bool>();
          auto clazz = std::get<0>(recv);
          auto offset = std::get<1>(recv);
          auto ignoreRTResolve = std::get<2>(recv);
          auto owningMethod = std::get<3>(recv);
+         auto useServerOffsets = std::get<4>(recv);
          TR_OpaqueMethodBlock *ramMethod = fe->getResolvedVirtualMethod(clazz, offset, ignoreRTResolve);
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (ramMethod)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, ramMethod, 0, owningMethod, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, ramMethod, 0, owningMethod, fe, trMemory, useServerOffsets);
          client->write(response, ramMethod, methodInfo);
          }
          break;
@@ -1486,18 +1493,19 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::ResolvedMethod_getResolvedInterfaceMethodAndMirror_3:
          {
-         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_OpaqueClassBlock *, I_32, TR_ResolvedJ9Method *>();
+         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_OpaqueClassBlock *, I_32, TR_ResolvedJ9Method *, bool>();
          auto method = std::get<0>(recv);
          auto clazz = std::get<1>(recv);
          auto cpIndex = std::get<2>(recv);
          auto owningMethod = std::get<3>(recv);
+         bool useServerOffsets = std::get<4>(recv);
          J9Method * ramMethod = (J9Method *)fe->getResolvedInterfaceMethod(method, clazz, cpIndex);
          bool resolved = ramMethod && J9_BYTECODE_START_FROM_RAM_METHOD(ramMethod);
 
          // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (resolved)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, owningMethod, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) ramMethod, 0, owningMethod, fe, trMemory, useServerOffsets);
 
          client->write(response, resolved, ramMethod, methodInfo);
          }
@@ -1514,9 +1522,10 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::ResolvedMethod_getResolvedImproperInterfaceMethodAndMirror:
          {
-         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32>();
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, I_32, bool>();
          auto mirror = std::get<0>(recv);
          auto cpIndex = std::get<1>(recv);
+         bool useServerOffsets = std::get<2>(recv);
          UDATA vtableOffset = 0;
          J9Method *j9method = NULL;
             {
@@ -1526,7 +1535,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          // Create a mirror right away
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          if (j9method)
-            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, (uint32_t)vtableOffset, mirror, fe, trMemory);
+            TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, (uint32_t)vtableOffset, mirror, fe, trMemory, useServerOffsets);
 
          client->write(response, j9method, methodInfo, vtableOffset);
          }
@@ -1889,11 +1898,12 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          break;
       case MessageType::ResolvedRelocatableMethod_createResolvedRelocatableJ9Method:
          {
-         auto recv = client->getRecvData<TR_ResolvedJ9Method *, J9Method *, int32_t, uint32_t>();
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, J9Method *, int32_t, uint32_t, bool>();
          auto mirror = std::get<0>(recv);
          auto j9method = std::get<1>(recv);
          auto cpIndex = std::get<2>(recv);
          auto vTableSlot = std::get<3>(recv);
+         auto useServerOffsets = std::get<4>(recv);
 
          bool sameLoaders = false;
          bool sameClass = false;
@@ -1901,7 +1911,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
 
          // Create mirror, if possible
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
-         TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, vTableSlot, mirror, fe, trMemory);
+         TR_ResolvedJ9JITServerMethod::createResolvedMethodFromJ9MethodMirror(methodInfo, (TR_OpaqueMethodBlock *) j9method, vTableSlot, mirror, fe, trMemory, useServerOffsets);
 
          // Collect AOT stats
          TR_ResolvedJ9Method *resolvedMethod = std::get<0>(methodInfo).remoteMirror;

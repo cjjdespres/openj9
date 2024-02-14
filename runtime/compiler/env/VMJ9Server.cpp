@@ -40,7 +40,9 @@ void
 TR_J9ServerVM::getResolvedMethodsAndMethods(TR_Memory *trMemory, TR_OpaqueClassBlock *classPointer, List<TR_ResolvedMethod> *resolvedMethodsInClass, J9Method **methods, uint32_t *numMethods)
    {
    JITServer::ServerStream *stream = _compInfoPT->getMethodBeingCompiled()->_stream;
-   stream->write(JITServer::MessageType::VM_getResolvedMethodsAndMirror, classPointer);
+   TR::Compilation *comp = _compInfoPT->getCompilation();
+   bool useServerOffsets = comp->isAOTCacheStore() && comp->getClientData()->useServerOffsets(stream);
+   stream->write(JITServer::MessageType::VM_getResolvedMethodsAndMirror, classPointer, useServerOffsets);
    auto recv = stream->read<J9Method *, std::vector<TR_ResolvedJ9JITServerMethodInfo>>();
    auto methodsInClass = std::get<0>(recv);
    auto &methodsInfo = std::get<1>(recv);

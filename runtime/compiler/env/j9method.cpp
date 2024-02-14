@@ -1018,6 +1018,42 @@ TR_ResolvedRelocatableJ9Method::TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBl
 
    }
 
+#if defined(J9VM_OPT_JITSERVER)
+TR_ResolvedRelocatableJ9Method::TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBlock * aMethod, TR_FrontEnd * fe, TR_Memory * trMemory, bool useServerOffsets,
+                                                               TR_ResolvedMethod * owner, uint32_t vTableSlot)
+   : TR_ResolvedJ9Method(aMethod, fe, trMemory, owner, vTableSlot)
+   {
+   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
+   TR::Compilation *comp = TR::comp();
+   if (useServerOffsets)
+      {
+      return;
+      }
+   else if (comp && this->TR_ResolvedMethod::getRecognizedMethod() != TR::unknownMethod)
+      {
+      if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != fej9->sharedCache()->rememberClass(containingClass()))
+         {
+         if (comp->getOption(TR_UseSymbolValidationManager))
+            {
+            TR::SymbolValidationManager *svm = comp->getSymbolValidationManager();
+            SVM_ASSERT_ALREADY_VALIDATED(svm, aMethod);
+            SVM_ASSERT_ALREADY_VALIDATED(svm, containingClass());
+            }
+         else if (owner)
+            {
+            // JITServer: in baseline, if owner doesn't exist then comp doesn't exist, so thi case is not possible
+            // but in JITClient comp is initialized before creating resolved method for compilee, so need this guard.
+            ((TR_ResolvedRelocatableJ9Method *) owner)->validateArbitraryClass(comp, (J9Class*)containingClass());
+            }
+         }
+      else
+         {
+         setRecognizedMethod(TR::unknownMethod);
+         }
+      }
+   }
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
 int32_t
 TR_ResolvedRelocatableJ9Method::virtualCallSelector(U_32 cpIndex)
    {
