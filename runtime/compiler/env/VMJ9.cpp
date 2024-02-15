@@ -9333,7 +9333,13 @@ void *
 TR_J9SharedCacheVM::getJ2IThunk(char *signatureChars, uint32_t signatureLength, TR::Compilation *comp)
    {
    void *thunk = NULL;
-
+#if defined(J9VM_OPT_JITSERVER)
+   if (comp->ignoringLocalSCC())
+      {
+      TR::VMAccessCriticalSection getJ2IThunk(this);
+      void * result = j9ThunkLookupSignature(_jitConfig, signatureLength, signatureChars);
+      }
+#endif /* defined(J9VM_OPT_JITSERVER) */
 #if defined(J9VM_INTERP_AOT_COMPILE_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
    uintptr_t length;
    thunk = j9ThunkFindPersistentThunk(_jitConfig, signatureChars, signatureLength, &length);
