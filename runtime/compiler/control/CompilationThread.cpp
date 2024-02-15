@@ -8038,6 +8038,7 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
                          TR::CompilationInfo::getMethodBytecodeSize(method) >= TR::Options::_smallMethodBytecodeSizeThresholdForJITServerAOTCache)
                         {
                         entry->_useAotCacheCompilation = true;
+                        canDoRelocatableCompile = true;
                         }
                      }
                   }
