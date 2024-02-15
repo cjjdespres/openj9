@@ -9335,7 +9335,7 @@ TR_J9SharedCacheVM::getJ2IThunk(char *signatureChars, uint32_t signatureLength, 
    void *thunk = NULL;
 #if defined(J9VM_OPT_JITSERVER)
    if (comp->ignoringLocalSCC())
-      TR_J9VMBase::getJ2IThunk(signatureChars, signatureLength, comp);
+      return TR_J9VMBase::getJ2IThunk(signatureChars, signatureLength, comp);
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
 #if defined(J9VM_INTERP_AOT_COMPILE_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
@@ -9354,7 +9354,7 @@ TR_J9SharedCacheVM::setJ2IThunk(char *signatureChars, uint32_t signatureLength, 
 
 #if defined(J9VM_OPT_JITSERVER)
    if (comp->ignoringLocalSCC())
-      TR_J9VMBase::setJ2iThunk(signatureChars, signatureLength, thunkptr, comp);
+      return TR_J9VMBase::setJ2IThunk(signatureChars, signatureLength, thunkptr, comp);
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
 #if defined(J9VM_INTERP_AOT_COMPILE_SUPPORT) && defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
