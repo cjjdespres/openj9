@@ -222,7 +222,7 @@ TR_J9VMBase::createResolvedMethodWithSignature(TR_Memory * trMemory, TR_OpaqueMe
 #if defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
       TR::Compilation *comp = TR::comp();
 #if defined(J9VM_OPT_JITSERVER)
-      if (comp && comp->isAOTCacheStore())
+      if (_compInfoPT->getMethodBeingCompiled()->_useAotCacheCompilation)
          result = new (trMemory->trHeapMemory()) TR_ResolvedRelocatableJ9Method(aMethod, this, trMemory, owningMethod, vTableSlot);
       else
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -999,7 +999,7 @@ TR_ResolvedRelocatableJ9Method::TR_ResolvedRelocatableJ9Method(TR_OpaqueMethodBl
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe;
    TR::Compilation *comp = TR::comp();
 #if defined(J9VM_OPT_JITSERVER)
-   if (comp && comp->ignoringLocalSCC())
+   if (fej9->_compInfoPT->getMethodBeingCompiled()->_useAotCacheCompilation)
       {
       return;
       }

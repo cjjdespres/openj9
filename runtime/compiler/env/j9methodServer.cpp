@@ -65,8 +65,7 @@ TR_ResolvedJ9JITServerMethod::TR_ResolvedJ9JITServerMethod(TR_OpaqueMethodBlock 
    TR_ResolvedJ9Method* owningMethodMirror = owningMethod ? ((TR_ResolvedJ9JITServerMethod*) owningMethod)->_remoteMirror : NULL;
 
    // If in AOT mode, will actually create relocatable version of resolved method on the client
-   bool useServerOffsets = entry->_useAotCacheCompilation && threadCompInfo->getClientData()->useServerOffsets(_stream);
-   _stream->write(JITServer::MessageType::mirrorResolvedJ9Method, aMethod, owningMethodMirror, vTableSlot, fej9->isAOT_DEPRECATED_DO_NOT_USE(), useServerOffsets);
+   _stream->write(JITServer::MessageType::mirrorResolvedJ9Method, aMethod, owningMethodMirror, vTableSlot, fej9->isAOT_DEPRECATED_DO_NOT_USE());
    auto recv = _stream->read<TR_ResolvedJ9JITServerMethodInfo>();
    auto &methodInfo = std::get<0>(recv);
 

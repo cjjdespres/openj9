@@ -1230,12 +1230,11 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          {
          // allocate a new TR_ResolvedJ9Method on the heap, to be used as a mirror for performing actions which are only
          // easily done on the client side.
-         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_ResolvedJ9Method *, uint32_t, bool, bool>();
+         auto recv = client->getRecvData<TR_OpaqueMethodBlock *, TR_ResolvedJ9Method *, uint32_t, bool>();
          TR_OpaqueMethodBlock *method = std::get<0>(recv);
          auto *owningMethod = std::get<1>(recv);
          uint32_t vTableSlot = std::get<2>(recv);
          bool isAOT = std::get<3>(recv);
-         bool useServerOffsets = std::get<4>(recv);
          TR_ResolvedJ9JITServerMethodInfo methodInfo;
          // if in AOT mode, create a relocatable method mirror
          TR_ResolvedJ9JITServerMethod::createResolvedMethodMirror(methodInfo, method, vTableSlot, owningMethod, fe, trMemory, comp->ignoringLocalSCC());

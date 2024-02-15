@@ -979,7 +979,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
             }
          }
       entry._useAotCompilation = entry._useAotCompilation || _aotCacheStore;
-      entry._useAotCacheCompilation = _aotCacheStore;
+      // entry._useAotCacheCompilation = _aotCacheStore;
 
       if (aotCacheLoad)
          aotCacheHit = serveCachedAOTMethod(entry, ramMethod, clazz, &clientOptPlan, clientSession, scratchSegmentProvider);
