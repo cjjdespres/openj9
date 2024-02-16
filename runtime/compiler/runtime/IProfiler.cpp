@@ -3116,19 +3116,28 @@ TR_IPBCDataCallGraph::createPersistentCopy(TR_J9SharedCache *sharedCache, TR_IPB
          {
          if (sharedCache->isClassInSharedCache(clazz))
             {
-            uintptr_t classChainOffset = sharedCache->rememberClass(clazz);
-            if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != classChainOffset)
+            uintptr_t *classChain = sharedCache->rememberClass(clazz);
+            if (classChain)
                {
-               store->_csInfo.setClazz(0, classChainOffset);
-               store->_csInfo._weight[0] = _csInfo._weight[indexMaxWeight];
-               // I need to find the chain of the first class loaded by the class loader of this RAMClass
-               // getClassChainOffsetIdentifyingLoader() fails the compilation if not found, hence we use a special implementation
-               uintptr_t classChainOffsetOfCLInSharedCache = sharedCache->getClassChainOffsetIdentifyingLoaderNoThrow(clazz);
-               // The chain that identifies the class loader is stored at index 1
-               store->_csInfo.setClazz(1, classChainOffsetOfCLInSharedCache);
-               if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffsetOfCLInSharedCache)
+               uintptr_t cacheOffset = 0;
+               if (sharedCache->isPointerInSharedCache(classChain, &cacheOffset))
+                  {
+                  store->_csInfo.setClazz(0, cacheOffset);
+                  store->_csInfo._weight[0] = _csInfo._weight[indexMaxWeight];
+                  // I need to find the chain of the first class loaded by the class loader of this RAMClass
+                  // getClassChainOffsetIdentifyingLoader() fails the compilation if not found, hence we use a special implementation
+                  uintptr_t classChainOffsetOfCLInSharedCache = sharedCache->getClassChainOffsetIdentifyingLoaderNoThrow(clazz);
+                  // The chain that identifies the class loader is stored at index 1
+                  store->_csInfo.setClazz(1, classChainOffsetOfCLInSharedCache);
+                  if (classChainOffsetOfCLInSharedCache == 0)
+                     if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseIProfilerPersistence))
+                        TR_VerboseLog::writeLineLocked(TR_Vlog_PERF, "createPersistentCopy: Cannot store CallGraphEntry because classChain identifying classloader is 0");
+                  }
+               else
+                  {
                   if (TR::Options::getCmdLineOptions()->getVerboseOption(TR_VerboseIProfilerPersistence))
-                     TR_VerboseLog::writeLineLocked(TR_Vlog_PERF, "createPersistentCopy: Cannot store CallGraphEntry because classChain identifying classloader is 0");
+                     TR_VerboseLog::writeLineLocked(TR_Vlog_PERF, "createPersistentCopy: Cannot store CallGraphEntry because of race condition while storing chain");
+                  }
                }
             else
                {

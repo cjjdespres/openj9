@@ -158,7 +158,7 @@ struct ClassValidationRecord : public SymbolValidationRecord
 struct ClassValidationRecordWithChain : public ClassValidationRecord
    {
    ClassValidationRecordWithChain(TR_ExternalRelocationTargetKind kind, TR_OpaqueClassBlock *clazz)
-      : ClassValidationRecord(kind), _class(clazz), _classChainOffset(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      : ClassValidationRecord(kind), _class(clazz), _classChain(NULL)
       {
 #if defined(J9VM_OPT_JITSERVER)
       _aotCacheClassChainRecord = NULL;
@@ -174,7 +174,7 @@ struct ClassValidationRecordWithChain : public ClassValidationRecord
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    TR_OpaqueClassBlock *_class;
-   uintptr_t _classChainOffset;
+   void *_classChain;
 #if defined(J9VM_OPT_JITSERVER)
    const AOTCacheClassChainRecord *_aotCacheClassChainRecord;
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -196,10 +196,10 @@ struct ClassByNameRecord : public ClassValidationRecordWithChain
 
 struct ProfiledClassRecord : public ClassValidationRecord
    {
-   ProfiledClassRecord(TR_OpaqueClassBlock *clazz, uintptr_t classChainOffset,
+   ProfiledClassRecord(TR_OpaqueClassBlock *clazz, void *classChain,
                        const AOTCacheClassChainRecord *aotCacheClassChainRecord = NULL)
       : ClassValidationRecord(TR_ValidateProfiledClass),
-        _class(clazz), _classChainOffset(classChainOffset)
+        _class(clazz), _classChain(classChain)
       {
 #if defined(J9VM_OPT_JITSERVER)
       _aotCacheClassChainRecord = aotCacheClassChainRecord;
@@ -216,7 +216,7 @@ struct ProfiledClassRecord : public ClassValidationRecord
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    TR_OpaqueClassBlock *_class;
-   uintptr_t _classChainOffset;
+   void *_classChain;
 #if defined(J9VM_OPT_JITSERVER)
    const AOTCacheClassChainRecord *_aotCacheClassChainRecord;
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -388,11 +388,11 @@ struct ConcreteSubClassFromClassRecord : public ClassValidationRecord
 
 struct ClassChainRecord : public SymbolValidationRecord
    {
-   ClassChainRecord(TR_OpaqueClassBlock *clazz, uintptr_t classChainOffset,
+   ClassChainRecord(TR_OpaqueClassBlock *clazz, void *classChain,
                     const AOTCacheClassChainRecord *aotCacheClassChainRecord = NULL)
       : SymbolValidationRecord(TR_ValidateClassChain),
         _class(clazz),
-        _classChainOffset(classChainOffset)
+        _classChain(classChain)
       {
 #if defined(J9VM_OPT_JITSERVER)
       _aotCacheClassChainRecord = aotCacheClassChainRecord;
@@ -409,7 +409,7 @@ struct ClassChainRecord : public SymbolValidationRecord
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    TR_OpaqueClassBlock *_class;
-   uintptr_t _classChainOffset;
+   void *_classChain;
 #if defined(J9VM_OPT_JITSERVER)
    const AOTCacheClassChainRecord *_aotCacheClassChainRecord;
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -887,7 +887,7 @@ private:
    struct ClassChainInfo
       {
       ClassChainInfo()
-         : _baseComponent(NULL), _baseComponentClassChainOffset(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET), _arrayDims(0)
+         : _baseComponent(NULL), _baseComponentClassChain(NULL), _arrayDims(0)
          {
 #if defined(J9VM_OPT_JITSERVER)
          _baseComponentAOTCacheClassChainRecord = NULL;
@@ -895,7 +895,7 @@ private:
          }
 
       TR_OpaqueClassBlock *_baseComponent;
-      uintptr_t _baseComponentClassChainOffset;
+      void *_baseComponentClassChain;
       int32_t _arrayDims;
 #if defined(J9VM_OPT_JITSERVER)
       const AOTCacheClassChainRecord *_baseComponentAOTCacheClassChainRecord;
