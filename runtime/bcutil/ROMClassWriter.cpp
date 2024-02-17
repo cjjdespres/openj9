@@ -341,7 +341,7 @@ ROMClassWriter::~ROMClassWriter()
 	_bufferManager->free(_methodNotes);
 }
 
-#define DECL(x, lit) UDATA oldCount = 0; Cursor *myCursor = (x); bool shouldWrite = (0 == strncmp((char *)_context->className(), (lit), sizeof(lit)));
+#define DECL(x, lit) UDATA oldCount = 0; Cursor *myCursor = (x); bool shouldWrite = _context->className() && (0 == strncmp((char *)_context->className(), (lit), sizeof(lit)));
 #define MARKBYTES()\
 	{\
 	UDATA newCount = myCursor->getCount();\
