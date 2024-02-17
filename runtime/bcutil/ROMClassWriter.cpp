@@ -341,6 +341,26 @@ ROMClassWriter::~ROMClassWriter()
 	_bufferManager->free(_methodNotes);
 }
 
+#define DECL(x, lit) UDATA oldCount = 0; Cursor *myCursor = (x); bool shouldWrite = (0 == strncmp((char *)_context->className(), (lit), sizeof(lit)));
+#define MARKBYTES()\
+	{\
+	UDATA newCount = myCursor->getCount();\
+	const char *line = __LINE__;\
+	const char *file = __FILE__;\
+	if (shouldWrite && (newCount > oldCount))\
+		{\
+		TR_VerboseLog::writeLineLocked(\
+			TR_Vlog_JITServer,\
+			"CHANGE: \t%zu\t%zu\t%s\t%s",\
+			oldCount,\
+			newCount - oldCount,\
+			__FILE__,\
+			__LINE__\
+			);\
+		oldCount = newCount;\
+		}\
+	}
+
 void
 ROMClassWriter::writeROMClass(Cursor *cursor,
 		Cursor *lineNumberCursor,
@@ -350,6 +370,7 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags,
 		MarkOrWrite markOrWrite)
 {
+	DECL(cursor, "java/util/concurrent/ConcurrentLinkedQueue");
 	bool markAndCountOnly = (MARK_AND_COUNT_ONLY== markOrWrite);
 	/*
 	 * Write the J9ROMClass structure (AKA Header).
@@ -441,39 +462,61 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 	/*
 	 * Write the rest of the contiguous portion of the ROMClass
 	 */
-
+	MARKBYTES();
 	cursor->setClassNameIndex((_classFileOracle->getClassNameIndex()));
 	writeConstantPool(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeFields(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeInterfaces(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeInnerClasses(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeEnclosedInnerClasses(cursor, markAndCountOnly);
+	MARKBYTES();
 #if JAVA_SPEC_VERSION >= 11
 	writeNestMembers(cursor, markAndCountOnly);
+	MARKBYTES();
 #endif /* JAVA_SPEC_VERSION >= 11 */
 	writeNameAndSignatureBlock(cursor);
+	MARKBYTES();
 	writeMethods(cursor, lineNumberCursor, variableInfoCursor, markAndCountOnly);
+	MARKBYTES();
 	writeConstantPoolShapeDescriptions(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeAnnotationInfo(cursor);
+	MARKBYTES();
 	writeSourceDebugExtension(cursor);
+	MARKBYTES();
 	writeRecordComponents(cursor, markAndCountOnly);
+	MARKBYTES();
 	writePermittedSubclasses(cursor, markAndCountOnly);
+	MARKBYTES();
 #if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
 	writeInjectedInterfaces(cursor, markAndCountOnly);
+	MARKBYTES();
 	writePreload(cursor, markAndCountOnly);
+	MARKBYTES();
 #endif /* J9VM_OPT_VALHALLA_VALUE_TYPES */
 #if defined(J9VM_OPT_VALHALLA_FLATTENABLE_VALUE_TYPES)
 	writeImplicitCreation(cursor, markAndCountOnly);
+	MARKBYTES();
 #endif /* defined(J9VM_OPT_VALHALLA_FLATTENABLE_VALUE_TYPES) */
 	writeOptionalInfo(cursor);
+	MARKBYTES();
 	writeCallSiteData(cursor, markAndCountOnly);
+	MARKBYTES();
 #if defined(J9VM_OPT_METHOD_HANDLE)
 	writeVarHandleMethodTypeLookupTable(cursor, markAndCountOnly);
+	MARKBYTES();
 #endif /* defined(J9VM_OPT_METHOD_HANDLE) */
 	writeStaticSplitTable(cursor, markAndCountOnly);
+	MARKBYTES();
 	writeSpecialSplitTable(cursor, markAndCountOnly);
+	MARKBYTES();
 	/* aligned to U_64 required by the shared classes */
 	cursor->padToAlignment(sizeof(U_64), Cursor::GENERIC);
+	MARKBYTES();
 
 	/*
 	 * Write UTF8s
