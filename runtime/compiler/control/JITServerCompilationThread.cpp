@@ -664,7 +664,7 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
          || !unloadedClasses.empty())
          && !serverDetails->isJitDumpMethod(); // if this is a JitDump recompilation, ignore any critical updates
 
-      if (useAotCompilation || aotCacheStore)
+      if (useAotCompilation)
          {
          _vm = TR_J9VMBase::get(_jitConfig, compThread, TR_J9VMBase::J9_SHARED_CACHE_SERVER_VM);
          }
