@@ -635,10 +635,19 @@ JITServerHelpers::packROMClass(J9ROMClass *romClass, TR_Memory *trMemory, TR_J9V
 
       if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(name), J9UTF8_LENGTH(name), "java/util/concurrent/atomic/AtomicBoolean"))
          {
-         fprintf(stderr, "MAP START\n");
+         size_t myPackedNonStringSize = OMR::alignNoCheck(ctx._preStringSize - ctx._segmentMap.removedDebugInfoSize(), sizeof(uint64_t));
+         size_t myPackedSize = OMR::alignNoCheck(packedNonStringSize + ctx._stringsSize, sizeof(uint64_t));
+
+         fprintf(stderr, "DATA:\n");
+         fprintf(stderr, "\tHeader size: %zu\n", sizeof(*romClass));
+         fprintf(stderr, "\tPrestring size: %zu\n", ctx._preStringSize);
+         fprintf(stderr, "\tString start: %zu\n", ctx._origUtf8SectionStart - ctx._origRomClassStart);
+         fprintf(stderr, "\tPacked non-string size: %zu\n", myPackedNonStringSize);
+         fprintf(stderr, "\tPacked size: %zu\n", myPackedSize);
+         fprintf(stderr, "\tMAP START\n");
          for (const auto &pair : ctx._segMap)
             {
-            fprintf(stderr, "\t%zu\t%s\n", pair.first, pair.second.data());
+            fprintf(stderr, "\t\t%zu\t%s\n", pair.first, pair.second.data());
             }
          }
       auto end = ctx._origUtf8SectionEnd ? ctx._origUtf8SectionEnd : classEnd;
