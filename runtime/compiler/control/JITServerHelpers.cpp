@@ -234,7 +234,7 @@ ROMClassPackContext::addSegVec(const uint8_t *addr, const char *name)
    if (!isInline(addr, (const J9ROMClass *)_origRomClassStart))
       return;
 
-   auto name = J9ROMCLASS_CLASSNAME(romClass);
+   auto name = J9ROMCLASS_CLASSNAME((J9ROMClass *)_origRomClassStart);
    size_t offset = addr - _origRomClassStart;
    auto it = _segMap.find(offset);
    if (it != _segMap.end())
