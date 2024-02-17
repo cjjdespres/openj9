@@ -234,10 +234,14 @@ ROMClassPackContext::addSegVec(const uint8_t *addr, const char *name)
    if (!isInline(addr, (const J9ROMClass *)_origRomClassStart))
       return;
 
+   auto name = J9ROMCLASS_CLASSNAME(romClass);
    size_t offset = addr - _origRomClassStart;
    auto it = _segMap.find(offset);
    if (it != _segMap.end())
-      fprintf(stderr, "DUPLICATE: %zu %s %s\n", offset, name, it->second.data());
+      {
+      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(name), J9UTF8_LENGTH(name), "java/util/concurrent/ConcurrentLinkedDeque"))
+         fprintf(stderr, "DUPLICATE: %zu %s %s\n", offset, name, it->second.data());
+      }
    else
       {
       std::string nm(name);
