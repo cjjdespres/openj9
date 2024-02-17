@@ -367,7 +367,7 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags,
 		MarkOrWrite markOrWrite)
 {
-	DECL(cursor, "java/util/concurrent/ConcurrentLinkedQueue");
+	DECL(cursor, "java/util/concurrent/atomic/AtomicBoolean");
 	bool markAndCountOnly = (MARK_AND_COUNT_ONLY== markOrWrite);
 	/*
 	 * Write the J9ROMClass structure (AKA Header).

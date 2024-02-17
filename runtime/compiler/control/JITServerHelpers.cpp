@@ -239,7 +239,7 @@ ROMClassPackContext::addSegVec(const uint8_t *addr, const char *name)
    auto it = _segMap.find(offset);
    if (it != _segMap.end())
       {
-      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(romname), J9UTF8_LENGTH(romname), "java/util/concurrent/ConcurrentLinkedDeque"))
+      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(romname), J9UTF8_LENGTH(romname), "java/util/concurrent/atomic/AtomicBoolean"))
          fprintf(stderr, "DUPLICATE: %zu %s %s\n", offset, name, it->second.data());
       }
    else
@@ -633,7 +633,7 @@ JITServerHelpers::packROMClass(J9ROMClass *romClass, TR_Memory *trMemory, TR_J9V
       auto classEnd = (const uint8_t *)romClass + packedSize;
       ctx._origUtf8SectionStart = std::min(ctx._origUtf8SectionStart, classEnd);
 
-      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(name), J9UTF8_LENGTH(name), "java/util/concurrent/ConcurrentLinkedDeque"))
+      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(name), J9UTF8_LENGTH(name), "java/util/concurrent/atomic/AtomicBoolean"))
          {
          fprintf(stderr, "MAP START\n");
          for (const auto &pair : ctx._segMap)
