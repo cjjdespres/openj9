@@ -1033,13 +1033,13 @@ allSlotsInVarHandleMethodTypeLookupTableDo(J9ROMClass* romClass, J9ROMClassWalkC
 
 	if (count > 0) {
 		U_16 *cursor = J9ROMCLASS_VARHANDLEMETHODTYPELOOKUPTABLE(romClass);
-		BOOLEAN rangeValid = callback->validateRangeCallback(romClass, cursor, count * sizeof(U_16), userData);
+		BOOLEAN rangeValid = callbacks->validateRangeCallback(romClass, cursor, count * sizeof(U_16), userData);
 	
 		if (rangeValid) {
 			U_32 i = 0;
 
 			callbacks->sectionCallback(romClass, cursor, count * sizeof(U_16), "varHandleMethodTypeLookupTable", userData);
-			for (i = 0, i < count; i++) {
+			for (i = 0; i < count; i++) {
 				callbacks->slotCallback(romClass, J9ROM_U16, cursor, "cpIndex", userData);
 				cursor += 1;
 			}
