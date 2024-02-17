@@ -236,6 +236,9 @@ void allSlotsInROMClassDo(J9ROMClass* romClass,
 	allSlotsInConstantPoolDo(romClass, callbacks, userData);
 	allSlotsInCallSiteDataDo(romClass, callbacks, userData);
 	allSlotsInOptionalInfoDo(romClass, callbacks, userData);
+#if defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE)
+	allSlotsInVarHandleMethodTypeLookupTableDo(romClass, callbacks, userData);
+#endif /* defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 	allSlotsInStaticSplitMethodRefIndexesDo(romClass, callbacks, userData);
 	allSlotsInSpecialSplitMethodRefIndexesDo(romClass, callbacks, userData);
 }
@@ -1018,6 +1021,29 @@ allSlotsInOptionalInfoDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callback
 #endif /* defined(J9VM_OPT_VALHALLA_FLATTENABLE_VALUE_TYPES) */
 	callbacks->sectionCallback(romClass, optionalInfo, (UDATA)cursor - (UDATA)optionalInfo, "optionalInfo", userData);
 }
+
+#if defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE)
+static void
+allSlotsInVarHandleMethodTypeLookupTableDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
+{
+	U_32 count = romClass->varHandleMethodTypeCount;
+
+	if (count > 0) {
+		U_16 *cursor = J9ROMCLASS_VARHANDLEMETHODTYPELOOKUPTABLE(romClass);
+		BOOLEAN rangeValid = callback->validateRangeCallback(romClass, cursor, count * sizeof(U_16), userData);
+	
+		if (rangeValid) {
+			U_32 i = 0;
+
+			callbacks->sectionCallback(romClass, cursor, count * sizeof(U_16), "varHandleMethodTypeLookupTable", userData);
+			for (i = 0, i < count; i++) {
+				callbacks->slotCallback(romClass, J9ROM_U16, cursor, "cpIndex", userData);
+				cursor += 1;
+			}
+		}
+	}
+}
+#endif /* defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 
 static void 
 allSlotsInStaticSplitMethodRefIndexesDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData)
