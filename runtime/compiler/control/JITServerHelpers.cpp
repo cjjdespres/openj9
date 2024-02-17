@@ -198,6 +198,8 @@ struct ROMClassPackContext
    // packed ROM class.
    const uint8_t *newAddressFromOld(const uint8_t *oldAddr) const;
 
+   void addSegVec(const uint8_t *addr, const char *name);
+
    typedef void (*Callback)(const J9ROMClass *, const J9SRP *, const char *, ROMClassPackContext &);
    typedef void (*WSRPCallback)(const J9ROMClass *, const J9WSRP *, const char *, ROMClassPackContext &);
 
@@ -222,7 +224,26 @@ struct ROMClassPackContext
    WSRPCallback _wsrpCallback;
    const uint8_t *_newUtf8SectionStart;
    uint8_t *_cursor;
+
+   std::map<size_t, std::string> _segMap;
    };
+
+void
+ROMClassPackContext::addSegVec(const uint8_t *addr, const char *name)
+   {
+   if (!isInline(addr, (const J9ROMClass *)_origRomClassStart))
+      return;
+
+   size_t offset = addr - _origRomClassStart;
+   auto it = _segMap.find(offset);
+   if (it != _segMap.end())
+      fprintf(stderr, "DUPLICATE: %zu %s %s", offset, name, it->second.data());
+   else
+      {
+      std::string nm(name);
+      _segMap.insert(it, {offset, nm});
+      }
+   }
 
 const uint8_t *
 ROMClassPackContext::newAddressFromOld(const uint8_t *oldAddr) const
@@ -487,6 +508,7 @@ sectionEndCallback(J9ROMClass *romClass, void *sectionPtr, uintptr_t sectionSize
       {
       size_t endOffset = ((uint8_t *)sectionPtr - (uint8_t *)romClass) + sectionSize;
       ctx->_preStringSize = std::max(ctx->_preStringSize, endOffset);
+      ctx->addSegVec((uint8_t *)sectionPtr, sectionName);
       }
    }
 
@@ -607,6 +629,14 @@ JITServerHelpers::packROMClass(J9ROMClass *romClass, TR_Memory *trMemory, TR_J9V
       auto classEnd = (const uint8_t *)romClass + packedSize;
       ctx._origUtf8SectionStart = std::min(ctx._origUtf8SectionStart, classEnd);
 
+      if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(name), J9UTF8_LENGTH(name), "java/util/concurrent/ConcurrentLinkedDeque"))
+         {
+         fprintf(stderr, "MAP START\n");
+         for (const auto &pair : ctx._segMap)
+            {
+            fprintf(stderr, "\t%zu\t%s\n", pair.first, pair.second.data());
+            }
+         }
       auto end = ctx._origUtf8SectionEnd ? ctx._origUtf8SectionEnd : classEnd;
       TR_ASSERT_FATAL(ctx._utf8SectionSize == end - ctx._origUtf8SectionStart,
                       "Missed strings in ROMClass %.*s UTF8 section: %zu != %zu",

@@ -345,13 +345,10 @@ ROMClassWriter::~ROMClassWriter()
 #define MARKBYTES()\
 	{\
 	UDATA newCount = myCursor->getCount();\
-	const char *line = __LINE__;\
-	const char *file = __FILE__;\
 	if (shouldWrite && (newCount > oldCount))\
 		{\
-		TR_VerboseLog::writeLineLocked(\
-			TR_Vlog_JITServer,\
-			"CHANGE: \t%zu\t%zu\t%s\t%s",\
+		fprintf(stderr,\
+			"CHANGE: \t%zu\t%zu\t%s-%d\n",\
 			oldCount,\
 			newCount - oldCount,\
 			__FILE__,\
