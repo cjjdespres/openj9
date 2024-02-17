@@ -46,6 +46,9 @@ static void allSlotsInBytecodesDo (J9ROMClass* romClass, J9ROMMethod* method, J9
 static void allSlotsInCPShapeDescriptionDo (J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
 static void allSlotsInCallSiteDataDo (J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
 static UDATA allSlotsInMethodParametersDataDo(J9ROMClass* romClass, U_8* cursor, J9ROMClassWalkCallbacks* callbacks, void* userData);
+#if defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE)
+static void allSlotsInVarHandleMethodTypeLookupTableDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
+#endif /* defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 static void allSlotsInStaticSplitMethodRefIndexesDo (J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
 static void allSlotsInSpecialSplitMethodRefIndexesDo (J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
 static void allSlotsInSourceDebugExtensionDo (J9ROMClass* romClass, J9SourceDebugExtension* sde, J9ROMClassWalkCallbacks* callbacks, void* userData);
@@ -1024,7 +1027,7 @@ allSlotsInOptionalInfoDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callback
 
 #if defined(J9VM_OPT_METHOD_HANDLE) && !defined(J9VM_OPT_OPENJDK_METHODHANDLE)
 static void
-allSlotsInVarHandleMethodTypeLookupTableDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData);
+allSlotsInVarHandleMethodTypeLookupTableDo(J9ROMClass* romClass, J9ROMClassWalkCallbacks* callbacks, void* userData)
 {
 	U_32 count = romClass->varHandleMethodTypeCount;
 
