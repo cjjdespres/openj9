@@ -237,7 +237,7 @@ ROMClassPackContext::addSegVec(const uint8_t *addr, const char *name)
    size_t offset = addr - _origRomClassStart;
    auto it = _segMap.find(offset);
    if (it != _segMap.end())
-      fprintf(stderr, "DUPLICATE: %zu %s %s", offset, name, it->second.data());
+      fprintf(stderr, "DUPLICATE: %zu %s %s\n", offset, name, it->second.data());
    else
       {
       std::string nm(name);
