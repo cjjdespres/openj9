@@ -2959,7 +2959,11 @@ remoteCompilationEnd(J9VMThread *vmThread, TR::Compilation *comp, TR_ResolvedMet
             TR_J9VMBase *fe = TR_J9VMBase::get(jitConfig, vmThread);
             TR_J9SharedCache *cacheOverride = NULL;
             if (comp->isDeserializedAOTMethod() && compInfo->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC())
-               cacheOverride = compInfo->getDeserializerSharedCache();
+               {
+               auto deserializerCache = compInfo->getDeserializerSharedCache();
+               deserializerCache->setCompInfoPT((TR::CompilationInfoPerThread *)compInfoPT);
+               cacheOverride = deserializerCache;
+               }
             metaData = entry->_compInfoPT->reloRuntime()->prepareRelocateAOTCodeAndData(
                vmThread, fe, comp->cg()->getCodeCache(), (J9JITDataCacheHeader *)dataCacheStr.data(),
                method, false, comp->getOptions(), comp, compilee, (uint8_t *)codeCacheStr.data(), cacheOverride

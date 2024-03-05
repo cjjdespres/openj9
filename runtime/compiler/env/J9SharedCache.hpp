@@ -764,8 +764,11 @@ public:
 
    virtual J9SharedClassCacheDescriptor *getCacheDescriptorList() override { TR_ASSERT_FATAL(false, "called"); return NULL; }
 
+   void setCompInfoPT(TR::CompilationInfoPerThread *compInfoPT) { _compInfoPT = compInfoPT; }
+
 private:
    JITServerNoSCCAOTDeserializer *_deserializer;
+   TR::CompilationInfoPerThread *_compInfoPT;
    };
 
 #endif /* defined(J9VM_OPT_JITSERVER) */
