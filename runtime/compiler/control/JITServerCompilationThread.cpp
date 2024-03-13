@@ -955,6 +955,9 @@ TR::CompilationInfoPerThreadRemote::processEntry(TR_MethodToBeCompiled &entry, J
       if (aotCache && !aotCacheLoad)
          aotCache->incNumCacheBypasses();
 
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "They requested load (%s) store (%s)",
+                                     requestedAOTCacheLoad ? "yes" : "no",
+                                     requestedAOTCacheStore ? "yes" : "no");
       if (_aotCacheStore || aotCacheLoad)
          {
          // Get defining class chain record to use as a part of the key to lookup or store the method in AOT cache
