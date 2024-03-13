@@ -7950,7 +7950,7 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
                TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\twithoutSCCEligibleForRelocatableCompile: %d", withoutSCCEligibleForRelocatableCompile);
                TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\tpersistentInfo->doNotRequestJITServerAOTCacheStore: %d", persistentInfo->doNotRequestJITServerAOTCacheStore());
                TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\t!entry->_doNotLoadFromJITServerAOTCache: %d", !entry->_doNotLoadFromJITServerAOTCache);
-               TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\t!_compInfo.getLowCompDensityMode: %d", !_compInfo.getLowCompDensityMode);
+               TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\t!_compInfo.getLowCompDensityMode: %d", !_compInfo.getLowCompDensityMode());
                TR_VerboseLog::writeLine(TR_Vlog_JITServer, "\t!cannotDoRemoteCompilation: %d", !cannotDoRemoteCompilation);
                }
 #endif /* defined(J9VM_OPT_JITSERVER) */
