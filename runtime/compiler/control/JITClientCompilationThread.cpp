@@ -255,6 +255,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             // Do not forbid AOT cache stores or loads (this server might be able to fulfill them)
             compInfo->getPersistentInfo()->setDoNotRequestJITServerAOTCacheLoad(false);
             compInfo->getPersistentInfo()->setDoNotRequestJITServerAOTCacheStore(false);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Cleared deserializer and do-not-load flags");
             }
 
          client->write(response, ranges, unloadedClasses->getMaxRanges(), serializedCHTable);
