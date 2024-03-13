@@ -226,7 +226,9 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          {
          uint64_t serverUID = std::get<0>(client->getRecvData<uint64_t>());
          uint64_t previousUID = compInfo->getPersistentInfo()->getServerUID();
+         bool hasConnectedToServer = compInfo->getPersistentInfo()->hasConnectedToServer();
          compInfo->getPersistentInfo()->setServerUID(serverUID);
+         compInfo->getPersistentInfo()->setHasConnectedToServer();
 
          auto unloadedClasses = comp->getPersistentInfo()->getUnloadedClassAddresses();
          std::vector<TR_AddressRange> ranges;
@@ -245,7 +247,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             }
 
          // This is a connection to a new server after a previous disconnection
-         if ((0 != previousUID) && (previousUID != serverUID))
+         if (hasConnectedToServer && (previousUID != serverUID))
             {
             // Reset AOT deserializer (cached serialization records are now invalid)
             auto deserializer = compInfo->getJITServerAOTDeserializer();
