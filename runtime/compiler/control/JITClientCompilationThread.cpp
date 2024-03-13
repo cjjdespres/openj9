@@ -3148,6 +3148,9 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
    if (!aotCacheLoad && deserializer)
       deserializer->incNumCacheBypasses();
 
+   TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Remote comp starting with AOT cache: store (%s) load (%s)"
+                                  aotCacheStore ? "yes" : "no"
+                                  aotCacheLoad ? "yes" : "no");
    // For JitDump recompilations need to use the same stream as for the original compile
    JITServer::ClientStream *client = (enableJITServerPerCompConn && !details.isJitDumpMethod()) ? NULL
                                      : compInfoPT->getClientStream();
