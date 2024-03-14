@@ -1499,6 +1499,18 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
                      (referencesArrayClass ? "unsupported reference to array class" : "the AOT cache size limit")
                );
             }
+         for (size_t idx = 0; idx < ramClassChain.size(); ++idx)
+            {
+            auto cz = ramClassChain[idx];
+            J9ROMClass *rc = TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(cz));
+            int32_t len = 0;
+            if (J9ROMCLASS_IS_ARRAY(rc))
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %s",
+                  idx, J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(rc)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(rc)),
+                  TR::Compiler->cls.classNameChars(comp, (TR_OpaqueClassBlock *)clazz, len));
+               }
+            }
          if (classChainRecord)
             *classChainRecord = record;
          }
