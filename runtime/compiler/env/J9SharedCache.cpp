@@ -1508,7 +1508,7 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
                {
                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %s",
                   idx, J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(rc)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(rc)),
-                  fe()->getClassSignature((TR_OpaqueClassBlock *)clazz, comp->trMemory()));
+                  fe()->getClassSignature((TR_OpaqueClassBlock *)clazz, TR::Compiler->persistentMemory()));
                }
             }
          if (classChainRecord)
