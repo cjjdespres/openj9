@@ -1505,7 +1505,7 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
             J9ROMClass *rc = TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(cz));
             int32_t dim = 0;
             auto basecz = fe()->getBaseComponentClass((TR_OpaqueClassBlock *)clazz, dim);
-            auto basenm = J9ROMCLASS_CLASSNAME(TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(basecz)));
+            auto basenm = J9ROMCLASS_CLASSNAME(TR::Compiler->cls.romClassOf(basecz));
             if (J9ROMCLASS_IS_ARRAY(rc))
                {
                TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %.*s %d",
