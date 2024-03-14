@@ -1504,12 +1504,13 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
             auto cz = ramClassChain[idx];
             J9ROMClass *rc = TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(cz));
             int32_t dim = 0;
-            auto nm = fe()->getBaseComponentClass((TR_OpaqueClassBlock *)clazz, dim);
+            auto basecz = fe()->getBaseComponentClass((TR_OpaqueClassBlock *)clazz, dim);
+            auto basenm = J9ROMCLASS_CLASSNAME(TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(basecz)));
             if (J9ROMCLASS_IS_ARRAY(rc))
                {
-               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %s %d",
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %.*s %d",
                   idx, J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(rc)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(rc)),
-                  nm, dim);
+                  J9UTF8_LENGTH(basenm), J9UTF8_DATA(basenm), dim);
                }
             }
          if (classChainRecord)
