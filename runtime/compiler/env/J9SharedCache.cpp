@@ -1506,9 +1506,9 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
             int32_t len = 0;
             if (J9ROMCLASS_IS_ARRAY(rc))
                {
-               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %s",
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Found array idx %lu name %.*s for clazz %s (%s)",
                   idx, J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(rc)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(rc)),
-                  comp->trMemory() ? fe()->getClassSignature((TR_OpaqueClassBlock *)clazz, comp->trMemory()) : "");
+                  fe()->getClassSignature(clazz, comp->trMemory()));
                }
             }
          if (classChainRecord)

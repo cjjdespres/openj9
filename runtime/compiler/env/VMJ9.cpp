@@ -7218,7 +7218,7 @@ TR_J9VM::getBaseComponentClass(TR_OpaqueClassBlock * clazz, int32_t & numDims)
    J9Class * myClass = TR::Compiler->cls.convertClassOffsetToClassPtr(clazz);
    while (J9ROMCLASS_IS_ARRAY(myClass->romClass))
       {
-      J9Class * componentClass = (J9Class *)(((J9ArrayClass*)myClass)->componentType);
+      J9Class * componentClass = (J9Class *)getComponentClassFromArrayClass(clazz);
       if (J9ROMCLASS_IS_PRIMITIVE_TYPE(componentClass->romClass))
          break;
       numDims++;
