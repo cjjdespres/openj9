@@ -1488,6 +1488,17 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
          bool missingLoaderInfo = false;
          bool referencesArrayClass = false;
          record = clientData->getClassChainRecord(clazz, clientClassChainOffset, ramClassChain, _stream, missingLoaderInfo, referencesArrayClass);
+         if (!record)
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+                  "clientUID %llu failed to get defining class chain record for %p due to %s; ",
+                  (unsigned long long)clientData->getClientUID(),
+                  clazz,
+                  missingLoaderInfo ? "missing class loader info" :
+                     (referencesArrayClass ? "unsupported reference to array class" : "the AOT cache size limit")
+               );
+            }
          if (classChainRecord)
             *classChainRecord = record;
          }
