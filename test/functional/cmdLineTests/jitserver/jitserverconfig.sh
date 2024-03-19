@@ -26,16 +26,25 @@ DIFF=$(($END_PORT-$START_PORT+1))
 RANDOM=$$
 
 random_port () {
-    RANDOM_PORT=$(($(($RANDOM%$DIFF))+$START_PORT))
-    out=$(lsof -i -P -n | grep LISTEN | grep $RANDOM_PORT)
-    retVal=$?
+    if [ ! -x "ss" ]; then
+        RANDOM_PORT=$(($(($RANDOM%$DIFF))+$START_PORT))
+        >&2 echo "Command ss is not available, returning random port $RANDOM_PORT"
+        echo $RANDOM_PORT
+        exit 0
+    fi
 
+    retVal=0
     while [ $retVal -eq 0 ]
     do
         RANDOM_PORT=$(($(($RANDOM%$DIFF))+$START_PORT))
-        out=$(lsof -i -P -n | grep LISTEN | grep $RANDOM_PORT)
-        retVal=$?
+        >&2 echo "Trying $RANDOM_PORT"
+        # Test if $RANDOM_PORT is in use at all by checking if the (header-suppressed, filtered)
+        # output of ss is non-empty
+        if [ -n "$( ss -Hplunt \( src = :$RANDOM_PORT \) )" ]; then
+            retVal=1
+        fi
     done
 
+    >&2 echo "Found unused port $RANDOM_PORT"
     echo "$RANDOM_PORT"
 }
