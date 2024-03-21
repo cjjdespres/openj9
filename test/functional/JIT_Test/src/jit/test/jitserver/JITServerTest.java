@@ -35,6 +35,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.FileNotFoundException;
 import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 
 import org.testng.AssertJUnit;
 import org.testng.SkipException;
@@ -132,71 +134,34 @@ public class JITServerTest {
 		serverBuilder.command().set(1, newPortOption);
 	}
 
-	private static String generatePortOption() {
-		// Most systems have a specified ephemeral ports range. We're not bothering to find the actual range, just choosing a range that is outside the reserved area, reasonably large, and well-behaved.
-		// The range chosen here is within the actual ephemeral range on recent Linux systems and others (at the time of writing).
-		final int EPHEMERAL_PORTS_START = 33000, EPHEMERAL_PORTS_LAST = 60000;
-
-		// In order to run on multi-user systems we need to use a unique server port.
-		// We choose a random one in the ephemeral ports range here; the user can override via an env var if they want.
-		// This scheme is not perfect. We start many servers while executing this class using our random port so if someone else grabs the port
-		// in the middle of our test some of our servers will fail to start.
-		// The only way to avoid most of the races is to have the server choose a random port (and retry if it is busy) and for us read the port
-		// from the server log. We still need to worry about tests where we stop and restart the server, because we need to keep using the same
-		// port but someone may grab it in the interim.
-		int randomPort = EPHEMERAL_PORTS_START + new Random().nextInt(EPHEMERAL_PORTS_LAST - EPHEMERAL_PORTS_START + 1);
-		while (!isPortOpen(randomPort)) {
-			String[] portInfo = infoOfProcessUsingPort(randomPort);
-			if (0 != portInfo.length) {
-				logger.info("Port " + randomPort + " is busy. Process info:");
-				for (int i = 0; i < portInfo.length; ++i) {
-					logger.info(portInfo[i]);
-				}
-			} else {
-				logger.info("Port " + randomPort + " is busy");
-			}
-
-			randomPort = EPHEMERAL_PORTS_START + new Random().nextInt(EPHEMERAL_PORTS_LAST - EPHEMERAL_PORTS_START + 1);
-		}
-		return String.format(JITSERVER_PORT_OPTION_FORMAT_STRING, randomPort);
-	}
-
-	private static boolean isPortOpen(int port) {
-		Socket s = null;
-		try {
-			// Connect to the port as a client. If this succeeds, then something else is using that port.
-			s = new Socket((String)null, port);
+	private static int findAvailablePort() {
+		// This is only a heuristic - we request an unused port from the kernel, then immediately
+		// close the connection once we've established it, returning the port number that we got.
+		// This is obviously subject to timing problems, but unfortunately there isn't a more robust way
+		// of handling this issue in the tests where a client comes up before the server does. In the case
+		// where a server comes up first, the correct way of going about this is to get the server to request
+		// an unused port for itself and then read that port from its logs to give to the client.
+		// There is no way of reserving a port without binding to (and thus listening on) it, which would defeat
+		// the purpose of the client-coming-up-first tests.
+		// (Technically if the tests were run as root or ran in docker containers we could modify the network or
+		// otherwise ask the kernel to reserve a port for us, but that's not an option at the moment).
+		try (ServerSocket s = new ServerSocket()) {
+			// We want SO_REUSEADDR on this socket so the server can bind to the port we get from bind()
+			// without getting an EADDRINUSE.
+			s.setReuseAddress(true);
+			InetSocketAddress addr = new InetSocketAddress(0);
+			s.bind(addr);
+			final int port = s.getLocalPort();
 			s.close();
-			return false;
+			return port;
 		} catch (IOException e) {
-			// A client connection could not be established, so nothing is using the port.
-			return true;
-		} catch (SecurityException e) {
-			// Access to the port is forbidden.
-			return false;
+			// Do nothing
 		}
 	}
 
-	private static String[] infoOfProcessUsingPort(int port) {
-		String[] output = {};
-		if (System.getProperty("os.name").toLowerCase().contains("linux")) {
-			try {
-				Process proc = new ProcessBuilder("lsof", "-i", ":" + port).start();
-				proc.waitFor();
-				if (proc.exitValue() == 0) {
-					BufferedReader stdOutput = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-					ArrayList<String> al = new ArrayList<String>();
-					String line = null;
-					while ((line = stdOutput.readLine()) != null) {
-						al.add(line);
-					}
-					output = al.toArray(new String[0]);
-				}
-			} catch (IOException|InterruptedException e) {
-				// Do nothing.
-			}
-		}
-		return output;
+	private static String generatePortOption() {
+		final int randomPort = findAvailablePort();
+		return String.format(JITSERVER_PORT_OPTION_FORMAT_STRING, randomPort);
 	}
 
 	private static String[] stripQuotesFromEachArg(String[] args) {
