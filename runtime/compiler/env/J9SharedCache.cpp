@@ -1470,8 +1470,14 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
    auto recv = _stream->read<uintptr_t, std::vector<J9Class *>, std::vector<J9Class *>,
                              std::vector<JITServerHelpers::ClassInfoTuple>>();
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != clientClassChainOffset)
+      {
+      if (std::get<0>(recv) != clientClassChainOffset)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "CRASHING: %zu %zu", std::get<0>(recv), clientClassChainOffset);
+         }
       TR_ASSERT_FATAL(std::get<0>(recv) == clientClassChainOffset, "Received mismatching class chain offset: %" OMR_PRIuPTR " != %" OMR_PRIuPTR,
                       std::get<0>(recv), clientClassChainOffset);
+      }
    clientClassChainOffset = std::get<0>(recv);
    auto &ramClassChain = std::get<1>(recv);
    auto &uncachedRAMClasses = std::get<2>(recv);
