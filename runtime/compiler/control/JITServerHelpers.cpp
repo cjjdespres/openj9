@@ -1015,6 +1015,7 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
       sharedCache->getClassChainOffsetIdentifyingLoaderNoFail((TR_OpaqueClassBlock *)clazz, &classChainIdentifyingLoader) : 0;
 
    std::string classNameIdentifyingLoader;
+   const J9UTF8 *cninfo = NULL;
    if (fe->getPersistentInfo()->getJITServerUseAOTCache() &&
        (fe->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC() || classChainIdentifyingLoader))
       {
@@ -1022,6 +1023,7 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
       auto nameInfo = fe->getPersistentInfo()->getPersistentClassLoaderTable()->lookupClassNameAssociatedWithClassLoader(loader);
       if (nameInfo)
          {
+         cninfo = nameInfo;
          classNameIdentifyingLoader = std::string((const char *)J9UTF8_DATA(nameInfo), J9UTF8_LENGTH(nameInfo));
          }
       }
@@ -1035,11 +1037,12 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
       packedROMClassStr = std::string((const char *)packedROMClass, packedROMClass->romSize);
       }
 
-   if (classChainOffsetIdentifyingLoader != 0)
+   if ((classChainOffsetIdentifyingLoader != 0) && cninfo)
       {
       auto rcn = J9ROMCLASS_CLASSNAME(clazz->romClass);
-      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Sending ROM class info: loader name %s offset %zu class %.*s",
-                                                      classNameIdentifyingLoader, classChainOffsetIdentifyingLoader,
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Sending ROM class info: loader name %.*s offset %zu class %.*s",
+                                                      J9UTF8_LENGTH(cninfo), J9UTF8_DATA(cninfo),
+                                                      classChainOffsetIdentifyingLoader,
                                                       J9UTF8_LENGTH(rcn), J9UTF8_DATA(rcn));
       }
 
