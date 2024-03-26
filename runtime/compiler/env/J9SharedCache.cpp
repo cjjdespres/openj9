@@ -1471,7 +1471,7 @@ TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChai
                              std::vector<JITServerHelpers::ClassInfoTuple>>();
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != clientClassChainOffset)
       {
-      auto rcn = J9ROMCLASS_CLASSNAME((J9ROMClass *)fe()->getPersistentClassPointerFromClassPointer(clazz));
+      auto rcn = J9ROMCLASS_CLASSNAME((J9ROMClass *)fe()->getPersistentClassPointerFromClassPointer((TR_OpaqueClassBlock *)clazz));
       if (std::get<0>(recv) != clientClassChainOffset)
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "ERROR FOR CLASS: %.*s", J9UTF8_LENGTH(rcn), J9UTF8_DATA(rcn));
