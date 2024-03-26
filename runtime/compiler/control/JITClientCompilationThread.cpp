@@ -2187,6 +2187,11 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          bool needClientOffset = std::get<2>(recv);
          bool getClasses = std::get<3>(recv);
          uintptr_t classChainOffset = needClientOffset ? fe->sharedCache()->rememberClass(clazz, NULL, create) : TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+         if (classChainOffset != 0)
+            {
+            auto rcn = J9ROMCLASS_CLASSNAME(clazz->romClass);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "SCrememberClass: %zu %.*s %d", classChainOffset, J9UTF8_LENGTH(rcn), J9UTF8_DATA(rcn), create);
+            }
          std::vector<J9Class *> ramClassChain;
          std::vector<J9Class *> uncachedRAMClasses;
          std::vector<JITServerHelpers::ClassInfoTuple> uncachedClassInfos;
