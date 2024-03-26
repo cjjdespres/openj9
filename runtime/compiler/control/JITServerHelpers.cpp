@@ -1037,7 +1037,7 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
 
    if (classChainOffsetIdentifyingLoader != 0)
       {
-      auto rcn = J9ROMCLASS_CLASSNAME(packedROMClass);
+      auto rcn = J9ROMCLASS_CLASSNAME(clazz->romClass);
       TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Sending ROM class info: loader name %s offset %zu class %.*s",
                                                       classNameIdentifyingLoader, classChainOffsetIdentifyingLoader,
                                                       J9UTF8_LENGTH(rcn), J9UTF8_DATA(rcn));
