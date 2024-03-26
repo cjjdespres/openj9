@@ -1035,6 +1035,14 @@ JITServerHelpers::packRemoteROMClassInfo(J9Class *clazz, J9VMThread *vmThread, T
       packedROMClassStr = std::string((const char *)packedROMClass, packedROMClass->romSize);
       }
 
+   if (classChainOffsetIdentifyingLoader != 0)
+      {
+      auto rcn = J9ROMCLASS_CLASSNAME(packedROMClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Sending ROM class info: loader name %s offset %zu class %.*s",
+                                                      classNameIdentifyingLoader, classChainOffsetIdentifyingLoader,
+                                                      J9UTF8_LENGTH(rcn), J9UTF8_DATA(rcn));
+      }
+
    int32_t arrayElementSize = vmThread->javaVM->internalVMFunctions->arrayElementSize((J9ArrayClass*)clazz);
 
    // getDefaultValueSlotAddress can only be called if the value type class is initialized
