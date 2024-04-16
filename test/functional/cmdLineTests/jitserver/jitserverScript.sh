@@ -58,7 +58,7 @@ if [ "$METRICS" == true ]; then
     METRICS_OPTS="-XX:+JITServerMetrics -XX:JITServerMetricsPort=$METRICS_PORT"
 fi
 
-JITSERVER_OPTIONS="-Xjit:verbose={JITServer} -XX:JITServerPort=$JITSERVER_PORT -XX:JITServerHealthProbePort=$HEALTH_PORT $METRICS_OPTS $JITSERVER_OPTS $SSL_OPTS"
+JITSERVER_OPTIONS="-XX:JITServerPort=$JITSERVER_PORT -XX:JITServerHealthProbePort=$HEALTH_PORT $METRICS_OPTS $JITSERVER_OPTS $SSL_OPTS -Xjit:verbose={JITServer}"
 
 echo "Starting $TEST_JDK_BIN/jitserver $JITSERVER_OPTIONS"
 $TEST_JDK_BIN/jitserver $JITSERVER_OPTIONS &
