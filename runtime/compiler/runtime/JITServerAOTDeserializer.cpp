@@ -1026,7 +1026,7 @@ JITServerNoSCCAOTDeserializer::cacheRecord(const ClassLoaderSerializationRecord 
       return false;
 
    auto it = _classLoaderIdMap.find(record->id());
-   if (it != _classLoaderIdMap.end())
+   if ((it != _classLoaderIdMap.end()) && it->second)
       return true;
    isNew = true;
 
