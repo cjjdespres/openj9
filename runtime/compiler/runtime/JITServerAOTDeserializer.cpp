@@ -1061,25 +1061,16 @@ JITServerNoSCCAOTDeserializer::cacheRecord(const ClassSerializationRecord *recor
    auto it = _classIdMap.find(record->id());
    if (it != _classIdMap.end())
       {
-      // Check that this record hasn't been marked invalid
-      if (!it->second._ramClass)
+      if (it->second._ramClass)
+         {
+         return true;
+         }
+      else
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "ERROR: Mismatching class ID %zu", record->id());
          return false;
          }
-      // Check that the loader record hasn't been marked invalid either
-      if (!findInMap(_classLoaderIdMap, it->second._classLoaderId, getClassLoaderMonitor(), comp, wasReset))
-         {
-         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-               "ERROR: Class loader for class %.*s ID %zu was marked invalid",
-               RECORD_NAME(record), record->id()
-            );
-         return false;
-         }
-
-      return true;
       }
    isNew = true;
 
