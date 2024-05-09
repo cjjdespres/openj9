@@ -1026,7 +1026,8 @@ JITServerNoSCCAOTDeserializer::cacheRecord(const ClassLoaderSerializationRecord 
       return false;
 
    auto it = _classLoaderIdMap.find(record->id());
-   if (it != _classLoaderIdMap.end())
+   // Check if the record has already been cached and is still valid
+   if ((it != _classLoaderIdMap.end()) && it->second)
       return true;
    isNew = true;
 
