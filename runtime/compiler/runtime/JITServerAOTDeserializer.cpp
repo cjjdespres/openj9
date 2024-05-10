@@ -1406,12 +1406,17 @@ JITServerNoSCCAOTDeserializer::revalidateRecord(AOTSerializationRecordType type,
          }
       case ClassChain:
          {
+         // Why do we need to revalidate the entire chain here?
+         // Note that only serialization records the server thinks the client needs are sent to the client,
+         // and only offsets used in the method's relocation records get serialized SCC offsets. That means
+         // that we aren't guaranteed to have revalidated every class mentioned in this class chain, and so
+         // we must check the entire chain here.
          OMR::CriticalSection cs(getClassChainMonitor());
          if (deserializerWasReset(comp, wasReset))
             return false;
 
          auto it = _classChainMap.find(id);
-         if (it == _classChainMap.end())
+         if (it == _classChainMap.end() || !it->second)
             return false;
 
          size_t chainLength = it->second[0] / sizeof(it->second[0]) - 1;
@@ -1434,12 +1439,13 @@ JITServerNoSCCAOTDeserializer::revalidateRecord(AOTSerializationRecordType type,
          }
       case WellKnownClasses:
          {
+         // See the note for case ClassChain
          OMR::CriticalSection cs(getWellKnownClassesMonitor());
          if (deserializerWasReset(comp, wasReset))
             return false;
 
          auto it = _wellKnownClassesMap.find(id);
-         if (it == _wellKnownClassesMap.end())
+         if ((it == _wellKnownClassesMap.end()) || !it->second)
             return false;
 
          size_t chainLength = it->second[0];
