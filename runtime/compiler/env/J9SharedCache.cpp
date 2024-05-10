@@ -1705,7 +1705,7 @@ TR_J9DeserializerSharedCache::romClassFromOffsetInSharedCache(uintptr_t offset)
    if (wasReset)
       comp->failCompilation<J9::AOTDeserializerReset>(
          "Deserializer reset during relocation of method %s", comp->signature());
-   TR_ASSERT_FATAL(romClass, "ROM class for offset %zu could not be found",
+   TR_ASSERT_FATAL(romClass, "ROM class for offset %zu ID %zu type %u could not be found",
                    offset,
                    JITServerNoSCCAOTDeserializer::offsetId(offset),
                    JITServerNoSCCAOTDeserializer::offsetType(offset));
