@@ -1372,14 +1372,12 @@ JITServerNoSCCAOTDeserializer::updateSCCOffsets(SerializedAOTMethod *method, TR:
       TR_ASSERT_FATAL((ptr >= start + sizeof(uintptr_t)/*skip the size word*/) && (ptr < end),
                       "Out-of-bounds relocation data offset %zu in serialized method %s",
                       serializedOffset.reloDataOffset(), comp->signature());
-#if defined(DEBUG)
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
             "Updating offset %zu -> %zu for record type %u ID %zu at relo data offset %zu in serialized method %s",
             *(uintptr_t *)ptr, offset, serializedOffset.recordType(), serializedOffset.recordId(),
             serializedOffset.reloDataOffset(), comp->signature()
          );
-#endif /* defined(DEBUG) */
       *(uintptr_t *)ptr = offset;
       }
 
