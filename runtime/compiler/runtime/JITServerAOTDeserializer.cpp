@@ -1405,7 +1405,61 @@ JITServerNoSCCAOTDeserializer::revalidateRecord(AOTSerializationRecordType type,
          return !wasReset && (method != NULL);
          }
       case ClassChain:
+         {
+         OMR::CriticalSection cs(getClassChainMonitor());
+         if (deserializerWasReset(comp, wasReset))
+            return false;
+
+         auto it = _classChainMap.find(id);
+         if (it == _classChainMap.end())
+            return false;
+
+         size_t chainLength = it->second[0] / sizeof(it->second[0]) - 1;
+         uintptr_t *chainData = it->second + 1;
+         for (size_t i = 0; i < chainLength; ++i)
+            {
+            auto ramClass = findInMap(_classIdMap, offsetId(chainData[i]), getClassMonitor(), comp, wasReset)._ramClass;
+            if (!ramClass)
+               {
+               TR::Compiler->persistentGlobalMemory()->freePersistentMemory(it->second);
+               it->second = NULL;
+               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                  TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+                     "Invalidated cached class chain record ID %zu", id
+                  );
+               return false;
+               }
+            }
+         return true;
+         }
       case WellKnownClasses:
+         {
+         OMR::CriticalSection cs(getWellKnownClassesMonitor());
+         if (deserializerWasReset(comp, wasReset))
+            return false;
+
+         auto it = _wellKnownClassesMap.find(id);
+         if (it == _wellKnownClassesMap.end())
+            return false;
+
+         size_t chainLength = it->second[0];
+         uintptr_t *chainData = it->second + 1;
+         for (size_t i = 0; i < chainLength; ++i)
+            {
+            auto classChain = findInMap(_classChainMap, offsetId(chainData[i]), getClassChainMonitor(), comp, wasReset);
+            if (!classChain)
+               {
+               TR::Compiler->persistentGlobalMemory()->freePersistentMemory(it->second);
+               it->second = NULL;
+               if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+                  TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
+                     "Invalidated cached well-known classes record ID %zu", id
+                  );
+               return false;
+               }
+            }
+         return true;
+         }
       case Thunk:
          {
          // We will have re-checked all the dependencies of class chains and well-known classes already
