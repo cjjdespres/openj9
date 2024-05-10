@@ -1028,7 +1028,10 @@ JITServerNoSCCAOTDeserializer::cacheRecord(const ClassLoaderSerializationRecord 
    auto it = _classLoaderIdMap.find(record->id());
    // Check if the record has already been cached and is still valid
    if ((it != _classLoaderIdMap.end()) && it->second)
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Deserializer hit: class loader %zu %p %.*s", record->id(), it->second, RECORD_NAME(record));
       return true;
+      }
    isNew = true;
 
    // Lookup the class loader using the name of the first class that it loaded
@@ -1064,6 +1067,7 @@ JITServerNoSCCAOTDeserializer::cacheRecord(const ClassSerializationRecord *recor
       {
       if (it->second._ramClass)
          {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Deserializer hit: class %zu %p %.*s", record->id(), it->second._ramClass, RECORD_NAME(record));
          return true;
          }
       else
