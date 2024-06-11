@@ -230,7 +230,6 @@ private:
    static TR::Monitor *_totalBuffersMonitor;
    static int _totalBuffers;
    static TR::PersistentAllocator *_allocator;
-   static bool _shouldFreePersistentAllocator;
    };
 };
 #endif
