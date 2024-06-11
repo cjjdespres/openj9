@@ -62,12 +62,6 @@ MessageBuffer::~MessageBuffer()
 
    freeMemory(_storage);
    _totalBuffers--;
-
-   if (_totalBuffers == 0 && (J9::PersistentInfo::_remoteCompilationMode == JITServer::CLIENT))
-      {
-      _allocator->~PersistentAllocator();
-      _allocator = NULL;
-      }
    }
 
 void
@@ -143,5 +137,19 @@ MessageBuffer::computeRequiredCapacity(uint32_t requiredSize)
       extendedCapacity *= 2;
    return extendedCapacity;
    }
-};
 
+void
+MessageBuffer::tryFreeCustomAllocator()
+   {
+   if (J9::PersistentInfo::_remoteCompilationMode != JITServer::CLIENT)
+      return;
+
+   OMR::CriticalSection cs(getTotalBuffersMonitor());
+
+   if ((_totalBuffers != 0) || (_allocator == NULL))
+      return;
+
+   _allocator->~PersistentAllocator();
+   _allocator = NULL;
+   }
+};
