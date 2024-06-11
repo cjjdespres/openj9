@@ -205,6 +205,9 @@ public:
 
    uint32_t getCapacity() const { return _capacity; }
 
+   // Try to free the custom persistent allocator for message buffers. This method does nothing
+   // if the JVM is not in client mode, or if there is at least one active message buffer.
+   static void tryFreePersistentAllocator();
 
 private:
    static const size_t INITIAL_BUFFER_SIZE = 32768; // Initial buffer size is 32K
@@ -227,6 +230,7 @@ private:
    static TR::Monitor *_totalBuffersMonitor;
    static int _totalBuffers;
    static TR::PersistentAllocator *_allocator;
+   static bool _shouldFreePersistentAllocator;
    };
 };
 #endif
