@@ -139,7 +139,7 @@ MessageBuffer::computeRequiredCapacity(uint32_t requiredSize)
    }
 
 void
-MessageBuffer::tryFreeCustomAllocator()
+MessageBuffer::tryFreePersistentAllocator()
    {
    if (J9::PersistentInfo::_remoteCompilationMode != JITServer::CLIENT)
       return;
