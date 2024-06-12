@@ -37,7 +37,7 @@ namespace TR { using J9::PersistentAllocator; }
 #include "infra/ReferenceWrapper.hpp"
 #include "env/MemorySegment.hpp"
 #include <deque>
-#include <source-location>
+#include <source_location>
 
 extern "C" {
 struct J9MemorySegment;
