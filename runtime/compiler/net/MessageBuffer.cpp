@@ -62,6 +62,9 @@ MessageBuffer::~MessageBuffer()
 
    freeMemory(_storage);
    _totalBuffers--;
+
+   if ((0 == _totalBuffers) && (J9::PersistentInfo::_remoteCompilationMode == JITServer::CLIENT))
+      _allocator->adviseDontNeedSegments();
    }
 
 void
