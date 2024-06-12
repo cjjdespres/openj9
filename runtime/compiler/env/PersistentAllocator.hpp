@@ -37,6 +37,7 @@ namespace TR { using J9::PersistentAllocator; }
 #include "infra/ReferenceWrapper.hpp"
 #include "env/MemorySegment.hpp"
 #include <deque>
+#include <stdatomic.h>
 
 extern "C" {
 struct J9MemorySegment;
@@ -76,6 +77,7 @@ public:
    bool isDisclaimEnabled() const { return _disclaimEnabled; }
    int disclaimAllSegments();
    int getNumSegments() const { return _numSegments; }
+   size_t getTotalAllocations() const { return _totalAllocations; }
 
 private:
 
@@ -132,6 +134,8 @@ private:
    int _numSegments;
    bool _disclaimEnabled;
    const J9JavaVM &_javaVM;
+
+   size_t _totalAllocations;
 
 #if defined(J9VM_OPT_JITSERVER)
    // For JITServer, large freed blocks are put in a doubly linked list ordered by size.

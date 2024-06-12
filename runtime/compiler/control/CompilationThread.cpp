@@ -3380,6 +3380,7 @@ void TR::CompilationInfo::stopCompilationThreads()
       {
       if (trPersistentMemory)
          trPersistentMemory->printMemStats();
+         fprintf(stderr, "Total allocations in general: %lu\n", trPersistentMemory->getTotalAllocations());
       }
 
    TR_DataCacheManager::getManager()->printStatistics();

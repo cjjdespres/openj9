@@ -91,6 +91,11 @@ PersistentAllocator::~PersistentAllocator() throw()
 void *
 PersistentAllocator::allocate(size_t size, const std::nothrow_t tag, void * hint) throw()
    {
+   j9thread_monitor_enter(_segmentMonitor);
+   TR_ASSERT_FATAL(_totalAllocations != (size_t)-1, "Much too big!");
+   _totalAllocations++;
+   j9thread_monitor_exit(_segmentMonitor);
+
    return allocateInternal(size);
    }
 
