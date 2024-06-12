@@ -37,6 +37,7 @@ namespace TR { using J9::PersistentAllocator; }
 #include "infra/ReferenceWrapper.hpp"
 #include "env/MemorySegment.hpp"
 #include <deque>
+#include <source-location>
 
 extern "C" {
 struct J9MemorySegment;
@@ -54,8 +55,8 @@ public:
    PersistentAllocator(const PersistentAllocatorKit &creationKit);
    ~PersistentAllocator() throw();
 
-   void *allocate(size_t size, const std::nothrow_t tag, void * hint = 0) throw();
-   void *allocate(size_t size, void * hint = 0);
+   void *allocate(size_t size, const std::nothrow_t tag, void * hint = 0, const std::source_location location = std::source_location::current()) throw();
+   void *allocate(size_t size, void * hint = 0, const std::source_location location = std::source_location::current());
    void deallocate(void * p, size_t sizeHint = 0) throw();
 
    friend bool operator ==(const PersistentAllocator &left, const PersistentAllocator &right)

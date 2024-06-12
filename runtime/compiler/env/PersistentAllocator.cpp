@@ -89,15 +89,21 @@ PersistentAllocator::~PersistentAllocator() throw()
    }
 
 void *
-PersistentAllocator::allocate(size_t size, const std::nothrow_t tag, void * hint) throw()
+PersistentAllocator::allocate(size_t size, const std::nothrow_t tag, void * hint, const std::source_location location) throw()
    {
+   static int timesPrinted = 0;
+   if (timesPrinted < 100)
+      {
+      fprintf(stderr, "ALLOC: %s-%d.%d: %s\n", location.file_name(), location.line(), location.column(), location.function_name());
+      timesPrinted++;
+      }
    return allocateInternal(size);
    }
 
 void *
-PersistentAllocator::allocate(size_t size, void *hint)
+PersistentAllocator::allocate(size_t size, void *hint, const std::source_location location)
    {
-   void *alloc = allocate(size, std::nothrow, hint);
+   void *alloc = allocate(size, std::nothrow, hint, location);
    if (!alloc) throw std::bad_alloc();
    return alloc;
    }
