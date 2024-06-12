@@ -5321,7 +5321,9 @@ static void jitStateLogic(J9JITConfig * jitConfig, TR::CompilationInfo * compInf
          if (disableIdleRATCleanup == NULL)
             persistentInfo->getRuntimeAssumptionTable()->reclaimMarkedAssumptionsFromRAT(-1);
 
+#if defined(J9VM_OPT_JITSERVER)
          JITServer::MessageBuffer::tryFreePersistentAllocator();
+#endif /* defined(J9VM_OPT_JITSERVER) */
          }
 
       // Logic related to IdleCPU exploitation
