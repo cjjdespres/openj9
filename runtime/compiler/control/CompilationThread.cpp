@@ -3380,7 +3380,9 @@ void TR::CompilationInfo::stopCompilationThreads()
       {
       if (trPersistentMemory)
          trPersistentMemory->printMemStats();
-         fprintf(stderr, "Total allocations in general: %lu\n", TR::Compiler->persistentGlobalAllocator().getTotalAllocations());
+      fprintf(stderr, "Total allocations in general: %lu\n", TR::Compiler->persistentGlobalAllocator().getTotalAllocations());
+      if (TR_IProfiler::allocator())
+         fprintf(stderr, "Total iprofiler allocations: %lu\n", TR_IProfiler::allocator()->getTotalAllocations());
       }
 
    TR_DataCacheManager::getManager()->printStatistics();
