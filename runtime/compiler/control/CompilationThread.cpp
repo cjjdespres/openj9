@@ -10128,6 +10128,20 @@ TR::CompilationInfo::compilationEnd(J9VMThread * vmThread, TR::IlGeneratorMethod
    // Performs some necessary updates once a compilation has been attempted
    //
    PORT_ACCESS_FROM_JAVAVM(jitConfig->javaVM);
+   static const char *sccName = feGetEnv("TR_StartupSccRssIn");
+   static const char *outFileName = feGetEnv("TR_StartupSccRssOut");
+   static const char *sccRssPrintLimitString = feGetEnv("TR_StartupSccRssPrintLimit");
+   static int sccRssPrintLimit = sccRssPrintLimitString ? atoi(sccRssPrintLimitString) : 0;
+   if (sccName && outFileName && (sccRssPrintLimit > 0))
+      {
+      uintptr_t jvmPID = j9sysinfo_get_pid();
+      char systemCommand[1000];
+      snprintf(systemCommand, sizeof(systemCommand), "pmap -x %lu | grep -e '%s' >> %s", jvmPID, sccName, outFileName);
+      int ret = system(systemCommand);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Out: %lu %s %s", jvmPID, sccName, outFileName);
+      sccRssPrintLimit--;
+      }
+
    TR_DataCache *dataCache = NULL;
    TR::CompilationInfo *compInfo = TR::CompilationInfo::get();
 

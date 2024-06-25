@@ -2100,6 +2100,16 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
 
       if (javaVM->sharedClassConfig->runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_READONLY)
          {
+         static const char *sccName = feGetEnv("TR_StartupSccRssIn");
+         static const char *outFileName = feGetEnv("TR_StartupSccRssOut");
+         if (sccName && outFileName)
+            {
+            uintptr_t jvmPID = j9sysinfo_get_pid();
+            char systemCommand[1000];
+            snprintf(systemCommand, sizeof(systemCommand), "pmap -x %lu | grep -e '%s' >> %s", jvmPID, sccName, outFileName);
+            int ret = system(systemCommand);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Out: %lu %s %s", jvmPID, sccName, outFileName);
+            }
          TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
          TR_J9SharedCache::setSharedCacheDisabledReason(TR_J9SharedCache::AOT_DISABLED);
          }
