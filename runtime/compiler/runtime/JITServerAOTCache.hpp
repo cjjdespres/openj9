@@ -95,6 +95,7 @@ protected:
    HiddenB(T x, R y, Args... args) : _hbPrivate(x) {}
 private:
    T _hbPrivate;
+   R _otherPrivate[];
    };
 
 class HiddenC : HiddenB<int, bool>
