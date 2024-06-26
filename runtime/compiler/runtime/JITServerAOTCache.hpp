@@ -79,44 +79,6 @@ struct AOTCacheAOTHeaderRecord;
 #define LOAD_AOTCACHE_REQUEST (JITServer::ServerStream *)0x1
 #define SAVE_AOTCACHE_REQUEST (JITServer::ServerStream *)0x3 // pointers cannot have the last bit set
 
-class HiddenA 
-   {
-protected:
-   HiddenA() : _haPrivate(5) {}
-
-private:
-   int _haPrivate;
-   };
-
-class HiddenFoo
-   {
-public:
-   HiddenFoo() : _hiddenFoo1(0) {}
-   size_t _hiddenFoo1;
-   uintptr_t _hiddenFooStuff[];
-   };
-
-template<class Base, class T, class R, typename... Args>
-class HiddenB : HiddenA
-   {
-public:
-   HiddenFoo *getMe() { return static_cast<Base *>(this)->getHiddenFoo(); }
-   static size_t sizeMe() { return 5 + Base::dataOffset(); }
-protected:
-   HiddenB(T x, R y, Args... args) : HiddenA() {}
-   };
-
-class HiddenC final : HiddenB<HiddenC, HiddenFoo, bool>
-   {
-public:
-   HiddenC *getC() { return new HiddenC(HiddenFoo(), true); }
-private:
-   HiddenFoo *getHiddenFoo() { return &_hiddenFoo; }
-   static size_t dataOffset() { return offsetof(HiddenC, _hiddenFoo); }
-   HiddenFoo _hiddenFoo;
-   using HiddenB<HiddenC, HiddenFoo, bool>::HiddenB;
-   };
-
 // Base class for serialization record "wrappers" stored at the server.
 //
 // When a cached serialized method is sent to a client, the server needs
