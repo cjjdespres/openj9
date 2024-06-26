@@ -79,6 +79,32 @@ struct AOTCacheAOTHeaderRecord;
 #define LOAD_AOTCACHE_REQUEST (JITServer::ServerStream *)0x1
 #define SAVE_AOTCACHE_REQUEST (JITServer::ServerStream *)0x3 // pointers cannot have the last bit set
 
+class HiddenA 
+   {
+protected:
+   HiddenA() : _haPrivate(5) {}
+
+private:
+   int _haPrivate;
+   };
+
+template<class T, class R, typename... Args>
+class HiddenB : HiddenA
+   {
+protected:
+   HiddenB(T x, R y, Args... args) : _hbPrivate(x) {}
+private:
+   T _hbPrivate;
+   };
+
+class HiddenC : HiddenB<int, bool>
+   {
+public:
+   HiddenC *getC() { return new HiddenC(5, true); }
+private:
+   using HiddenB<int, bool>::HiddenB;
+   };
+
 // Base class for serialization record "wrappers" stored at the server.
 //
 // When a cached serialized method is sent to a client, the server needs
@@ -236,9 +262,6 @@ public:
    R **records() { return (R **)_data.end(); }
 
    void subRecordsDo(const std::function<void(const AOTCacheRecord *)> &f) const override;
-
-private:
-   virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context);
 
 protected:
    AOTCacheListRecord(uintptr_t id, const R *const *records, size_t length, Args... args);
