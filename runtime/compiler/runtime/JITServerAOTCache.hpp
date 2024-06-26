@@ -237,6 +237,9 @@ public:
 
    void subRecordsDo(const std::function<void(const AOTCacheRecord *)> &f) const override;
 
+private:
+   virtual bool setSubrecordPointers(const Vector<R *> &cacheRecords);
+
 protected:
    AOTCacheListRecord(uintptr_t id, const R *const *records, size_t length, Args... args);
    AOTCacheListRecord(const JITServerAOTCacheReadContext &context, const D &header) {}
