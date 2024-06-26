@@ -98,7 +98,7 @@ private:
    R _otherPrivate[];
    };
 
-class HiddenC : HiddenB<int, bool>
+class HiddenC final : HiddenB<int, bool>
    {
 public:
    HiddenC *getC() { return new HiddenC(5, true); }
