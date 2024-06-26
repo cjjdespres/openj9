@@ -245,36 +245,26 @@ AOTCacheMethodRecord::subRecordsDo(const std::function<void(const AOTCacheRecord
    f(_definingClassRecord);
    }
 
-template<class D, class R, typename... Args>
-AOTCacheListRecord<D, R, Args...>::AOTCacheListRecord(uintptr_t id, const R *const *records,
-                                                      size_t length, Args... args) :
-   _data(id, length, args...)
+template<class D, class R> static void
+listClassSubRecordsDo(const D &data, const R *const *records, const std::function<void(const AOTCacheRecord *)> &f)
    {
-   for (size_t i = 0; i < length; ++i)
-      _data.list().ids()[i] = records[i]->data().id();
-   memcpy((void *)this->records(), records, length * sizeof(R *));
+   for (size_t i = 0; i < data.list().length(); ++i)
+      f(records[i]);
    }
 
-template<class D, class R, typename... Args> void
-AOTCacheListRecord<D, R, Args...>::subRecordsDo(const std::function<void(const AOTCacheRecord *)> &f) const
+template<class D, class R> static bool
+listClassSetSubrecordPointers(const D &data, R **records, const Vector<R *> &cacheRecords, const char *recordName, const char *subrecordName)
    {
-   for (size_t i = 0; i < _data.list().length(); ++i)
-      f(records()[i]);
-   }
-
-template<class D, class R, typename... Args> bool
-AOTCacheListRecord<D, R, Args...>::setSubrecordPointers(const Vector<R *> &cacheRecords, const char *recordName, const char *subrecordName)
-   {
-   for (size_t i = 0; i < data().list().length(); ++i)
+   for (size_t i = 0; i < data.list().length(); ++i)
       {
-      uintptr_t id = data().list().ids()[i];
+      uintptr_t id = data.list().ids()[i];
       if ((id >= cacheRecords.size()) || !cacheRecords[id])
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "AOT cache: Invalid %s subrecord: type %s, ID %zu", recordName, subrecordName, id);
          return false;
          }
-      records()[i] = cacheRecords[id];
+      records[i] = cacheRecords[id];
       }
    return true;
    }
@@ -291,6 +281,18 @@ ClassChainSerializationRecord::ClassChainSerializationRecord() :
    {
    }
 
+AOTCacheClassChainRecord::AOTCacheClassChainRecord(uintptr_t id, const AOTCacheClassRecord *const *records, size_t length) :
+   _data(id, length)
+   {
+   for (size_t i = 0; i < length; ++i)
+      _data.list().ids()[i] = records[i]->data().id();
+   memcpy((void *)this->records(), records, length * sizeof(AOTCacheClassRecord *));
+   }
+
+void
+AOTCacheClassChainRecord::subRecordsDo(const std::function<void(const AOTCacheRecord *)> &f) const
+   { return listClassSubRecordsDo(data(), records(), f); }
+
 AOTCacheClassChainRecord *
 AOTCacheClassChainRecord::create(uintptr_t id, const AOTCacheClassRecord *const *records, size_t length)
    {
@@ -301,7 +303,7 @@ AOTCacheClassChainRecord::create(uintptr_t id, const AOTCacheClassRecord *const 
 bool
 AOTCacheClassChainRecord::setSubrecordPointers(const JITServerAOTCacheReadContext &context)
    {
-   return AOTCacheListRecord::setSubrecordPointers(context._classRecords, "class chain", "class");
+   return listClassSetSubrecordPointers(data(), records(), context._classRecords, "class chain", "class");
    }
 
 WellKnownClassesSerializationRecord::WellKnownClassesSerializationRecord(uintptr_t id, size_t length,
@@ -317,6 +319,19 @@ WellKnownClassesSerializationRecord::WellKnownClassesSerializationRecord() :
    {
    }
 
+AOTCacheWellKnownClassesRecord::AOTCacheWellKnownClassesRecord(uintptr_t id, const AOTCacheClassChainRecord *const *records,
+                                                               size_t length, uintptr_t includedClasses) :
+   _data(id, length, includedClasses)
+   {
+   for (size_t i = 0; i < length; ++i)
+      _data.list().ids()[i] = records[i]->data().id();
+   memcpy((void *)this->records(), records, length * sizeof(AOTCacheClassChainRecord *));
+   }
+
+void
+AOTCacheWellKnownClassesRecord::subRecordsDo(const std::function<void(const AOTCacheRecord *)> &f) const
+   { return listClassSubRecordsDo(data(), records(), f); }
+
 AOTCacheWellKnownClassesRecord *
 AOTCacheWellKnownClassesRecord::create(uintptr_t id, const AOTCacheClassChainRecord *const *records,
                                        size_t length, uintptr_t includedClasses)
@@ -328,7 +343,7 @@ AOTCacheWellKnownClassesRecord::create(uintptr_t id, const AOTCacheClassChainRec
 bool
 AOTCacheWellKnownClassesRecord::setSubrecordPointers(const JITServerAOTCacheReadContext &context)
    {
-   return AOTCacheListRecord::setSubrecordPointers(context._classChainRecords, "well-known classes", "class chain");
+   return listClassSetSubrecordPointers(data(), records(), context._classChainRecords, "well-known classes", "class chain");
    }
 
 AOTHeaderSerializationRecord::AOTHeaderSerializationRecord(uintptr_t id, const TR_AOTHeader *header) :
