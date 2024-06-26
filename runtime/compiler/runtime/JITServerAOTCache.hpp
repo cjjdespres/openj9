@@ -88,6 +88,14 @@ private:
    int _haPrivate;
    };
 
+class HiddenFoo
+   {
+public:
+   HiddenFoo() : _hiddenFoo1(0) {}
+   size_t _hiddenFoo1;
+   uintptr_t _hiddenFooStuff[];
+   };
+
 template<class T, class R, typename... Args>
 class HiddenB : HiddenA
    {
@@ -95,15 +103,14 @@ protected:
    HiddenB(T x, R y, Args... args) : _hbPrivate(x) {}
 private:
    T _hbPrivate;
-   R _otherPrivate[];
    };
 
-class HiddenC final : HiddenB<int, bool>
+class HiddenC final : HiddenB<HiddenFoo, bool>
    {
 public:
-   HiddenC *getC() { return new HiddenC(5, true); }
+   HiddenC *getC() { return new HiddenC(HiddenFoo(), true); }
 private:
-   using HiddenB<int, bool>::HiddenB;
+   using HiddenB<HiddenFoo, bool>::HiddenB;
    };
 
 // Base class for serialization record "wrappers" stored at the server.
