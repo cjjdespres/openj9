@@ -2587,7 +2587,7 @@ TR_ResolvedRelocatableJ9JITServerMethod::staticAttributes(TR::Compilation * comp
 
    if (!resolveField)
       {
-      *address = (U_32)NULL;
+      *address = NULL;
       fieldInfoCanBeUsed = false;
       }
 
