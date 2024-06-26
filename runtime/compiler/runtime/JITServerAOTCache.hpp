@@ -122,11 +122,11 @@ public:
 protected:
    AOTCacheRecord() : _nextRecord(NULL) {}
 
-private:
    // Set the subrecord pointers in the variable-length portion of a record if necessary.
    // The subrecord pointers in the statically-sized portion of a record are set in the record constructors.
    virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) { return true; }
 
+private:
    AOTCacheRecord *_nextRecord;
    };
 
@@ -143,7 +143,7 @@ public:
 private:
    using SerializationRecord = ClassLoaderSerializationRecord;
 
-   friend AOTCacheClassLoaderRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheClassLoaderRecord *AOTCacheRecord::readRecord<AOTCacheClassLoaderRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    AOTCacheClassLoaderRecord(uintptr_t id, const uint8_t *name, size_t nameLength);
    AOTCacheClassLoaderRecord(const JITServerAOTCacheReadContext &context, const ClassLoaderSerializationRecord &header) {}
@@ -177,7 +177,7 @@ public:
 private:
    using SerializationRecord = ClassSerializationRecord;
 
-   friend AOTCacheClassRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheClassRecord *AOTCacheRecord::readRecord<AOTCacheClassRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    AOTCacheClassRecord(uintptr_t id, const AOTCacheClassLoaderRecord *classLoaderRecord, const JITServerROMClassHash &hash,
                        uint32_t romClassSize, bool generated, const J9ROMClass *romClass,
@@ -210,7 +210,7 @@ public:
 private:
    using SerializationRecord = MethodSerializationRecord;
 
-   friend AOTCacheMethodRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheMethodRecord *AOTCacheRecord::readRecord<AOTCacheMethodRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    AOTCacheMethodRecord(uintptr_t id, const AOTCacheClassRecord *definingClassRecord, uint32_t index);
    AOTCacheMethodRecord(const JITServerAOTCacheReadContext &context, const MethodSerializationRecord &header);
@@ -255,7 +255,7 @@ private:
 
    using SerializationRecord = ClassChainSerializationRecord;
 
-   friend AOTCacheClassChainRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheClassChainRecord *AOTCacheRecord::readRecord<AOTCacheClassChainRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
@@ -295,7 +295,7 @@ private:
 
    using SerializationRecord = WellKnownClassesSerializationRecord;
 
-   friend AOTCacheWellKnownClassesRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheWellKnownClassesRecord *AOTCacheRecord::readRecord<AOTCacheWellKnownClassesRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
@@ -316,7 +316,7 @@ public:
 private:
    using SerializationRecord = AOTHeaderSerializationRecord;
 
-   friend AOTCacheAOTHeaderRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheAOTHeaderRecord *AOTCacheRecord::readRecord<AOTCacheAOTHeaderRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    AOTCacheAOTHeaderRecord(uintptr_t id, const TR_AOTHeader *header);
    AOTCacheAOTHeaderRecord(const JITServerAOTCacheReadContext &context, const AOTHeaderSerializationRecord &header) {}
@@ -339,7 +339,7 @@ public:
 private:
    using SerializationRecord = ThunkSerializationRecord;
 
-   friend AOTCacheThunkRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend AOTCacheThunkRecord *AOTCacheRecord::readRecord<AOTCacheThunkRecord>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    AOTCacheThunkRecord(uintptr_t id, const uint8_t *signature, uint32_t signatureSize, const uint8_t *thunkStart, uint32_t thunkSize);
    AOTCacheThunkRecord(const JITServerAOTCacheReadContext &context, const ThunkSerializationRecord &header) {}
@@ -383,7 +383,7 @@ public:
 private:
    using SerializationRecord = SerializedAOTMethod;
 
-   friend CachedAOTMethod *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
+   friend CachedAOTMethod *AOTCacheRecord::readRecord<CachedAOTMethod>(FILE *f, const JITServerAOTCacheReadContext &context);
 
    CachedAOTMethod(const AOTCacheClassChainRecord *definingClassChainRecord, uint32_t index,
                    TR_Hotness optLevel, const AOTCacheAOTHeaderRecord *aotHeaderRecord,
