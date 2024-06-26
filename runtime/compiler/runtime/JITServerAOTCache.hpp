@@ -269,9 +269,9 @@ private:
 
    friend AOTCacheClassChainRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
 
-   bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
+   virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
-   using AOTCacheListRecord::AOTCacheListRecord;
+   using AOTCacheListRecord<ClassChainSerializationRecord, AOTCacheClassRecord>::AOTCacheListRecord;
    };
 
 
@@ -288,9 +288,9 @@ private:
 
    friend AOTCacheWellKnownClassesRecord *AOTCacheRecord::readRecord<>(FILE *f, const JITServerAOTCacheReadContext &context);
 
-   bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
+   virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
-   using AOTCacheListRecord::AOTCacheListRecord;
+   using AOTCacheListRecord<WellKnownClassesSerializationRecord, AOTCacheClassChainRecord, uintptr_t>::AOTCacheListRecord;
    };
 
 
