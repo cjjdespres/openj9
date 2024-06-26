@@ -96,21 +96,25 @@ public:
    uintptr_t _hiddenFooStuff[];
    };
 
-template<class T, class R, typename... Args>
+template<class Base, class T, class R, typename... Args>
 class HiddenB : HiddenA
    {
+public:
+   HiddenFoo *getMe() { return static_cast<Base *>(this)->getHiddenFoo(); }
+   static size_t sizeMe() { return 5 + Base::dataOffset(); }
 protected:
-   HiddenB(T x, R y, Args... args) : _hbPrivate(x) {}
-private:
-   T _hbPrivate;
+   HiddenB(T x, R y, Args... args) : HiddenA() {}
    };
 
-class HiddenC final : HiddenB<HiddenFoo, bool>
+class HiddenC final : HiddenB<HiddenC, HiddenFoo, bool>
    {
 public:
    HiddenC *getC() { return new HiddenC(HiddenFoo(), true); }
 private:
-   using HiddenB<HiddenFoo, bool>::HiddenB;
+   HiddenFoo *getHiddenFoo() { return &_hiddenFoo; }
+   static size_t dataOffset() { return offsetof(HiddenC, _hiddenFoo); }
+   HiddenFoo _hiddenFoo;
+   using HiddenB<HiddenC, HiddenFoo, bool>::HiddenB;
    };
 
 // Base class for serialization record "wrappers" stored at the server.
