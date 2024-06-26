@@ -274,7 +274,7 @@ private:
 
    virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
-   using AOTCacheListRecord::AOTCacheListRecord;
+   using AOTCacheListRecord<ClassChainSerializationRecord, AOTCacheClassRecord>::AOTCacheListRecord;
    };
 
 
@@ -293,7 +293,7 @@ private:
 
    virtual bool setSubrecordPointers(const JITServerAOTCacheReadContext &context) override;
 
-   using AOTCacheListRecord::AOTCacheListRecord;
+   using AOTCacheListRecord<WellKnownClassesSerializationRecord, AOTCacheClassChainRecord, uintptr_t>::AOTCacheListRecord;
    };
 
 
