@@ -1050,6 +1050,7 @@
    java_lang_invoke_Invokers_checkCustomized,
    java_lang_invoke_Invokers_checkExactType,
    java_lang_invoke_Invokers_getCallSiteTarget,
+   java_lang_invoke_Invokers_directVarHandleTarget,
    java_lang_invoke_Invokers_checkVarHandleGenericType,
    java_lang_invoke_MethodHandle_doCustomizationLogic,
    java_lang_invoke_MethodHandle_asType,
