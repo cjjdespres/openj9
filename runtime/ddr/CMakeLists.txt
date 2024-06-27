@@ -57,6 +57,8 @@ if(OMR_TOOLCONFIG STREQUAL "gnu")
 	omr_remove_flags(CMAKE_CXX_FLAGS ${OMR_STRNCPY_FORTIFY_OPTIONS})
 	if(NOT CMAKE_CXX_COMPILER_ID MATCHES Clang)
 		target_compile_options(j9ddr_misc PRIVATE -femit-class-debug-always)
+	else()
+		target_compile_options(j9ddr_misc PRIVATE -fno-eliminate-unused-debug-types)
 	endif()
 endif()
 
