@@ -56,11 +56,11 @@ TR::SymbolValidationManager::_systemClassesNotWorthRemembering[] = {
    { "java/lang/StringBuffer", NULL, false }
 };
 
-TR::SymbolValidationManager::SymbolValidationManager(TR::Region &region, TR_ResolvedMethod *compilee)
+TR::SymbolValidationManager::SymbolValidationManager(TR::Region &region, TR_ResolvedMethod *compilee, TR::Compilation *comp)
    : _symbolID(FIRST_ID),
      _heuristicRegion(0),
      _region(region),
-     _comp(TR::comp()),
+     _comp(comp),
      _vmThread(_comp->j9VMThread()),
      _fej9((TR_J9VM *)TR_J9VMBase::get(
         _vmThread->javaVM->jitConfig,
@@ -87,6 +87,7 @@ TR::SymbolValidationManager::SymbolValidationManager(TR::Region &region, TR_Reso
    {
    assertionsAreFatal(); // Acknowledge the env var whether or not assertions fail
 
+   TR_ASSERT_FATAL(TR::comp() == comp, "must equal %p %p", TR::comp(), comp);
 #if defined(J9VM_OPT_JITSERVER)
    auto stream = TR::CompilationInfo::getStream();
    if (stream && _fej9->sharedCache())

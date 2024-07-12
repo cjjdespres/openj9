@@ -1071,10 +1071,11 @@ bool TR_J9MutableCallSite::findCallSiteTarget (TR_CallStack *callStack, TR_Inlin
          {
          vgs->_mutableCallSiteEpoch = TR::KnownObjectTable::UNKNOWN;
          bool knotEnabled = (knot != NULL);
-         auto stream = TR::CompilationInfo::getStream();
+         auto stream = comp()->getStream();
+         TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
          stream->write(JITServer::MessageType::KnownObjectTable_mutableCallSiteEpoch, _mcsReferenceLocation, knotEnabled);
 
-         auto recv = stream->read<uintptr_t, TR::KnownObjectTable::Index, uintptr_t*>();
+         auto recv = stream->read<uintptr_t, TR::KnownObjectTable::Index, uintptr_t *>();
          uintptr_t mcsObject = std::get<0>(recv);
          TR::KnownObjectTable::Index knotIndex = std::get<1>(recv);
          uintptr_t *objectPointerReference = std::get<2>(recv);

@@ -74,7 +74,8 @@ J9::KnownObjectTable::getOrCreateIndex(uintptr_t objectPointer)
    if (self()->comp()->isOutOfProcessCompilation())
       {
       TR_ASSERT_FATAL(false, "It is not safe to call getOrCreateIndex() at the server. The object pointer could have become stale at the client.");
-      auto stream = TR::CompilationInfo::getStream();
+      auto stream = self()->comp()->getStream();
+      TR_ASSERT_FATAL(TR::CompilationInfo::getStream() == stream, "Must be equal");
       stream->write(JITServer::MessageType::KnownObjectTable_getOrCreateIndex, objectPointer);
       auto recv = stream->read<TR::KnownObjectTable::Index, uintptr_t *>();
 
@@ -133,7 +134,8 @@ J9::KnownObjectTable::getOrCreateIndexAt(uintptr_t *objectReferenceLocation)
 #if defined(J9VM_OPT_JITSERVER)
    if (self()->comp()->isOutOfProcessCompilation())
       {
-      auto stream = TR::CompilationInfo::getStream();
+      TR_ASSERT_FATAL(!self()->comp()->getStream() || (self()->comp()->getStream() == TR::CompilationInfo::getStream()), "must be equal: %p %p", self()->comp()->getStream(), TR::CompilationInfo::getStream());
+      auto stream = self()->comp()->getStream() ? self()->comp()->getStream() : TR::CompilationInfo::getStream();
       stream->write(JITServer::MessageType::KnownObjectTable_getOrCreateIndexAt, objectReferenceLocation);
       auto recv = stream->read<TR::KnownObjectTable::Index, uintptr_t *>();
 
@@ -169,7 +171,8 @@ J9::KnownObjectTable::getExistingIndexAt(uintptr_t *objectReferenceLocation)
 #if defined(J9VM_OPT_JITSERVER)
    if (self()->comp()->isOutOfProcessCompilation())
       {
-      auto stream = TR::CompilationInfo::getStream();
+      TR_ASSERT_FATAL(!self()->comp()->getStream() || (self()->comp()->getStream() == TR::CompilationInfo::getStream()), "must be equal %p %p", self()->comp()->getStream(), TR::CompilationInfo::getStream());
+      auto stream = self()->comp()->getStream() ? self()->comp()->getStream() : TR::CompilationInfo::getStream();
       stream->write(JITServer::MessageType::KnownObjectTable_getExistingIndexAt, objectReferenceLocation);
       result = std::get<0>(stream->read<TR::KnownObjectTable::Index>());
       }
@@ -205,7 +208,8 @@ J9::KnownObjectTable::getPointer(Index index)
       if (self()->comp()->isOutOfProcessCompilation())
          {
          TR_ASSERT_FATAL(false, "It is not safe to call getPointer() at the server. The object pointer could have become stale at the client.");
-         auto stream = TR::CompilationInfo::getStream();
+         auto stream = self()->comp()->getStream();
+         TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal: %p %p", stream, TR::CompilationInfo::getStream());
          stream->write(JITServer::MessageType::KnownObjectTable_getPointer, index);
          return std::get<0>(stream->read<uintptr_t>());
          }
@@ -391,7 +395,8 @@ J9::KnownObjectTable::dumpTo(TR::FILE *file, TR::Compilation *comp)
 #if defined(J9VM_OPT_JITSERVER)
    if (comp->isOutOfProcessCompilation())
       {
-      auto stream = TR::CompilationInfo::getStream();
+      auto stream = comp->getStream();
+      TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
       stream->write(JITServer::MessageType::KnownObjectTable_getKnownObjectTableDumpInfo, JITServer::Void());
 
       auto recv = stream->read<std::vector<TR_KnownObjectTableDumpInfo>>();

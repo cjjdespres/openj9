@@ -204,7 +204,9 @@ JITServerIProfiler::profilingSample(TR_OpaqueMethodBlock *method, uint32_t byteC
 #if defined(DEBUG) || defined(PROD_WITH_ASSUMES)
          // sanity check
          // Ask the client again and see if the two sources of information match
-         auto stream = TR::CompilationInfo::getStream();
+         TR_ASSERT_FATAL(comp, "must exist");
+         auto stream = comp->getStream();
+         TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
          stream->write(JITServer::MessageType::IProfiler_profilingSample, method, byteCodeIndex, (uintptr_t)1);
          auto recv = stream->read<std::string, bool, bool, bool>();
          auto &ipdata = std::get<0>(recv);
@@ -240,8 +242,9 @@ JITServerIProfiler::profilingSample(TR_OpaqueMethodBlock *method, uint32_t byteC
       }
 
    // Now ask the client
-   //
-   auto stream = TR::CompilationInfo::getStream();
+   TR_ASSERT_FATAL(comp, "must exist");
+   auto stream = comp->getStream();
+   TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
    stream->write(JITServer::MessageType::IProfiler_profilingSample, method, byteCodeIndex, (uintptr_t)(_useCaching ? 0 : 1));
    auto recv = stream->read<std::string, bool, bool, bool>();
    auto &ipdata = std::get<0>(recv);
@@ -554,7 +557,9 @@ JITServerIProfiler::setCallCount(TR_OpaqueMethodBlock *method, int32_t bcIndex, 
       }
    if (sendRemoteMessage)
       {
-      auto stream = TR::CompilationInfo::getStream();
+      TR_ASSERT_FATAL(comp, "must exist");
+      auto stream = comp->getStream();
+      TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
       stream->write(JITServer::MessageType::IProfiler_setCallCount, method, bcIndex, count);
       auto recv = stream->read<bool>();
       bool isCompiled = std::get<0>(recv);
@@ -582,8 +587,10 @@ void
 JITServerIProfiler::persistIprofileInfo(TR::ResolvedMethodSymbol *methodSymbol, TR_ResolvedMethod *method, TR::Compilation *comp)
    {
    // resolvedMethodSymbol is only used for debugging on the client, so we don't have to send it
-   auto stream = TR::CompilationInfo::getStream();
-   auto compInfoPT = (TR::CompilationInfoPerThreadRemote *)(comp->fej9()->_compInfoPT);
+   TR_ASSERT_FATAL(comp, "must exist");
+   auto stream = comp->getStream();
+   TR_ASSERT_FATAL(stream == TR::CompilationInfo::getStream(), "must be equal %p %p", stream, TR::CompilationInfo::getStream());
+   auto compInfoPT = (TR::CompilationInfoPerThreadRemote *)comp->fej9()->_compInfoPT;
    ClientSessionData *clientSessionData = compInfoPT->getClientData();
 
    if (clientSessionData->getOrCacheVMInfo(stream)->_elgibleForPersistIprofileInfo)
