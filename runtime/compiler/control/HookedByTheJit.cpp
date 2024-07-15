@@ -2547,7 +2547,13 @@ void jitClassesRedefined(J9VMThread * currentThread, UDATA classCount, J9JITRede
          {
          compInfo->getUnloadedClassesTempList()->push_back((TR_OpaqueClassBlock *) classPair->oldClass);
          if (auto deserializer = compInfo->getJITServerAOTDeserializer())
+            {
+            // Both the old class and its methods must be invalidated. The old class will always be
+            // oldClass, but the old methods may be in newClass if the class is being redefined in-place.
+            // Invalidate both classes to be sure we invalidate the old methods.
             deserializer->invalidateClass(currentThread, classPair->oldClass);
+            deserializer->invalidateClass(currentThread, classPair->newClass);
+            }
          }
 #endif
 
