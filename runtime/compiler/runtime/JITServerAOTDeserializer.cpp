@@ -379,6 +379,14 @@ JITServerAOTDeserializer::findGeneratedClassHash(J9ClassLoader *loader, J9Class 
    if (h_it == n_it->second._classPtrMap.end())
       return std::string();
    JITServerROMClassHash hash = h_it->second;
+   if (&hash == NULL)
+      {
+      JITServerROMClassHash *hashAddr = &hash;
+      if (hashAddr == NULL)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Somehow %.*s has null hash!", namePrefixLength, name);
+         }
+      }
    return std::string((const char *)&hash, sizeof(hash));
    }
 
