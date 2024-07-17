@@ -378,7 +378,8 @@ JITServerAOTDeserializer::findGeneratedClassHash(J9ClassLoader *loader, J9Class 
    auto h_it = n_it->second._classPtrMap.find(ramClass);
    if (h_it == n_it->second._classPtrMap.end())
       return std::string();
-   return std::string((const char *)&h_it->second, sizeof(h_it->second));
+   JITServerROMClassHash *hash = &h_it->second;
+   return std::string((const char *)hash, sizeof(*hash));
    }
 
 void
