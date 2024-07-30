@@ -3752,7 +3752,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
             if (TR::Options::getVerboseOption(TR_VerboseJITServer))
                TR_VerboseLog::writeLineLocked(
                   TR_Vlog_JITServer,
-                  "Client successfully loaded method %s @ %s following compilation request. [metaData=%p, startPC=%p]",
+                  "Client compiling method %s @ %s [metaData=%p, startPC=%p] locally following remote compilation",
                   compiler->signature(),
                   compiler->getHotnessName(),
                   metaData, (metaData) ? (void *)metaData->startPC : NULL
