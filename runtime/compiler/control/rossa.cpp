@@ -2172,6 +2172,8 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
          return -1;
       }
 
+   OMR::DataType::initVectorNames();
+
    // For RI enabled we may want to start as off and only enable when there is
    // compilation pressure
    if (persistentInfo->isRuntimeInstrumentationEnabled() &&
