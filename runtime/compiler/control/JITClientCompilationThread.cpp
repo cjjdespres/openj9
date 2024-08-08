@@ -3748,6 +3748,7 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
             {
             intptr_t rtn = 0;
             compiler->getOptions()->setLogFileForClientOptions(compilationSequenceNumber);
+            TR::MonitorTable::get()->readAcquireClassUnloadMonitor(compInfoPT->getCompThreadId());
             releaseVMAccess(vmThread);
             if (TR::Options::getVerboseOption(TR_VerboseJITServer))
                TR_VerboseLog::writeLineLocked(
@@ -3757,7 +3758,9 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
                   compiler->getHotnessName(),
                   metaData, (metaData) ? (void *)metaData->startPC : NULL
                   );
-            if ((rtn = compiler->compile()) != COMPILATION_SUCCEEDED)
+            rtn = compiler->compile();
+            TR::MonitorTable::get()->readReleaseClassUnloadMonitor(compInfoPT->getCompThreadId());
+            if (rtn != COMPILATION_SUCCEEDED)
                {
                TR_ASSERT(false, "Compiler returned non zero return code %d\n", rtn);
                compiler->failCompilation<TR::CompilationException>("Compilation Failure");
