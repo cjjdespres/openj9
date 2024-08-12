@@ -442,6 +442,9 @@ public:
    virtual void * &                addressOfClassOfMethod();
 
    virtual uint32_t                vTableSlot(uint32_t);
+#if defined(J9VM_OPT_JITSERVER)
+   virtual uint32_t                vTableSlotNoSlotAssert(uint32_t cpIndex);
+#endif /* defined(J9VM_OPT_JITSERVER) */
 
    virtual bool                    isCompilable(TR_Memory *);
 

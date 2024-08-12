@@ -6491,9 +6491,23 @@ TR_ResolvedJ9Method::vTableSlot(U_32 cpIndex)
    {
    TR_ASSERT(cpIndex != -1, "cpIndex shouldn't be -1");
    //UDATA vTableSlot = ((J9RAMVirtualMethodRef *)literals())[cpIndex].methodIndexAndArgCount >> 8;
-   TR_ASSERT(convertToMethod()->isArchetypeSpecimen() || _vTableSlot, "vTableSlot called for unresolved method");
+   TR_ASSERT(_vTableSlot, "vTableSlot called for unresolved method");
    return _vTableSlot;
    }
+
+#if defined(J9VM_OPT_JITSERVER)
+// The _vTableSlot of a resolved method can be 0; see comment in J9::TransformUtil::refineMethodHandleLinkTo,
+// but private virtual methods and java/lang/Object methods can result in such resolved methods. A JITServer
+// client needs to be able to send certain information as-is to the server, so this method that doesn't assert
+// on a zero slot index is required.
+uint32_t
+TR_ResolvedJ9Method::vTableSlotNoSlotAssert(uint32_t cpIndex)
+   {
+   TR_ASSERT(cpIndex != -1, "cpIndex shouldn't be -1");
+   return _vTableSlot;
+   }
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
 
 bool
 TR_ResolvedJ9Method::isCompilable(TR_Memory * trMemory)
