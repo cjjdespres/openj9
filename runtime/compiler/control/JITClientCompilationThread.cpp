@@ -3748,6 +3748,10 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
             {
             intptr_t rtn = 0;
             compiler->getOptions()->setLogFileForClientOptions(compilationSequenceNumber);
+            // We need to acquire the class unload monitor for this local compilation. Since we didn't acquire
+            // the class unload monitor in TR::CompilationInfoPerThreadBase::compile, the processException() handler
+            // doesn't know that this thread has the class unload monitor, so we also have to make sure that
+            // we release the monitor if any exception gets thrown.
             TR::MonitorTable::get()->readAcquireClassUnloadMonitor(compInfoPT->getCompThreadId());
             releaseVMAccess(vmThread);
             if (TR::Options::getVerboseOption(TR_VerboseJITServer))
@@ -3758,7 +3762,15 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
                   compiler->getHotnessName(),
                   metaData, (metaData) ? (void *)metaData->startPC : NULL
                   );
-            rtn = compiler->compile();
+            try
+               {
+               rtn = compiler->compile();
+               }
+            catch (...)
+               {
+               TR::MonitorTable::get()->readReleaseClassUnloadMonitor(compInfoPT->getCompThreadId());
+               throw;
+               }
             TR::MonitorTable::get()->readReleaseClassUnloadMonitor(compInfoPT->getCompThreadId());
             if (rtn != COMPILATION_SUCCEEDED)
                {
