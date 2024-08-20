@@ -344,6 +344,7 @@ public class JITServerTest {
 			p.destroyForcibly().waitFor();
 
 			final String errorText = "The process is still alive after waiting for " + (PROCESS_DESTROY_WAIT_TIME_MS * waitCount) + "ms.";
+			dumpProcessLog(builder);
 			AssertJUnit.fail(errorText);
 		}
 
