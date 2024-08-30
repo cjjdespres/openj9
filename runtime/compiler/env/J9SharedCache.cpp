@@ -39,9 +39,11 @@
 #include "exceptions/PersistenceFailure.hpp"
 #include "infra/CriticalSection.hpp"
 #include "infra/String.hpp"
+#include "j9nonbuilder.h"
 #include "runtime/CodeRuntime.hpp"
 #include "runtime/IProfiler.hpp"
 #include "runtime/RuntimeAssumptions.hpp"
+#include "shcflags.h"
 #if defined(J9VM_OPT_JITSERVER)
 #include "control/JITServerHelpers.hpp"
 #include "runtime/JITClientSession.hpp"
@@ -1458,6 +1460,39 @@ TR_J9SharedCache::storeWellKnownClasses(J9VMThread *vmThread, uintptr_t *classCh
    J9SharedDataDescriptor dataDescriptor;
    dataDescriptor.address = (U_8*)classChainOffsets;
    dataDescriptor.length = classChainOffsetsSize * sizeof (classChainOffsets[0]);
+   dataDescriptor.type = J9SHR_DATA_TYPE_JITHINT;
+   dataDescriptor.flags = 0;
+
+   return storeSharedData(vmThread, key, &dataDescriptor);
+   }
+
+const void *
+TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
+                                             TR_OpaqueMethodBlock *method,
+                                             TR_OpaqueClassBlock *definingClass,
+                                             uintptr_t *classDependencyChain,
+                                             size_t classDependencyChainSize)
+   {
+   uintptr_t methodOffset = 0;
+   if (!isMethodInSharedCache(method, definingClass, &methodOffset))
+      return NULL;
+
+   const char keyPrefix[] = "AOTMethodDependencies:";
+   const int keyPrefixLength = sizeof(keyPrefix) - 1; // excluding NULL terminator
+
+   char key[keyPrefixLength + 17]; // longest possible key length is way less than 16 digits
+   char *cursor = key;
+
+   memcpy(cursor, keyPrefix, keyPrefixLength);
+   cursor += keyPrefixLength;
+
+   convertUnsignedOffsetToASCII(methodOffset, key);
+   cursor += _numDigitsForCacheOffsets;
+   *cursor = '\0';
+
+   J9SharedDataDescriptor dataDescriptor;
+   dataDescriptor.address = (uint8_t *)classDependencyChain;
+   dataDescriptor.length = classDependencyChainSize * sizeof(classDependencyChain[0]);
    dataDescriptor.type = J9SHR_DATA_TYPE_JITHINT;
    dataDescriptor.flags = 0;
 

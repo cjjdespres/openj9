@@ -377,6 +377,12 @@ public:
    virtual const void *storeWellKnownClasses(J9VMThread *vmThread, uintptr_t *classChainOffsets, size_t classChainOffsetsSize, unsigned int includedClasses);
    virtual const void *storeSharedData(J9VMThread *vmThread, const char *key, const J9SharedDataDescriptor *descriptor);
 
+   virtual const void *storeAOTMethodDependencies(J9VMThread *vmThread,
+                                                  TR_OpaqueMethodBlock *method,
+                                                  TR_OpaqueClassBlock *definingClass,
+                                                  uintptr_t *classDependencyChain,
+                                                  size_t classDependencyChainSize);
+
    /**
     * \brief Fill the given buffer with the SCC key for the well-known classes object with the given
     *        includedClasses
