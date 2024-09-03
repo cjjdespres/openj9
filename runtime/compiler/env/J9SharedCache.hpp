@@ -382,6 +382,7 @@ public:
                                                 TR_OpaqueClassBlock *definingClass,
                                                 uintptr_t *classDependencyChain,
                                                 size_t classDependencyChainSize);
+   virtual void *aotMethodDependenciesFromOffsetInSharedCache(uintptr_t offset);
 
    /**
     * \brief Fill the given buffer with the SCC key for the well-known classes object with the given
@@ -693,6 +694,12 @@ public:
    void setStream(JITServer::ServerStream *stream) { _stream = stream; }
    void setCompInfoPT(TR::CompilationInfoPerThread *compInfoPT) { _compInfoPT = compInfoPT; }
    virtual const void *storeSharedData(J9VMThread *vmThread, const char *key, const J9SharedDataDescriptor *descriptor) override;
+   virtual uintptr_t storeAOTMethodDependencies(J9VMThread *vmThread,
+                                                TR_OpaqueMethodBlock *method,
+                                                TR_OpaqueClassBlock *definingClass,
+                                                uintptr_t *classDependencyChain,
+                                                size_t classDependencyChainSize) override;
+   virtual void *aotMethodDependenciesFromOffsetInSharedCache(uintptr_t offset) override { TR_ASSERT_FATAL(false, "called"); return NULL;};
 
 private:
 

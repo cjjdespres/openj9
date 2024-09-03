@@ -1502,6 +1502,18 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
    return storedDependenciesOffset;
    }
 
+void *
+TR_J9SharedCache::aotMethodDependenciesFromOffsetInSharedCache(uintptr_t offset)
+   {
+   uintptr_t ptr = 0;
+   if (isOffsetInSharedCache(offset, &ptr))
+      {
+      return (void *)ptr;
+      }
+   TR_ASSERT_FATAL(false, "Shared cache offset %d out of bounds", offset);
+   return (void *)ptr;
+   }
+
 #if defined(J9VM_OPT_JITSERVER)
 TR_J9JITServerSharedCache::TR_J9JITServerSharedCache(TR_J9VMBase *fe)
    : TR_J9SharedCache(fe), _stream(NULL), _compInfoPT(NULL)
@@ -1734,6 +1746,25 @@ TR_J9JITServerSharedCache::storeSharedData(J9VMThread *vmThread, const char *key
    _stream->write(JITServer::MessageType::SharedCache_storeSharedData, std::string(key, strlen(key)), *descriptor, dataStr);
    return std::get<0>(_stream->read<const void *>());
    }
+
+uintptr_t
+TR_J9JITServerSharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
+                                                      TR_OpaqueMethodBlock *method,
+                                                      TR_OpaqueClassBlock *definingClass,
+                                                      uintptr_t *classDependencyChain,
+                                                      size_t classDependencyChainSize)
+   {
+   TR_ASSERT(_stream, "stream must be initialized by now");
+   TR::Compilation *comp = _compInfoPT->getCompilation();
+   ClientSessionData *clientData = comp->getClientData();
+
+   bool useServerOffsets = clientData->useServerOffsets(_stream) && comp->isAOTCacheStore();
+   if (useServerOffsets)
+      return TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+
+   return TR_J9SharedCache::storeAOTMethodDependencies(vmThread, method, definingClass, classDependencyChain, classDependencyChainSize);
+   }
+
 
 TR_J9DeserializerSharedCache::TR_J9DeserializerSharedCache(TR_J9VMBase *fe, JITServerNoSCCAOTDeserializer *deserializer, TR::CompilationInfoPerThread *compInfoPT)
    : TR_J9SharedCache(fe), _deserializer(deserializer), _compInfoPT(compInfoPT)
