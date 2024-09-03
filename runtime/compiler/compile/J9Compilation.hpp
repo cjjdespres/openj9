@@ -564,6 +564,7 @@ private:
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    UnorderedSet<uintptr_t> _aotMethodDependencies;
+   bool _trackAOTMethodDependencies;
 
    TR::SymbolValidationManager *_symbolValidationManager;
    bool _osrProhibitedOverRangeOfTrees;
