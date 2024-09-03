@@ -1466,7 +1466,7 @@ TR_J9SharedCache::storeWellKnownClasses(J9VMThread *vmThread, uintptr_t *classCh
    return storeSharedData(vmThread, key, &dataDescriptor);
    }
 
-const void *
+uintptr_t
 TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
                                              TR_OpaqueMethodBlock *method,
                                              TR_OpaqueClassBlock *definingClass,
@@ -1475,7 +1475,7 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
    {
    uintptr_t methodOffset = 0;
    if (!isMethodInSharedCache(method, definingClass, &methodOffset))
-      return NULL;
+      return TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET;
 
    const char keyPrefix[] = "AOTMethodDependencies:";
    const int keyPrefixLength = sizeof(keyPrefix) - 1; // excluding NULL terminator
@@ -1496,7 +1496,10 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
    dataDescriptor.type = J9SHR_DATA_TYPE_JITHINT;
    dataDescriptor.flags = 0;
 
-   return storeSharedData(vmThread, key, &dataDescriptor);
+   const void *storedDependencies = storeSharedData(vmThread, key, &dataDescriptor);
+   uintptr_t storedDependenciesOffset = TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   isPointerInSharedCache((void *)storedDependencies, &storedDependenciesOffset);
+   return storedDependenciesOffset;
    }
 
 #if defined(J9VM_OPT_JITSERVER)
