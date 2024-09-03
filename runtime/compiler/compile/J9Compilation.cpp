@@ -205,6 +205,7 @@ J9::Compilation::Compilation(int32_t id,
    _serializationRecords(decltype(_serializationRecords)::allocator_type(heapMemoryRegion)),
    _thunkRecords(decltype(_thunkRecords)::allocator_type(heapMemoryRegion)),
 #endif /* defined(J9VM_OPT_JITSERVER) */
+   _aotMethodDependencies(decltype(_aotMethodDependencies)::allocator_type(heapMemoryRegion)),
    _osrProhibitedOverRangeOfTrees(false),
    _wasFearPointAnalysisDone(false)
    {
@@ -1586,6 +1587,14 @@ J9::Compilation::canAddOSRAssumptions()
       && self()->isOSRTransitionTarget(TR::postExecutionOSR)
       && self()->getOSRMode() == TR::voluntaryOSR
       && !self()->wasFearPointAnalysisDone();
+   }
+
+// Document: offset must be to class or class chain (can currently tell which by low bit)
+void
+J9::Compilation::addAOTMethodDependency(uintptr_t offset)
+   {
+   TR_ASSERT_FATAL(self()->compileRelocatableCode(), "Must be generating AOT code");
+   _aotMethodDependencies.insert(offset);
    }
 
 #if defined(J9VM_OPT_JITSERVER)
