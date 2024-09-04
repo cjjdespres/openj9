@@ -75,6 +75,8 @@ public:
    TR_PERSISTENT_ALLOC(TR_Memory::PersistentCHTable)
    TR_AOTDependencyTable(TR_PersistentMemory *persistentMemory);
 
+   void setSharedCache(TR_J9SharedCache *sharedCache) { _sharedCache = sharedCache; }
+
    void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const void *aotCachedMethod);
 private:
    TR_PersistentMemory *const _persistentMemory;
