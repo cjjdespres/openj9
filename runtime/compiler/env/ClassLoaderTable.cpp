@@ -471,7 +471,7 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    }
 
 void
-TR_AOTDependencyTable::trackStoredMethod(J9Method *method)
+TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const void *aotCachedMethod)
    {
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);

@@ -517,7 +517,11 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                   }
                count = scount;
                compInfo->incrementNumMethodsFoundInSharedCache();
-               compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(method);
+               // TODO: should probably improve this
+               UDATA flags = 0;
+               const void *aotCachedMethod = vmThread->javaVM->sharedClassConfig->findCompiledMethodEx1(vmThread, romMethod, &flags);
+               if (!(flags & J9SHR_AOT_METHOD_FLAG_INVALIDATED))
+                  compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(vmThread, method, aotCachedMethod);
                }
             // AOT Body not in SCC, so scount was not set
             else if (!TR::Options::getCountsAreProvidedByUser() && !countInOptionSet)
