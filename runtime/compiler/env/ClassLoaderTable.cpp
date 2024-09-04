@@ -23,6 +23,7 @@
 #include "AtomicSupport.hpp"
 #include "control/CompilationThread.hpp"
 #include "env/ClassLoaderTable.hpp"
+#include "env/J9PersistentInfo.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/VerboseLog.hpp"
 #include "infra/MonitorTable.hpp"
@@ -462,4 +463,22 @@ TR_PersistentClassLoaderTable::removeClassLoader(J9VMThread *vmThread, void *loa
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    _persistentMemory->freePersistentMemory(info);
+   }
+
+TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemory) :
+   _persistentMemory(persistentMemory), _sharedCache(NULL)
+   {
+   }
+
+void
+TR_AOTDependencyTable::trackStoredMethod(J9Method *method)
+   {
+   // TODO: verbose option
+   J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
+   J9UTF8 *name      = J9ROMMETHOD_NAME(J9_ROM_METHOD_FROM_RAM_METHOD(method));
+   J9UTF8 *signature = J9ROMMETHOD_SIGNATURE(J9_ROM_METHOD_FROM_RAM_METHOD(method));
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC: %.*s.%.*s%.*s",
+                                  J9UTF8_LENGTH(className), J9UTF8_DATA(className),
+                                  J9UTF8_LENGTH(name), J9UTF8_DATA(name),
+                                  J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
    }

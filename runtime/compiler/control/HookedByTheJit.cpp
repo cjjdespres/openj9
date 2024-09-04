@@ -517,6 +517,7 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                   }
                count = scount;
                compInfo->incrementNumMethodsFoundInSharedCache();
+               compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(method);
                }
             // AOT Body not in SCC, so scount was not set
             else if (!TR::Options::getCountsAreProvidedByUser() && !countInOptionSet)

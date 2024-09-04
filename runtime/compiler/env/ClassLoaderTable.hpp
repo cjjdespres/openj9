@@ -68,4 +68,17 @@ private:
 #endif /* defined(J9VM_OPT_JITSERVER) */
    };
 
+// TODO: move to own file
+class TR_AOTDependencyTable
+   {
+public:
+   TR_PERSISTENT_ALLOC(TR_Memory::PersistentCHTable)
+   TR_AOTDependencyTable(TR_PersistentMemory *persistentMemory);
+
+   void trackStoredMethod(J9Method *method);
+private:
+   TR_PersistentMemory *const _persistentMemory;
+   TR_J9SharedCache *_sharedCache;
+   };
+
 #endif
