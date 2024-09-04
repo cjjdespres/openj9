@@ -206,7 +206,7 @@ J9::Compilation::Compilation(int32_t id,
    _thunkRecords(decltype(_thunkRecords)::allocator_type(heapMemoryRegion)),
 #endif /* defined(J9VM_OPT_JITSERVER) */
    _aotMethodDependencies(decltype(_aotMethodDependencies)::allocator_type(heapMemoryRegion)),
-   _trackingAOTMethodDependencies(false),
+   _trackingAOTMethodDependencies(true),
    _osrProhibitedOverRangeOfTrees(false),
    _wasFearPointAnalysisDone(false)
    {
