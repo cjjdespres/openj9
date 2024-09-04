@@ -2510,7 +2510,7 @@ void J9::AheadOfTimeCompile::processRelocations()
          *dependencyChainOffsetCursor = dependencyChainOffset;
          // TODO: improve log
          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has %lu dependencies ", comp->signature(), dependencies.size());
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has %lu dependencies at offset %lu", comp->signature(), dependencies.size(), dependencyChainOffset);
          }
       }
    }
