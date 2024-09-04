@@ -2504,7 +2504,8 @@ void J9::AheadOfTimeCompile::processRelocations()
          auto sharedCache = fej9->sharedCache();
          auto vmThread = fej9->getCurrentVMThread();
          auto method = (TR_OpaqueMethodBlock *)comp->getMethodBeingCompiled()->convertToMethod();
-         auto definingClass = fej9->getClassOfMethod(method);
+         // TODO: below does not work with JITServer! need non-shared frontend.
+         auto definingClass = (TR_OpaqueClassBlock *)J9_CLASS_FROM_METHOD(((J9Method *)method));
          auto dependencyChainOffset = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
          *dependencyChainOffsetCursor = dependencyChainOffset;
          // TODO: improve log
