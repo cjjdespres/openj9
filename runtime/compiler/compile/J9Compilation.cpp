@@ -206,7 +206,7 @@ J9::Compilation::Compilation(int32_t id,
    _thunkRecords(decltype(_thunkRecords)::allocator_type(heapMemoryRegion)),
 #endif /* defined(J9VM_OPT_JITSERVER) */
    _aotMethodDependencies(decltype(_aotMethodDependencies)::allocator_type(heapMemoryRegion)),
-   _trackAOTMethodDependencies(false),
+   _trackingAOTMethodDependencies(false),
    _osrProhibitedOverRangeOfTrees(false),
    _wasFearPointAnalysisDone(false)
    {
@@ -1596,16 +1596,25 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset)
    {
    TR_ASSERT_FATAL(self()->compileRelocatableCode(), "Must be generating AOT code");
 
-   if (!_trackAOTMethodDependencies)
+   if (!_trackingAOTMethodDependencies)
       return;
 
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
       {
       // TODO: associate this to a particular option
       TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Giving up tracking offsets for method %s", signature());
-      _trackAOTMethodDependencies = false;
+      _trackingAOTMethodDependencies = false;
       }
    _aotMethodDependencies.insert(offset);
+   }
+
+void
+J9::Compilation::populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer) const
+   {
+   // TODO: document
+   chainBuffer.reserve(_aotMethodDependencies.size() + 1);
+   chainBuffer.push_back(_aotMethodDependencies.size());
+   chainBuffer.insert(chainBuffer.end(), _aotMethodDependencies.begin(), _aotMethodDependencies.end());
    }
 
 #if defined(J9VM_OPT_JITSERVER)

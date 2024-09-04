@@ -2463,12 +2463,16 @@ void J9::AheadOfTimeCompile::processRelocations()
       //
       int32_t wellKnownClassesOffsetSize = useSVM ? SIZEPOINTER : 0;
       uintptr_t reloBufferSize =
-         self()->getSizeOfAOTRelocations() + SIZEPOINTER + wellKnownClassesOffsetSize;
+         self()->getSizeOfAOTRelocations() + 2 * SIZEPOINTER + wellKnownClassesOffsetSize;
       uint8_t *relocationDataCursor = self()->setRelocationData(
          fej9->allocateRelocationData(comp, reloBufferSize));
 
       // set up the size for the region
       *(uintptr_t *)relocationDataCursor = reloBufferSize;
+      relocationDataCursor += SIZEPOINTER;
+
+      uintptr_t *dependencyChainOffsetCursor = (uintptr_t *)relocationDataCursor;
+      *dependencyChainOffsetCursor = TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       relocationDataCursor += SIZEPOINTER;
 
       if (useSVM)
@@ -2491,6 +2495,18 @@ void J9::AheadOfTimeCompile::processRelocations()
          s->setRelocationData(relocationDataCursor);
          s->initializeRelocation(cg);
          relocationDataCursor += s->getSizeOfRelocationData();
+         }
+
+      if (comp->isTrackingAOTMethodDependencies())
+         {
+         Vector<uintptr_t> dependencies(comp->trMemory()->currentStackRegion());
+         comp->populateAOTMethodDependencies(dependencies);
+         auto sharedCache = fej9->sharedCache();
+         auto vmThread = fej9->getCurrentVMThread();
+         auto method = (TR_OpaqueMethodBlock *)comp->getMethodBeingCompiled()->convertToMethod();
+         auto definingClass = fej9->getClassOfMethod(method);
+         auto dependencyChainOffset = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
+         *dependencyChainOffsetCursor = dependencyChainOffset;
          }
       }
    }
