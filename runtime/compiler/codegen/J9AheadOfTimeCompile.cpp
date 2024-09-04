@@ -2508,7 +2508,8 @@ void J9::AheadOfTimeCompile::processRelocations()
          auto dependencyChainOffset = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
          *dependencyChainOffsetCursor = dependencyChainOffset;
          // TODO: improve log
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has %lu dependencies ", comp->signature(), dependencies.size());
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has %lu dependencies ", comp->signature(), dependencies.size());
          }
       }
    }
