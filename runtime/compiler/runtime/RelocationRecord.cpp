@@ -453,9 +453,9 @@ TR_RelocationRecordGroup::wellKnownClassChainOffsets(
    if (!TR::comp()->getOption(TR_UseSymbolValidationManager))
       return NULL;
 
-   // The first word is the size of the group (itself pointer-sized). Skip it
-   // to reach the SCC offset of the well-known classes' class chain offsets.
-   uintptr_t offset = *((uintptr_t *)_group + 1);
+   // The first word is the size of the group (itself pointer-sized), and the second is the dependency chain offset.
+   // Skip these to reach the SCC offset of the well-known classes' class chain offsets.
+   uintptr_t offset = *((uintptr_t *)_group + 2);
    void *classChains =
       reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(offset);
 

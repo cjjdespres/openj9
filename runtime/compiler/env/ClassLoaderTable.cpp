@@ -27,6 +27,7 @@
 #include "env/J9SharedCache.hpp"
 #include "env/VerboseLog.hpp"
 #include "infra/MonitorTable.hpp"
+#include <cstdint>
 
 
 enum TableKind { Loader, Chain, Name };
@@ -470,15 +471,30 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    {
    }
 
+// TODO: should consolidate some of the code here and at call-site into a single shared cache
+// function called something like getDependenciesofAOTMethod.
 void
 TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const void *aotCachedMethod)
    {
+   // TODO: really shouldn't duplicate this with relo runtime.
+   auto cacheEntry = static_cast<const J9JITDataCacheHeader *>(aotCachedMethod);
+   // TODO: need to check that header is valid?
+   auto aotMethodHeaderEntry = (TR_AOTMethodHeader *)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
+   auto binaryReloRecords = (uint8_t *)aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + aotMethodHeaderEntry->offsetToRelocationDataItems;
+
+   uintptr_t dependencyOffset = *((uintptr_t *)binaryReloRecords + 1);
+
+   uintptr_t *dependencies = NULL;
+   if (dependencyOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      dependencies = (uintptr_t *)_sharedCache->aotMethodDependenciesFromOffsetInSharedCache(dependencyOffset);
+
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
    J9UTF8 *name      = J9ROMMETHOD_NAME(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    J9UTF8 *signature = J9ROMMETHOD_SIGNATURE(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC: %.*s.%.*s%.*s",
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC %s: %.*s.%.*s%.*s",
+                                     dependencies ? "with deps" : "no deps",
                                      J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                      J9UTF8_LENGTH(name), J9UTF8_DATA(name),
                                      J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
