@@ -457,7 +457,7 @@ TR_RelocationRecordGroup::wellKnownClassChainOffsets(
    // Skip these to reach the SCC offset of the well-known classes' class chain offsets.
    uintptr_t offset = *((uintptr_t *)_group + 2);
 
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has wkc %lu", reloRuntime->comp()->signature(), offset);
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p has wkc %lu", reloRuntime->method(), offset);
    void *classChains =
       reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(offset);
 
