@@ -521,7 +521,12 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                // TODO: should probably improve this
                auto dependencyChain = sc->getDependenciesOfMethod(method);
                if (dependencyChain)
-                  compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(vmThread, method, dependencyChain);
+                  {
+                  bool dependenciesSatisfied = false;
+                  compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(vmThread, method, dependencyChain, dependenciesSatisfied);
+                  if (dependenciesSatisfied)
+                     count = 0;
+                  }
                else if (TR::Options::getVerboseOption(TR_VerbosePerformance)) // TODO: verbose flag
                   TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "SCC method %p did not have any dependencies", method);
                }

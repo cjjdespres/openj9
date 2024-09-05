@@ -98,7 +98,7 @@ public:
 
    void setSharedCache(TR_J9SharedCache *sharedCache) { _sharedCache = sharedCache; }
 
-   void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain);
+   void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied);
 
    void onClassLoad(TR_OpaqueClassBlock *ramClass);
    void invalidateClass(TR_OpaqueClassBlock *ramClass);

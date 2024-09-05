@@ -479,7 +479,7 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    }
 
 void
-TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain)
+TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied)
    {
    uintptr_t dependencyChainLength = *dependencyChain;
    const uintptr_t *dependencyChainData = dependencyChain + 1;
