@@ -103,6 +103,9 @@ public:
    virtual void addHint(TR_ResolvedMethod *, TR_SharedCacheHint);
    virtual bool isMostlyFull();
 
+   // TEMP - check if offset is at all in the shared cache
+   bool isOffsetInCache(uintptr_t offset);
+
    static void validateAOTHeader(J9JITConfig *jitConfig, J9VMThread *vmThread, TR::CompilationInfo *compInfo);
 
    /**

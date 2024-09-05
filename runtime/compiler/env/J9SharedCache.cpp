@@ -526,6 +526,12 @@ TR_J9SharedCache::isOffsetInCache(const J9SharedClassCacheDescriptor *cacheDesc,
    }
 
 bool
+TR_J9SharedCache::isOffsetInCache(uintptr_t offset)
+   {
+   return isOffsetInCache(_sharedCacheConfig->cacheDescriptorList, offset);
+   }
+
+bool
 TR_J9SharedCache::isPointerInMetadataSectionInCache(const J9SharedClassCacheDescriptor *cacheDesc, void *ptr)
    {
    bool isPointerInMetadataSection = false;
