@@ -663,6 +663,7 @@ TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
 
    if (count > 0)
       {
+      // TODO: do I have to check not already compiled?
       if (TR::CompilationInfo::setInvocationCount(method, 0))
          {
          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
