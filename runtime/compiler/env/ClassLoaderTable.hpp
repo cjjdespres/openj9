@@ -25,6 +25,7 @@
 
 #include "env/TRMemory.hpp"
 #include "env/PersistentCollections.hpp"
+#include "env/jittypes.h"
 
 
 #define CLASSLOADERTABLE_SIZE 2053
@@ -98,8 +99,8 @@ public:
 
    void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain);
 
-   void onClassLoad(J9Class *ramClass);
-   void invalidateClass(J9Class *ramClass);
+   void onClassLoad(TR_OpaqueClassBlock *ramClass);
+   void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
 
 private:

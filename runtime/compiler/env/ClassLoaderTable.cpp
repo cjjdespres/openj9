@@ -480,19 +480,19 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
 void
 TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain)
    {
+   uintptr_t dependencyChainLength = *dependencyChain;
+   const uintptr_t *dependencyChainData = dependencyChain + 1;
+
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
    J9UTF8 *name      = J9ROMMETHOD_NAME(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    J9UTF8 *signature = J9ROMMETHOD_SIGNATURE(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC: %.*s.%.*s%.*s",
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC with %lu: %.*s.%.*s%.*s",
+                                     dependencyChainLength,
                                      J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                      J9UTF8_LENGTH(name), J9UTF8_DATA(name),
                                      J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
-
-   uintptr_t dependencyChainLength = *dependencyChain;
-   const uintptr_t *dependencyChainData = dependencyChain + 1;
-
 
    OMR::CriticalSection cs(_tableMonitor);
 
@@ -532,9 +532,11 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    }
 
 void
-TR_AOTDependencyTable::onClassLoad(J9Class *ramClass)
+TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
    {
    OMR::CriticalSection cs(_tableMonitor);
+
+   auto ramClass = (J9Class *)clazz;
 
    uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
    if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
@@ -546,6 +548,8 @@ TR_AOTDependencyTable::onClassLoad(J9Class *ramClass)
       registerOffset(chainOffset);
 
    _classMap.insert({ramClass, {classOffset, chainOffset}});
+
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
    }
 
 void
@@ -564,9 +568,11 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
    }
 
 void
-TR_AOTDependencyTable::invalidateClass(J9Class *ramClass)
+TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    {
    OMR::CriticalSection cs(_tableMonitor);
+
+   auto ramClass = (J9Class *)clazz;
 
    auto c_it = _classMap.find(ramClass);
    if (c_it == _classMap.end())
@@ -576,6 +582,7 @@ TR_AOTDependencyTable::invalidateClass(J9Class *ramClass)
    unregisterOffset(c_it->second._classOffset);
 
    _classMap.erase(c_it);
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
    }
 
 void
