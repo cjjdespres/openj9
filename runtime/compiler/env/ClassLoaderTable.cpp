@@ -488,17 +488,13 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
    J9UTF8 *name      = J9ROMMETHOD_NAME(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    J9UTF8 *signature = J9ROMMETHOD_SIGNATURE(J9_ROM_METHOD_FROM_RAM_METHOD(method));
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC with %lu: %.*s.%.*s%.*s",
-                                     dependencyChainLength,
-                                     J9UTF8_LENGTH(className), J9UTF8_DATA(className),
-                                     J9UTF8_LENGTH(name), J9UTF8_DATA(name),
-                                     J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
 
    OMR::CriticalSection cs(_tableMonitor);
 
    // TODO: checking?
-   uintptr_t *methodCount = &_methodMap.insert({method, {0, dependencyChain}}).first->second._dependencyCount;
+
+   auto m_it = _methodMap.insert({method, {0, dependencyChain}});
+   auto methodEntry = &(*m_it.first);
 
    uintptr_t numberRemainingDependencies = dependencyChainLength;
 
@@ -511,11 +507,11 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       if (it == _offsetMap.end())
          {
          // TODO probably incorrectly allocated
-         PersistentUnorderedSet<uintptr_t *> waitingCounts(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
-         it = _offsetMap.insert(it, {offset, {0, waitingCounts}});
+         PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
+         it = _offsetMap.insert(it, {offset, {0, waitingMethods}});
          }
       auto &offsetEntry = it->second;
-      offsetEntry._waitingMethodCounts.insert(methodCount);
+      offsetEntry._waitingMethods.insert(methodEntry);
       if (offsetEntry._loadedClassCount > 0)
          numberRemainingDependencies -= 1;
       }
@@ -528,7 +524,15 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       }
    else
       {
-      *methodCount = numberRemainingDependencies;
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC with %lu %lu: %p %.*s.%.*s%.*s",
+                                        numberRemainingDependencies,
+                                        dependencyChainLength,
+                                        method,
+                                        J9UTF8_LENGTH(className), J9UTF8_DATA(className),
+                                        J9UTF8_LENGTH(name), J9UTF8_DATA(name),
+                                        J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
+      methodEntry->second._dependencyCount = numberRemainingDependencies;
       }
    }
 
@@ -562,11 +566,31 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
    if (it == _offsetMap.end())
       {
       // TODO probably incorrectly allocated
-      PersistentUnorderedSet<uintptr_t *> waitingCounts(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
-      it = _offsetMap.insert(it, {offset, {0, waitingCounts}});
+      PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
+      it = _offsetMap.insert(it, {offset, {0, waitingMethods}});
       }
    auto &offsetEntry = it->second;
-   offsetEntry._loadedClassCount += 1;
+   auto oldClassCount = ++offsetEntry._loadedClassCount;
+
+   std::vector<J9Method *> methodsToUntrack;
+   // if this is the first load
+   if (oldClassCount == 1)
+      {
+      for (auto entry : offsetEntry._waitingMethods)
+         {
+         uintptr_t existingCount = entry->second._dependencyCount;
+         if (existingCount == 1)
+            methodsToUntrack.push_back(entry->first);
+         else
+            --entry->second._dependencyCount;
+         }
+      }
+
+   for (auto entry : methodsToUntrack)
+      {
+      stopTracking(entry);
+      queueAOTLoad(entry);
+      }
    }
 
 void
@@ -596,8 +620,8 @@ TR_AOTDependencyTable::unregisterOffset(uintptr_t offset)
       return;
 
    it->second._loadedClassCount -= 1;
-   for (auto count : it->second._waitingMethodCounts)
-      ++(*count);
+   for (auto entry: it->second._waitingMethods)
+      ++entry->second._dependencyCount;
    }
 
 void
@@ -607,7 +631,7 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    if (m_it == _methodMap.end())
       return;
 
-   auto dependencyCount = &m_it->second._dependencyCount;
+   auto methodEntry = &*m_it;
    auto dependencyChain = m_it->second._dependencyChain;
    auto dependencyChainLength = *dependencyChain;
    auto dependencyChainData = dependencyChain + 1;
@@ -616,7 +640,7 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
       {
       auto m_it = _offsetMap.find(dependencyChainData[i]);
       TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
-      m_it->second._waitingMethodCounts.erase(dependencyCount);
+      m_it->second._waitingMethods.erase(methodEntry);
       }
 
    _methodMap.erase(m_it);

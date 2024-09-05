@@ -70,16 +70,17 @@ private:
 #endif /* defined(J9VM_OPT_JITSERVER) */
    };
 
-struct OffsetEntry
-   {
-   uintptr_t _loadedClassCount;
-   PersistentUnorderedSet<uintptr_t *> _waitingMethodCounts;
-   };
-
 struct MethodEntry
    {
    uintptr_t _dependencyCount;
    const uintptr_t *_dependencyChain;
+   };
+
+
+struct OffsetEntry
+   {
+   uintptr_t _loadedClassCount;
+   PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingMethods;
    };
 
 struct ClassEntry
