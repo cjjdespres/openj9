@@ -615,5 +615,5 @@ void
 TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
    {
    auto count = _sharedCache->fe()->getInvocationCount((TR_OpaqueMethodBlock *)method);
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p", method);
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p at count %d", method, count);
    }
