@@ -22,6 +22,7 @@
 
 #include "AtomicSupport.hpp"
 #include "control/CompilationThread.hpp"
+#include "control/OMROptions.hpp"
 #include "env/ClassLoaderTable.hpp"
 #include "env/J9PersistentInfo.hpp"
 #include "env/J9SharedCache.hpp"
@@ -549,7 +550,8 @@ TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
 
    _classMap.insert({ramClass, {classOffset, chainOffset}});
 
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
+   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
    }
 
 void
@@ -582,7 +584,8 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    unregisterOffset(c_it->second._classOffset);
 
    _classMap.erase(c_it);
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
+   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
    }
 
 void
@@ -623,5 +626,6 @@ void
 TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
    {
    auto count = _sharedCache->fe()->getInvocationCount((TR_OpaqueMethodBlock *)method);
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p at count %d", method, count);
+   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p at count %d", method, count);
    }
