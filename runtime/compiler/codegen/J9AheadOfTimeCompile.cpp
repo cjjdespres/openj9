@@ -2480,6 +2480,7 @@ void J9::AheadOfTimeCompile::processRelocations()
          TR::SymbolValidationManager *svm = comp->getSymbolValidationManager();
          void *offsets = const_cast<void *>(svm->wellKnownClassChainOffsets());
          uintptr_t *wkcOffsetAddr = (uintptr_t *)relocationDataCursor;
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has wkc %lu", self()->offsetInSharedCacheFromWellKnownClasses(fej9->sharedCache(), offsets));
          *wkcOffsetAddr = self()->offsetInSharedCacheFromWellKnownClasses(fej9->sharedCache(), offsets);
 #if defined(J9VM_OPT_JITSERVER)
          self()->addWellKnownClassesSerializationRecord(svm->aotCacheWellKnownClassesRecord(), wkcOffsetAddr);
