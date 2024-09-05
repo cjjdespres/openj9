@@ -505,6 +505,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    for (size_t i = 0; i < dependencyChainLength; ++i)
       {
       uintptr_t offset = dependencyChainData[i];
+      TR_ASSERT_FATAL(_sharedCache->isOffsetInSharedCache(offset), "Offset must be in the SCC!");
       auto it = _offsetMap.find(offset);
       if (it == _offsetMap.end())
          {
