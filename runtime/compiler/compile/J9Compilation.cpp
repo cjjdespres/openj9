@@ -1599,13 +1599,18 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset)
    if (!_trackingAOTMethodDependencies)
       return;
 
+   // TODO: unsure if invalid offset should be an issue
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
-      {
-      // TODO: associate this to a particular option
-      TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Giving up tracking offsets for method %s", signature());
-      _trackingAOTMethodDependencies = false;
-      }
+      return;
    _aotMethodDependencies.insert(offset);
+
+   // if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
+   //    {
+   //    // TODO: associate this to a particular option
+   //    TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Giving up tracking offsets for method %s", signature());
+   //    _trackingAOTMethodDependencies = false;
+   //    }
+   // _aotMethodDependencies.insert(offset);
    }
 
 void
