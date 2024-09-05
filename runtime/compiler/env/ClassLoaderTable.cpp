@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include "AtomicSupport.hpp"
+#include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
 #include "control/OMROptions.hpp"
 #include "env/ClassLoaderTable.hpp"
@@ -654,10 +655,28 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    _methodMap.erase(m_it);
    }
 
+// TODO: if queueing doesn't work, what then?
 void
 TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
    {
-   auto count = _sharedCache->fe()->getInvocationCount((TR_OpaqueMethodBlock *)method);
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p at count %d", method, count);
+   auto count = TR::CompilationInfo::getInvocationCount(method);
+
+   if (count > 0)
+      {
+      if (TR::CompilationInfo::setInvocationCount(method, 0))
+         {
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p reduced from %d to zero", method, count);
+         }
+      else
+         {
+          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p couldn't have its count %d reduced", method, count);
+         }
+      }
+   else
+      {
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p has ineligible count %d", method, count);
+      }
    }
