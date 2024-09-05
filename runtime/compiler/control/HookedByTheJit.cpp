@@ -20,6 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
 
+#include "control/OMROptions.hpp"
 #include <algorithm>
 #include <limits.h>
 #ifdef LINUX
@@ -518,10 +519,11 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                count = scount;
                compInfo->incrementNumMethodsFoundInSharedCache();
                // TODO: should probably improve this
-               UDATA flags = 0;
-               const void *aotCachedMethod = vmThread->javaVM->sharedClassConfig->findCompiledMethodEx1(vmThread, romMethod, &flags);
-               if (!(flags & J9SHR_AOT_METHOD_FLAG_INVALIDATED))
-                  compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(vmThread, method, aotCachedMethod);
+               auto dependencyChain = sc->getDependenciesOfMethod(method);
+               if (dependencyChain)
+                  compInfo->getPersistentInfo()->getAOTDependencyTable()->trackStoredMethod(vmThread, method, dependencyChain);
+               else if (TR::Options::getVerboseOption(TR_VerbosePerformance)) // TODO: verbose flag
+                  TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "SCC method %p did not have any dependencies", method);
                }
             // AOT Body not in SCC, so scount was not set
             else if (!TR::Options::getCountsAreProvidedByUser() && !countInOptionSet)

@@ -1514,6 +1514,33 @@ TR_J9SharedCache::aotMethodDependenciesFromOffsetInSharedCache(uintptr_t offset)
    return (void *)ptr;
    }
 
+// TODO: must make compatible with jitserver
+const uintptr_t *
+TR_J9SharedCache::getDependenciesOfMethod(J9Method *method)
+   {
+   UDATA flags = 0;
+   J9VMThread * vmThread = fe()->getCurrentVMThread();
+   auto romMethod = fe()->getROMMethodFromRAMMethod(method);
+   // TODO: assert below is NULL or something like that
+   const void *aotCachedMethod = _sharedCacheConfig->findCompiledMethodEx1(vmThread, romMethod, &flags);
+   if (flags & J9SHR_AOT_METHOD_FLAG_INVALIDATED)
+      return NULL;
+
+   // TODO: duplication with relo runtime
+   auto cacheEntry = static_cast<const J9JITDataCacheHeader *>(aotCachedMethod);
+   // TODO: need to check that header is valid?
+   auto aotMethodHeaderEntry = (TR_AOTMethodHeader *)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
+   auto binaryReloRecords = (uint8_t *)aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + aotMethodHeaderEntry->offsetToRelocationDataItems;
+
+   uintptr_t dependencyOffset = *((uintptr_t *)binaryReloRecords + 1);
+
+   uintptr_t *dependencies = NULL;
+   if (dependencyOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      dependencies = (uintptr_t *)aotMethodDependenciesFromOffsetInSharedCache(dependencyOffset);
+
+   return dependencies;
+   }
+
 #if defined(J9VM_OPT_JITSERVER)
 TR_J9JITServerSharedCache::TR_J9JITServerSharedCache(TR_J9VMBase *fe)
    : TR_J9SharedCache(fe), _stream(NULL), _compInfoPT(NULL)

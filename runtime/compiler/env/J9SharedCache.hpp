@@ -382,6 +382,7 @@ public:
                                                 TR_OpaqueClassBlock *definingClass,
                                                 uintptr_t *classDependencyChain,
                                                 size_t classDependencyChainSize);
+   virtual const uintptr_t *getDependenciesOfMethod(J9Method *method);
    virtual void *aotMethodDependenciesFromOffsetInSharedCache(uintptr_t offset);
 
    /**

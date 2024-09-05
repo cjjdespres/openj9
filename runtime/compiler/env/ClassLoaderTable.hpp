@@ -24,6 +24,7 @@
 #define CLASSLOADERTABLE_INCL
 
 #include "env/TRMemory.hpp"
+#include "env/PersistentCollections.hpp"
 
 
 #define CLASSLOADERTABLE_SIZE 2053
@@ -68,6 +69,24 @@ private:
 #endif /* defined(J9VM_OPT_JITSERVER) */
    };
 
+struct OffsetEntry
+   {
+   uintptr_t _loadedClassCount;
+   PersistentUnorderedSet<uintptr_t *> _waitingMethodCounts;
+   };
+
+struct MethodEntry
+   {
+   uintptr_t _dependencyCount;
+   const uintptr_t *_dependencyChain;
+   };
+
+struct ClassEntry
+   {
+   uintptr_t _classOffset;
+   uintptr_t _classChainOffset;
+   };
+
 // TODO: move to own file
 class TR_AOTDependencyTable
    {
@@ -77,10 +96,25 @@ public:
 
    void setSharedCache(TR_J9SharedCache *sharedCache) { _sharedCache = sharedCache; }
 
-   void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const void *aotCachedMethod);
+   void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain);
+
+   void onClassLoad(J9Class *ramClass);
+   void invalidateClass(J9Class *ramClass);
+   void stopTracking(J9Method *method);
+
 private:
+   void queueAOTLoad(J9Method *method);
+   void registerOffset(uintptr_t offset);
+   void unregisterOffset(uintptr_t offset);
+
+   TR::Monitor *const _tableMonitor;
+
    TR_PersistentMemory *const _persistentMemory;
    TR_J9SharedCache *_sharedCache;
+
+   PersistentUnorderedMap<uintptr_t, OffsetEntry> _offsetMap; // TODO: must fill in rght types
+   PersistentUnorderedMap<J9Method *, MethodEntry> _methodMap;
+   PersistentUnorderedMap<J9Class *, ClassEntry> _classMap;
    };
 
 #endif

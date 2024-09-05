@@ -25,7 +25,9 @@
 #include "env/ClassLoaderTable.hpp"
 #include "env/J9PersistentInfo.hpp"
 #include "env/J9SharedCache.hpp"
+#include "env/PersistentCollections.hpp"
 #include "env/VerboseLog.hpp"
+#include "env/jittypes.h"
 #include "infra/MonitorTable.hpp"
 #include <cstdint>
 
@@ -467,35 +469,151 @@ TR_PersistentClassLoaderTable::removeClassLoader(J9VMThread *vmThread, void *loa
    }
 
 TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemory) :
-   _persistentMemory(persistentMemory), _sharedCache(NULL)
+   _persistentMemory(persistentMemory), _sharedCache(NULL),
+   _tableMonitor(TR::Monitor::create("JIT-AOTDependencyTableMonitor")),
+   _offsetMap(decltype(_offsetMap)::allocator_type(TR::Compiler->persistentAllocator())),
+   _methodMap(decltype(_methodMap)::allocator_type(TR::Compiler->persistentAllocator())),
+   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
    {
    }
 
-// TODO: should consolidate some of the code here and at call-site into a single shared cache
-// function called something like getDependenciesofAOTMethod.
 void
-TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const void *aotCachedMethod)
+TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain)
    {
-   // TODO: really shouldn't duplicate this with relo runtime.
-   auto cacheEntry = static_cast<const J9JITDataCacheHeader *>(aotCachedMethod);
-   // TODO: need to check that header is valid?
-   auto aotMethodHeaderEntry = (TR_AOTMethodHeader *)(cacheEntry + 1); // skip the header J9JITDataCacheHeader
-   auto binaryReloRecords = (uint8_t *)aotMethodHeaderEntry - sizeof(J9JITDataCacheHeader) + aotMethodHeaderEntry->offsetToRelocationDataItems;
-
-   uintptr_t dependencyOffset = *((uintptr_t *)binaryReloRecords + 1);
-
-   uintptr_t *dependencies = NULL;
-   if (dependencyOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
-      dependencies = (uintptr_t *)_sharedCache->aotMethodDependenciesFromOffsetInSharedCache(dependencyOffset);
-
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
    J9UTF8 *name      = J9ROMMETHOD_NAME(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    J9UTF8 *signature = J9ROMMETHOD_SIGNATURE(J9_ROM_METHOD_FROM_RAM_METHOD(method));
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC %s: %.*s.%.*s%.*s",
-                                     dependencies ? "with deps" : "no deps",
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC: %.*s.%.*s%.*s",
                                      J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                      J9UTF8_LENGTH(name), J9UTF8_DATA(name),
                                      J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
+
+   uintptr_t dependencyChainLength = *dependencyChain;
+   const uintptr_t *dependencyChainData = dependencyChain + 1;
+
+
+   OMR::CriticalSection cs(_tableMonitor);
+
+   // TODO: checking?
+   uintptr_t *methodCount = &_methodMap.insert({method, {0, dependencyChain}}).first->second._dependencyCount;
+
+   uintptr_t numberRemainingDependencies = dependencyChainLength;
+
+   // TODO: sanity checking here!
+   for (size_t i = 0; i < dependencyChainLength; ++i)
+      {
+      uintptr_t offset = dependencyChainData[i];
+      auto it = _offsetMap.find(offset);
+      if (it == _offsetMap.end())
+         {
+         // TODO probably incorrectly allocated
+         PersistentUnorderedSet<uintptr_t *> waitingCounts(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
+         it = _offsetMap.insert(it, {offset, {0, waitingCounts}});
+         }
+      auto &offsetEntry = it->second;
+      offsetEntry._waitingMethodCounts.insert(methodCount);
+      if (offsetEntry._loadedClassCount > 0)
+         numberRemainingDependencies -= 1;
+      }
+
+   // TODO: assert is still non-neg.
+   if (numberRemainingDependencies == 0)
+      {
+      stopTracking(method);
+      queueAOTLoad(method);
+      }
+   else
+      {
+      *methodCount = numberRemainingDependencies;
+      }
+   }
+
+void
+TR_AOTDependencyTable::onClassLoad(J9Class *ramClass)
+   {
+   OMR::CriticalSection cs(_tableMonitor);
+
+   uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
+   if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
+      return;
+   registerOffset(classOffset);
+
+   uintptr_t chainOffset = _sharedCache->rememberClass(ramClass, NULL, false);
+   if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      registerOffset(chainOffset);
+
+   _classMap.insert({ramClass, {classOffset, chainOffset}});
+   }
+
+void
+TR_AOTDependencyTable::registerOffset(uintptr_t offset)
+   {
+   // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
+   auto it = _offsetMap.find(offset);
+   if (it == _offsetMap.end())
+      {
+      // TODO probably incorrectly allocated
+      PersistentUnorderedSet<uintptr_t *> waitingCounts(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
+      it = _offsetMap.insert(it, {offset, {0, waitingCounts}});
+      }
+   auto &offsetEntry = it->second;
+   offsetEntry._loadedClassCount += 1;
+   }
+
+void
+TR_AOTDependencyTable::invalidateClass(J9Class *ramClass)
+   {
+   OMR::CriticalSection cs(_tableMonitor);
+
+   auto c_it = _classMap.find(ramClass);
+   if (c_it == _classMap.end())
+      return;
+
+   unregisterOffset(c_it->second._classChainOffset);
+   unregisterOffset(c_it->second._classOffset);
+
+   _classMap.erase(c_it);
+   }
+
+void
+TR_AOTDependencyTable::unregisterOffset(uintptr_t offset)
+   {
+   auto it = _offsetMap.find(offset);
+   if ((it == _offsetMap.end()) || (it->second._loadedClassCount == 0))
+      return;
+
+   it->second._loadedClassCount -= 1;
+   for (auto count : it->second._waitingMethodCounts)
+      ++(*count);
+   }
+
+void
+TR_AOTDependencyTable::stopTracking(J9Method *method)
+   {
+   auto m_it = _methodMap.find(method);
+   if (m_it == _methodMap.end())
+      return;
+
+   auto dependencyCount = &m_it->second._dependencyCount;
+   auto dependencyChain = m_it->second._dependencyChain;
+   auto dependencyChainLength = *dependencyChain;
+   auto dependencyChainData = dependencyChain + 1;
+
+   for (size_t i = 0; i < dependencyChainLength; ++i)
+      {
+      auto m_it = _offsetMap.find(dependencyChainData[i]);
+      TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
+      m_it->second._waitingMethodCounts.erase(dependencyCount);
+      }
+
+   _methodMap.erase(m_it);
+   }
+
+void
+TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
+   {
+   auto count = _sharedCache->fe()->getInvocationCount((TR_OpaqueMethodBlock *)method);
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Would have triggered load of %p", method);
    }
