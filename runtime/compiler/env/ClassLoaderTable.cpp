@@ -520,7 +520,15 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    if (numberRemainingDependencies == 0)
       {
       stopTracking(method);
-      queueAOTLoad(method);
+      dependenciesSatisfied = true;
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method schedule for early AOT load %lu %lu: %p %.*s.%.*s%.*s",
+                                        numberRemainingDependencies,
+                                        dependencyChainLength,
+                                        method,
+                                        J9UTF8_LENGTH(className), J9UTF8_DATA(className),
+                                        J9UTF8_LENGTH(name), J9UTF8_DATA(name),
+                                        J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
       }
    else
       {
