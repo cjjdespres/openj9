@@ -482,6 +482,9 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
 void
 TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied)
    {
+   if (!_sharedCache)
+      return;
+
    uintptr_t dependencyChainLength = *dependencyChain;
 
    // TODO: verbose option
@@ -547,6 +550,9 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 void
 TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
    {
+   if (!_sharedCache)
+      return;
+
    OMR::CriticalSection cs(_tableMonitor);
 
    auto ramClass = (J9Class *)clazz;
@@ -607,6 +613,9 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
 void
 TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    {
+   if (!_sharedCache)
+      return;
+
    OMR::CriticalSection cs(_tableMonitor);
 
    auto ramClass = (J9Class *)clazz;
