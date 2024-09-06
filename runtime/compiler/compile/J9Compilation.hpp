@@ -434,7 +434,7 @@ class OMR_EXTENSIBLE Compilation : public OMR::CompilationConnector
 
    void addAOTMethodDependency(uintptr_t offset);
    bool isTrackingAOTMethodDependencies() const { return _trackingAOTMethodDependencies; }
-   void populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer) const;
+   void populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer);
 
 private:
    enum CachedClassPointerId
