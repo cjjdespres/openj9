@@ -20,6 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
 
+#include "env/FrontEnd.hpp"
 #if defined(J9ZOS390)
 #pragma csect(CODE,"TRJ9CompBase#C")
 #pragma csect(STATIC,"TRJ9CompBase#S")
@@ -227,6 +228,9 @@ J9::Compilation::Compilation(int32_t id,
    for (int i = 0; i < CACHED_CLASS_POINTER_COUNT; i++)
       _cachedClassPointers[i] = NULL;
 
+   // TODO: replace with real option
+   static bool shouldTrackDependencies = feGetEnv("TR_ShouldTrackAOTDependencies") != NULL;
+   _trackingAOTMethodDependencies = shouldTrackDependencies;
 
    // Add known object index to parm 0 so that other optmizations can be unlocked.
    // It is safe to do so because method and method symbols of a archetype specimen
