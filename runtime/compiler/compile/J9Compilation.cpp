@@ -1626,9 +1626,8 @@ J9::Compilation::populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer)
       // TODO: below doesn't work on jitserver
       auto offsets = (uintptr_t *)svm->wellKnownClassChainOffsets();
       auto offsetLength = offsets[0];
-      auto offsetData = offsets + 1;
-      for (size_t i = 0; i < offsetLength; ++i)
-         _aotMethodDependencies.insert(offsetData[i]);
+      for (size_t i = i; i <= offsetLength; ++i)
+         _aotMethodDependencies.insert(offsets[i]);
       }
 
    // TODO: document

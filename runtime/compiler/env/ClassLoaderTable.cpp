@@ -483,7 +483,6 @@ void
 TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied)
    {
    uintptr_t dependencyChainLength = *dependencyChain;
-   const uintptr_t *dependencyChainData = dependencyChain + 1;
 
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
@@ -500,9 +499,9 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    uintptr_t numberRemainingDependencies = dependencyChainLength;
 
    // TODO: sanity checking here!
-   for (size_t i = 0; i < dependencyChainLength; ++i)
+   for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
-      uintptr_t offset = dependencyChainData[i];
+      uintptr_t offset = dependencyChain[i];
       TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset must be in the SCC!");
       auto it = _offsetMap.find(offset);
       if (it == _offsetMap.end())

@@ -432,7 +432,7 @@ TR_RelocationRecordGroup::firstRecord(
    {
    // The first word is the size of the group (itself pointer-sized).
    // The second word is the offset to the dependencies of the method.
-   // When using the SVM, the second is a pointer-sized SCC offset to the
+   // When using the SVM, the third is a pointer-sized SCC offset to the
    // well-known classes' class chain offsets.
    bool useSVM = reloRuntime->comp()->getOption(TR_UseSymbolValidationManager);
    int offs = 2 + int(useSVM);
