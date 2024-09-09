@@ -517,8 +517,13 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
                sharedCache->setPersistentClassLoaderTable(loaderTable);
                loaderTable->setSharedCache(sharedCache);
 
-               TR_AOTDependencyTable *dependencyTable = persistentMemory->getPersistentInfo()->getAOTDependencyTable();
-               dependencyTable->setSharedCache(sharedCache);
+               // TODO: fix this hack
+               static bool shouldMaintainDependencyTable = feGetEnv("TR_ShouldMaintainDependencyTable") != NULL;
+               if (shouldMaintainDependencyTable)
+                  {
+                  TR_AOTDependencyTable *dependencyTable = persistentMemory->getPersistentInfo()->getAOTDependencyTable();
+                  dependencyTable->setSharedCache(sharedCache);
+                  }
                }
             }
          else
