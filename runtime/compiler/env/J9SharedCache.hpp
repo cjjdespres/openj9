@@ -189,6 +189,8 @@ public:
       return rememberClass((J9Class *)classPtr, NULL, false) != TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       }
 
+   virtual uintptr_t classChainOffsetIfRemembered(TR_OpaqueClassBlock *classPtr);
+
    virtual uintptr_t rememberClass(TR_OpaqueClassBlock *classPtr,
                                     const AOTCacheClassChainRecord **classChainRecord = NULL)
       {

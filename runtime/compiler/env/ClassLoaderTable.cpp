@@ -562,10 +562,7 @@ TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
       return;
    registerOffset(classOffset);
 
-   // TODO: below was (ramClass, NULL, false) before, but I think if we do that
-   // then we need to check for return value of 1, which is "isn't in shared
-   // cache but we could have created it."
-   uintptr_t chainOffset = _sharedCache->rememberClass(ramClass);
+   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       registerOffset(chainOffset);
 

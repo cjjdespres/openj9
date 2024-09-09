@@ -1041,6 +1041,16 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    return chainOffset;
    }
 
+uintptr_t
+TR_J9SharedCache::classChainOffsetIfRemembered(TR_OpaqueClassBlock *classPtr)
+   {
+   uintptr_t offset = rememberClass((J9Class *)classPtr, NULL, false);
+   if (offset == COULD_CREATE_CLASS_CHAIN)
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   return offset;
+   }
+
+
 UDATA
 TR_J9SharedCache::rememberDebugCounterName(const char *name)
    {
