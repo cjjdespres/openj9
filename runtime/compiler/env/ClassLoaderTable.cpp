@@ -805,7 +805,7 @@ TR_AOTDependencyTable::dumpTableDetails()
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p waiting on offset %lu with no loads", entry.first);
                }
             }
-         TR_ASSERT_FATAL(!foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!");
+         TR_ASSERT_FATAL(foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!");
          }
       else
          {
