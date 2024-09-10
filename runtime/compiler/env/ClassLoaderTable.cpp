@@ -686,70 +686,76 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    _methodMap.erase(m_it);
    }
 
-bool
-TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue)
-   {
-   bool queued = false;
-   TR::CompilationInfo *compInfo = TR::CompilationInfo::get();
-   if (!compInfo->isCompiled(method))
-      {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to queue method %p by %lu", method, offsetThatCausedQueue);
-      TR_MethodEvent event;
-      // TODO: custom event?
-      event._eventType = TR_MethodEvent::InterpreterCounterTripped;
-      event._j9method = method;
-      event._oldStartPC = 0;
-      event._vmThread = vmThread;
-      event._classNeedingThunk = 0;
-
-      // TODO: really should think about what is necessary here
-      TR_OptimizationPlan *plan = TR_OptimizationPlan::alloc(TR_Hotness::cold); // TR::CompilationController::getCompilationStrategy()->processEvent(&event, &newPlanCreated);
-      if (plan)
-         {
-            {
-            TR::IlGeneratorMethodDetails details(method);
-            compInfo->addMethodToBeCompiled(details, NULL, CP_ASYNC_BELOW_MAX, true, plan, &queued, TR_yes);
-            }
-         if (!queued)
-            TR_OptimizationPlan::freeOptimizationPlan(plan);
-         if (!queued)
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu could not be queued", method, offsetThatCausedQueue);
-         }
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu did not have a plan created", method, offsetThatCausedQueue);
-      }
-   return queued;
-   }
-
-// TODO: if queueing doesn't work, what then?
+// TODO: revisit this
 // bool
-// TR_AOTDependencyTable::queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue)
+// TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue)
 //    {
-//    auto count = TR::CompilationInfo::getInvocationCount(method);
-//    bool loweredCount = false;
-//
-//    if (count > 0)
+//    bool queued = false;
+//    TR::CompilationInfo *compInfo = TR::CompilationInfo::get();
+//    if (!compInfo->isCompiled(method))
 //       {
-//       // TODO: do I have to check not already compiled?
-//       if (TR::CompilationInfo::setInvocationCount(method, 0))
+//       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to queue method %p by %lu", method, offsetThatCausedQueue);
+//       TR_MethodEvent event;
+//       // TODO: custom event?
+//       event._eventType = TR_MethodEvent::InterpreterCounterTripped;
+//       event._j9method = method;
+//       event._oldStartPC = 0;
+//       event._vmThread = vmThread;
+//       event._classNeedingThunk = 0;
+//
+//       // TODO: really should think about what is necessary here
+//       bool newPlanCreated;
+//       TR_OptimizationPlan *plan = TR::CompilationController::getCompilationStrategy()->processEvent(&event, &newPlanCreated);
+//       if (plan)
 //          {
-//          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-//             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
-//          loweredCount = true;
+//             {
+//             TR::IlGeneratorMethodDetails details(method);
+//
+//             compInfo->compileMethod(vmThread, details, NULL, TR_maybe, NULL, &queued, plan);
+//             // compInfo->compileMethod(vmThread, details, NULL, CP_ASYNC_BELOW_MAX, true, plan, &queued, TR_yes);
+//             }
+//          if (!queued && newPlanCreated)
+//             TR_OptimizationPlan::freeOptimizationPlan(plan);
+//          if (!queued)
+//             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu could not be queued", method, offsetThatCausedQueue);
 //          }
 //       else
 //          {
-//           if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-//             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
+//          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu did not have a plan created");
 //          }
 //       }
-//    else
-//       {
-//       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-//          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
-//       }
-//
-//    return loweredCount;
+//    return queued;
 //    }
+
+bool
+TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue)
+   {
+   auto count = TR::CompilationInfo::getInvocationCount(method);
+   bool loweredCount = false;
+
+   if (count > 0)
+      {
+      // TODO: do I have to check not already compiled?
+      if (TR::CompilationInfo::setInvocationCount(method, 0))
+         {
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
+         loweredCount = true;
+         }
+      else
+         {
+          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
+         }
+      }
+   else
+      {
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
+      }
+
+   return loweredCount;
+   }
 
 bool
 TR_AOTDependencyTable::isMethodTracked(J9Method *method, uintptr_t &remainingDependencies)
