@@ -475,7 +475,8 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    _tableMonitor(TR::Monitor::create("JIT-AOTDependencyTableMonitor")),
    _offsetMap(decltype(_offsetMap)::allocator_type(TR::Compiler->persistentAllocator())),
    _methodMap(decltype(_methodMap)::allocator_type(TR::Compiler->persistentAllocator())),
-   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
+   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator())),
+   _previouslyTrackedMethods(decltype(_previouslyTrackedMethods)::allocator_type(TR::Compiler->persistentAllocator()))
    {
    }
 
@@ -527,8 +528,9 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       {
       stopTracking(method);
       dependenciesSatisfied = true;
+      _previouslyTrackedMethods.insert({method, TrackingSuccessful});
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method schedule for early AOT load %lu %lu: %p %.*s.%.*s%.*s",
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method scheduled for early AOT load %lu %lu: %p %.*s.%.*s%.*s",
                                         numberRemainingDependencies,
                                         dependencyChainLength,
                                         method,
@@ -605,8 +607,11 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
 
    for (auto entry : methodsToUntrack)
       {
+      DependencyTrackingStatus status = TrackingSuccessful;
       stopTracking(entry);
-      queueAOTLoad(entry);
+      if (!queueAOTLoad(entry))
+         status = CouldNotReduceCount;
+      _previouslyTrackedMethods.insert({entry, status});
       }
    }
 
@@ -667,10 +672,11 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    }
 
 // TODO: if queueing doesn't work, what then?
-void
+bool
 TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
    {
    auto count = TR::CompilationInfo::getInvocationCount(method);
+   bool loweredCount = false;
 
    if (count > 0)
       {
@@ -679,6 +685,7 @@ TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
          {
          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p reduced from %d to zero", method, count);
+         loweredCount = true;
          }
       else
          {
@@ -691,6 +698,8 @@ TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p has ineligible count %d", method, count);
       }
+
+   return loweredCount;
    }
 
 bool
@@ -706,4 +715,18 @@ TR_AOTDependencyTable::isMethodTracked(J9Method *method, uintptr_t &remainingDep
 
    remainingDependencies = m_it->second._dependencyCount;
    return true;
+   }
+
+DependencyTrackingStatus
+TR_AOTDependencyTable::wasMethodPreviouslyTracked(J9Method *method)
+   {
+    if (!_sharedCache)
+      return MethodWasntTracked;
+
+   OMR::CriticalSection cs(_tableMonitor);
+   auto it = _previouslyTrackedMethods.find(method);
+   if (it == _previouslyTrackedMethods.end())
+      return MethodWasntTracked;
+
+   return it->second;
    }

@@ -6798,9 +6798,27 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       {
       uintptr_t dependenciesLeft = 0;
       if (dependencyTable->isMethodTracked(method, dependenciesLeft))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load tracked method %p with %lu dependencies left", method, dependenciesLeft);
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p active tracked with %lu dependencies left", method, dependenciesLeft);
+         }
       else
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load untracked method %p", method);
+         {
+         auto status = dependencyTable->wasMethodPreviouslyTracked(method);
+         switch (status)
+            {
+            case TrackingSuccessful:
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p successfully tracked", method);
+               break;
+            case CouldNotReduceCount:
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p could not reduce count", method);
+               break;
+            case MethodWasntTracked:
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p was not tracked", method);
+               break;
+            default:
+               TR_ASSERT_FATAL(false, "Unhandled status %d", status);
+            }
+         }
       }
 
    metaData = reloRuntime()->prepareRelocateAOTCodeAndData(vmThread,

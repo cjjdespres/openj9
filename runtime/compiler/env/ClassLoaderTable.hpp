@@ -89,6 +89,13 @@ struct ClassEntry
    uintptr_t _classChainOffset;
    };
 
+enum DependencyTrackingStatus
+   {
+   TrackingSuccessful,
+   CouldNotReduceCount,
+   MethodWasntTracked
+   };
+
 // TODO: move to own file
 class TR_AOTDependencyTable
    {
@@ -108,8 +115,9 @@ public:
    bool isTableActive() { return _sharedCache != NULL; }
    bool isMethodTracked(J9Method *method, uintptr_t &remainingDependencies);
 
+   DependencyTrackingStatus wasMethodPreviouslyTracked(J9Method *method);
 private:
-   void queueAOTLoad(J9Method *method);
+   bool queueAOTLoad(J9Method *method);
    void registerOffset(uintptr_t offset);
    void unregisterOffset(uintptr_t offset);
 
@@ -121,6 +129,9 @@ private:
    PersistentUnorderedMap<uintptr_t, OffsetEntry> _offsetMap; // TODO: must fill in rght types
    PersistentUnorderedMap<J9Method *, MethodEntry> _methodMap;
    PersistentUnorderedMap<J9Class *, ClassEntry> _classMap;
+
+   // TODO: temporary debug thing.
+   PersistentUnorderedMap<J9Method *, DependencyTrackingStatus> _previouslyTrackedMethods;
    };
 
 #endif
