@@ -3268,6 +3268,11 @@ void TR::CompilationInfo::stopCompilationThreads()
    J9JavaVM   * const vm       = _jitConfig->javaVM;
    J9VMThread * const vmThread = vm->internalVMFunctions->currentVMThread(vm);
 
+   // TODO: remove
+   static bool shouldPrintDependencyStats = feGetEnv("TR_ShouldPrintDependencyStats") != NULL;
+   if (shouldPrintDependencyStats)
+      getPersistentInfo()->getAOTDependencyTable()->dumpTableDetails();
+
    static char * printCompStats = feGetEnv("TR_PrintCompStats");
    if (printCompStats)
       {

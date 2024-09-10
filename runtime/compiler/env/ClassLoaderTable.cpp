@@ -30,6 +30,7 @@
 #include "env/PersistentCollections.hpp"
 #include "env/VerboseLog.hpp"
 #include "env/jittypes.h"
+#include "infra/Assert.hpp"
 #include "infra/MonitorTable.hpp"
 #include <cstdint>
 
@@ -646,6 +647,8 @@ TR_AOTDependencyTable::unregisterOffset(uintptr_t offset)
       return;
 
    it->second._loadedClassCount -= 1;
+   // TODO: this is wrong - only increase the dependency count if the loaded
+   // class count goes to zero.
    for (auto entry: it->second._waitingMethods)
       ++entry->second._dependencyCount;
    }
@@ -730,4 +733,38 @@ TR_AOTDependencyTable::wasMethodPreviouslyTracked(J9Method *method)
       return MethodWasntTracked;
 
    return it->second;
+   }
+
+void
+TR_AOTDependencyTable::dumpTableDetails()
+   {
+   for (auto entry : _methodMap)
+      {
+      if (entry.second._dependencyCount > 0)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p still has %lu dependencies", entry.first, entry.second._dependencyCount);
+         auto chain = entry.second._dependencyChain;
+         auto chainLength = chain[0];
+         bool foundUnsatisfiedDependency = false;
+         for (size_t i = 1; i < chainLength; ++i)
+            {
+            auto it = _offsetMap.find(chain[i]);
+            if (it == _offsetMap.end())
+               {
+               foundUnsatisfiedDependency = true;
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p waiting on offset %lu untracked", entry.first, chain[i]);
+               }
+            else if (it->second._loadedClassCount == 0)
+               {
+               foundUnsatisfiedDependency = true;
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p waiting on offset %lu with no loads", entry.first);
+               }
+            }
+         TR_ASSERT_FATAL(!foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!");
+         }
+      else
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p is somehow in the map but has no dependencies!", entry.first, entry.second._dependencyCount);
+         }
+      }
    }
