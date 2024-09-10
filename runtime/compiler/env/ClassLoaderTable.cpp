@@ -614,7 +614,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
       }
 
    // TODO: unsure about this...
-   TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
+   // TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
    TR::CompilationInfo::get()->acquireCompMonitor(vmThread);
 
    for (auto entry : methodsToUntrack)
