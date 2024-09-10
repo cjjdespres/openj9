@@ -31,6 +31,7 @@
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/VerboseLog.hpp"
 #include "env/jittypes.h"
+#include "il/OMRDataTypes.hpp"
 #include "infra/Assert.hpp"
 #include "infra/MonitorTable.hpp"
 #include <cstdint>
@@ -614,6 +615,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
 
    // TODO: unsure about this...
    TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
+   TR::CompilationInfo::get()->acquireCompMonitor(vmThread);
 
    for (auto entry : methodsToUntrack)
       {
@@ -623,6 +625,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
          status = MethodCouldNotBeQueued;
       _previouslyTrackedMethods.insert({entry, status});
       }
+   TR::CompilationInfo::get()->releaseCompMonitor(vmThread);
    }
 
 void
@@ -705,7 +708,7 @@ TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uint
          {
             {
             TR::IlGeneratorMethodDetails details(method);
-            compInfo->compileMethod(vmThread, details, NULL, TR_maybe, NULL, &queued, plan);
+            compInfo->addMethodToBeCompiled(details, NULL, CP_ASYNC_BELOW_MAX, true, plan, &queued, TR_yes);
             }
          if (!queued && newPlanCreated)
             TR_OptimizationPlan::freeOptimizationPlan(plan);
