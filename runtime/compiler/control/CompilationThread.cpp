@@ -60,6 +60,7 @@
 #include "env/jittypes.h"
 #include "env/ClassTableCriticalSection.hpp"
 #include "env/PersistentCHTable.hpp"
+#include "env/ClassLoaderTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/VerboseLog.hpp"
 #include "compile/CompilationException.hpp"
@@ -6789,6 +6790,17 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       {
       reloRuntime()->setIsLoading();
       reloRuntime()->initializeHWProfilerRecords(compiler);
+      }
+
+   // TODO: vlog cleanup
+   auto dependencyTable = _compInfo.getPersistentInfo()->getAOTDependencyTable();
+   if (dependencyTable->isTableActive())
+      {
+      uintptr_t dependenciesLeft = 0;
+      if (dependencyTable->isMethodTracked(method, dependenciesLeft))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load tracked method %p with %lu dependencies left", method, dependenciesLeft);
+      else
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load untracked method %p", method);
       }
 
    metaData = reloRuntime()->prepareRelocateAOTCodeAndData(vmThread,

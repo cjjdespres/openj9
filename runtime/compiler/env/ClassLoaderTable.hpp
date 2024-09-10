@@ -104,6 +104,10 @@ public:
    void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
 
+   // TODO: probably remove this entirely!
+   bool isTableActive() { return _sharedCache != NULL; }
+   bool isMethodTracked(J9Method *method, uintptr_t &remainingDependencies);
+
 private:
    void queueAOTLoad(J9Method *method);
    void registerOffset(uintptr_t offset);

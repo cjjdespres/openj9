@@ -692,3 +692,18 @@ TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p has ineligible count %d", method, count);
       }
    }
+
+bool
+TR_AOTDependencyTable::isMethodTracked(J9Method *method, uintptr_t &remainingDependencies)
+   {
+   if (!_sharedCache)
+      return false;
+
+   OMR::CriticalSection cs(_tableMonitor);
+   auto m_it = _methodMap.find(method);
+   if (m_it == _methodMap.end())
+      return false;
+
+   remainingDependencies = m_it->second._dependencyCount;
+   return true;
+   }
