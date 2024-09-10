@@ -3732,7 +3732,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
       }
 
    compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
-   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(clazz);
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
 
 #if defined(J9VM_OPT_JITSERVER)
    if (auto deserializer = compInfo->getJITServerAOTDeserializer())

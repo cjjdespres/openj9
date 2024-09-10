@@ -6814,8 +6814,8 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
             case TrackingSuccessful:
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p successfully tracked", method);
                break;
-            case CouldNotReduceCount:
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p could not reduce count", method);
+            case MethodCouldNotBeQueued:
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p could not be queued", method);
                break;
             case MethodWasntTracked:
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p was not tracked", method);

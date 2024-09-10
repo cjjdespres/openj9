@@ -92,7 +92,8 @@ struct ClassEntry
 enum DependencyTrackingStatus
    {
    TrackingSuccessful,
-   CouldNotReduceCount,
+   // CouldNotReduceCount,
+   MethodCouldNotBeQueued,
    MethodWasntTracked
    };
 
@@ -107,7 +108,7 @@ public:
 
    void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied);
 
-   void onClassLoad(TR_OpaqueClassBlock *ramClass);
+   void onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *ramClass);
    void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
 
@@ -120,8 +121,8 @@ public:
    void dumpTableDetails();
 
 private:
-   bool queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue);
-   void registerOffset(uintptr_t offset);
+   bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
+   void registerOffset(J9VMThread *vmThread, uintptr_t offset);
    void unregisterOffset(uintptr_t offset);
 
    TR::Monitor *const _tableMonitor;

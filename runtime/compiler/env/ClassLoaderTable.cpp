@@ -28,12 +28,17 @@
 #include "env/J9PersistentInfo.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCollections.hpp"
+#include "env/VMAccessCriticalSection.hpp"
 #include "env/VerboseLog.hpp"
 #include "env/jittypes.h"
 #include "infra/Assert.hpp"
 #include "infra/MonitorTable.hpp"
 #include <cstdint>
 
+#include "ilgen/IlGeneratorMethodDetails.hpp"
+#include "control/OptimizationPlan.hpp"
+#include "control/CompilationStrategy.hpp"
+#include "control/CompilationController.hpp"
 
 enum TableKind { Loader, Chain, Name };
 
@@ -554,7 +559,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    }
 
 void
-TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
+TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *clazz)
    {
    if (!_sharedCache)
       return;
@@ -570,17 +575,17 @@ TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
 
-   registerOffset(classOffset);
+   registerOffset(vmThread, classOffset);
 
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
-      registerOffset(chainOffset);
+      registerOffset(vmThread, chainOffset);
 
    _classMap.insert({ramClass, {classOffset, chainOffset}});
 
    }
 
 void
-TR_AOTDependencyTable::registerOffset(uintptr_t offset)
+TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
    {
    // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
    auto it = _offsetMap.find(offset);
@@ -607,12 +612,15 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
          }
       }
 
+   // TODO: unsure about this...
+   TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
+
    for (auto entry : methodsToUntrack)
       {
       DependencyTrackingStatus status = TrackingSuccessful;
       stopTracking(entry);
-      if (!queueAOTLoad(entry, offset))
-         status = CouldNotReduceCount;
+      if (!queueAOTLoad(vmThread, entry, offset))
+         status = MethodCouldNotBeQueued;
       _previouslyTrackedMethods.insert({entry, status});
       }
    }
@@ -675,36 +683,70 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    _methodMap.erase(m_it);
    }
 
-// TODO: if queueing doesn't work, what then?
 bool
-TR_AOTDependencyTable::queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue)
+TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue)
    {
-   auto count = TR::CompilationInfo::getInvocationCount(method);
-   bool loweredCount = false;
-
-   if (count > 0)
+   bool queued = false;
+   TR::CompilationInfo *compInfo = TR::CompilationInfo::get();
+   if (!compInfo->isCompiled(method))
       {
-      // TODO: do I have to check not already compiled?
-      if (TR::CompilationInfo::setInvocationCount(method, 0))
-         {
-         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
-         loweredCount = true;
-         }
-      else
-         {
-          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
-         }
-      }
-   else
-      {
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
-      }
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to queue method %p by %lu", method, offsetThatCausedQueue);
+      TR_MethodEvent event;
+      // TODO: custom event?
+      event._eventType = TR_MethodEvent::InterpreterCounterTripped;
+      event._j9method = method;
+      event._oldStartPC = 0;
+      event._vmThread = vmThread;
+      event._classNeedingThunk = 0;
 
-   return loweredCount;
+      bool newPlanCreated;
+      TR_OptimizationPlan *plan = TR::CompilationController::getCompilationStrategy()->processEvent(&event, &newPlanCreated);
+      if (plan)
+         {
+            {
+            TR::IlGeneratorMethodDetails details(method);
+            compInfo->compileMethod(vmThread, details, NULL, TR_maybe, NULL, &queued, plan);
+            }
+         if (!queued && newPlanCreated)
+            TR_OptimizationPlan::freeOptimizationPlan(plan);
+         if (!queued)
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu could not be queued", method, offsetThatCausedQueue);
+         }
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu did not have a plan created", method, offsetThatCausedQueue);
+      }
+   return queued;
    }
+
+// TODO: if queueing doesn't work, what then?
+// bool
+// TR_AOTDependencyTable::queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue)
+//    {
+//    auto count = TR::CompilationInfo::getInvocationCount(method);
+//    bool loweredCount = false;
+//
+//    if (count > 0)
+//       {
+//       // TODO: do I have to check not already compiled?
+//       if (TR::CompilationInfo::setInvocationCount(method, 0))
+//          {
+//          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+//             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
+//          loweredCount = true;
+//          }
+//       else
+//          {
+//           if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+//             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
+//          }
+//       }
+//    else
+//       {
+//       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+//          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
+//       }
+//
+//    return loweredCount;
+//    }
 
 bool
 TR_AOTDependencyTable::isMethodTracked(J9Method *method, uintptr_t &remainingDependencies)
