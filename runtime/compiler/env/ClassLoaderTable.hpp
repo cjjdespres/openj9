@@ -117,7 +117,7 @@ public:
 
    DependencyTrackingStatus wasMethodPreviouslyTracked(J9Method *method);
 private:
-   bool queueAOTLoad(J9Method *method);
+   bool queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue);
    void registerOffset(uintptr_t offset);
    void unregisterOffset(uintptr_t offset);
 

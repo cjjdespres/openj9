@@ -565,16 +565,17 @@ TR_AOTDependencyTable::onClassLoad(TR_OpaqueClassBlock *clazz)
    uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
    if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
       return;
+   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
+   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
+
    registerOffset(classOffset);
 
-   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       registerOffset(chainOffset);
 
    _classMap.insert({ramClass, {classOffset, chainOffset}});
 
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
    }
 
 void
@@ -609,7 +610,7 @@ TR_AOTDependencyTable::registerOffset(uintptr_t offset)
       {
       DependencyTrackingStatus status = TrackingSuccessful;
       stopTracking(entry);
-      if (!queueAOTLoad(entry))
+      if (!queueAOTLoad(entry, offset))
          status = CouldNotReduceCount;
       _previouslyTrackedMethods.insert({entry, status});
       }
@@ -673,7 +674,7 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
 
 // TODO: if queueing doesn't work, what then?
 bool
-TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
+TR_AOTDependencyTable::queueAOTLoad(J9Method *method, uintptr_t offsetThatCausedQueue)
    {
    auto count = TR::CompilationInfo::getInvocationCount(method);
    bool loweredCount = false;
@@ -684,19 +685,19 @@ TR_AOTDependencyTable::queueAOTLoad(J9Method *method)
       if (TR::CompilationInfo::setInvocationCount(method, 0))
          {
          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p reduced from %d to zero", method, count);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
          loweredCount = true;
          }
       else
          {
           if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p couldn't have its count %d reduced", method, count);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
          }
       }
    else
       {
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p has ineligible count %d", method, count);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
       }
 
    return loweredCount;
