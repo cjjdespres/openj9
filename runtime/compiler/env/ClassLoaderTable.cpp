@@ -702,15 +702,15 @@ TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uint
       event._vmThread = vmThread;
       event._classNeedingThunk = 0;
 
-      bool newPlanCreated;
-      TR_OptimizationPlan *plan = TR::CompilationController::getCompilationStrategy()->processEvent(&event, &newPlanCreated);
+      // TODO: really should think about what is necessary here
+      TR_OptimizationPlan *plan = TR_OptimizationPlan::alloc(TR_Hotness::cold); // TR::CompilationController::getCompilationStrategy()->processEvent(&event, &newPlanCreated);
       if (plan)
          {
             {
             TR::IlGeneratorMethodDetails details(method);
             compInfo->addMethodToBeCompiled(details, NULL, CP_ASYNC_BELOW_MAX, true, plan, &queued, TR_yes);
             }
-         if (!queued && newPlanCreated)
+         if (!queued)
             TR_OptimizationPlan::freeOptimizationPlan(plan);
          if (!queued)
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu could not be queued", method, offsetThatCausedQueue);
