@@ -593,7 +593,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
    if (it == _offsetMap.end())
       {
       // TODO probably incorrectly allocated
-      PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<uintptr_t *>::allocator_type(TR::Compiler->persistentAllocator()));
+      PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
       it = _offsetMap.insert(it, {offset, {0, waitingMethods}});
       }
    auto &offsetEntry = it->second;
@@ -615,7 +615,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
 
    // TODO: unsure about this...
    // TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
-   TR::CompilationInfo::get()->acquireCompMonitor(vmThread);
+   // TR::CompilationInfo::get()->acquireCompMonitor(vmThread);
 
    for (auto entry : methodsToUntrack)
       {
@@ -625,7 +625,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
          status = MethodCouldNotBeQueued;
       _previouslyTrackedMethods.insert({entry, status});
       }
-   TR::CompilationInfo::get()->releaseCompMonitor(vmThread);
+   // TR::CompilationInfo::get()->releaseCompMonitor(vmThread);
    }
 
 void
@@ -770,6 +770,63 @@ TR_AOTDependencyTable::isMethodTracked(J9Method *method, uintptr_t &remainingDep
 
    remainingDependencies = m_it->second._dependencyCount;
    return true;
+   }
+
+void
+TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
+   {
+   // TODO: should really consolidate this, isMethodTracked, and
+   // wasMethodPreviouslyTracked into a single debug print method.
+   OMR::CriticalSection cs(_tableMonitor);
+
+   auto m_it = _methodMap.find(method);
+
+   // TODO: really shouldn't need this when methods are consolidated. is here
+   // because we release the table monitor after checking if the method is
+   // tracked, so I think we need to double-check here for now.
+   if (m_it == _methodMap.end())
+      {
+      auto it = _previouslyTrackedMethods.find(method);
+      if (it == _previouslyTrackedMethods.end())
+         TR_ASSERT_FATAL(false, "We lost track of method %p");
+
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked! It got status %d", method, it->second);
+      return;
+      }
+
+   auto methodEntry = m_it->second;
+   auto chain = methodEntry._dependencyChain;
+   auto chainLength = chain[0];
+
+   std::pair<J9Method *const, MethodEntry> *methodEntryPtr = &*m_it;
+
+   TR_VerboseLog::CriticalSection vlogLock;
+   TR_VerboseLog::writeLine(TR_Vlog_INFO, "Dependency tracking status of method %p", method);
+   bool foundUnsatisfiedDependency = false;
+   for (size_t i = 1; i < chainLength; ++i)
+      {
+      auto d_it = _offsetMap.find(chain[i]);
+      if (d_it == _offsetMap.end())
+         {
+         foundUnsatisfiedDependency = true;
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", chain[i]);
+         }
+      else if (d_it->second._waitingMethods.find(methodEntryPtr) != d_it->second._waitingMethods.end())
+         {
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tAssumption violated: method not tracked in entry for offset %lu", chain[i]);
+         }
+      else if (d_it->second._loadedClassCount == 0)
+         {
+         foundUnsatisfiedDependency = true;
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has no loads", chain[i]);
+         }
+      else if (d_it->second._loadedClassCount > 0)
+         {
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has loads: %lu", chain[i], d_it->second._loadedClassCount);
+         }
+      }
+   if (!foundUnsatisfiedDependency)
+      TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tAssumption violated: method didn't have any unsatisfied dependencies, but wasn't queued");
    }
 
 DependencyTrackingStatus

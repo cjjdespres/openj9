@@ -115,6 +115,7 @@ public:
    // TODO: probably remove this entirely!
    bool isTableActive() { return _sharedCache != NULL; }
    bool isMethodTracked(J9Method *method, uintptr_t &remainingDependencies);
+   void printTrackingStatus(J9Method *method);
 
    DependencyTrackingStatus wasMethodPreviouslyTracked(J9Method *method);
 

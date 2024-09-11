@@ -6804,7 +6804,7 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       uintptr_t dependenciesLeft = 0;
       if (dependencyTable->isMethodTracked(method, dependenciesLeft))
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p active tracked with %lu dependencies left", method, dependenciesLeft);
+         dependencyTable->printTrackingStatus(method);
          }
       else
          {
