@@ -846,7 +846,9 @@ TR_AOTDependencyTable::wasMethodPreviouslyTracked(J9Method *method)
 void
 TR_AOTDependencyTable::dumpTableDetails()
    {
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending and %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending, %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked offsets", _offsetMap.size());
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked classes", _classMap.size());
    for (auto entry : _methodMap)
       {
       TR_VerboseLog::CriticalSection vlogLock;

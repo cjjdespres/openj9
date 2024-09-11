@@ -1620,15 +1620,15 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset)
 void
 J9::Compilation::populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer)
    {
-   // if (self()->getOption(TR_UseSymbolValidationManager))
-   //    {
-   //    TR::SymbolValidationManager *svm = self()->getSymbolValidationManager();
-   //    // TODO: below doesn't work on jitserver
-   //    auto offsets = (uintptr_t *)svm->wellKnownClassChainOffsets();
-   //    auto offsetLength = offsets[0];
-   //    for (size_t i = i; i <= offsetLength; ++i)
-   //       _aotMethodDependencies.insert(offsets[i]);
-   //    }
+   if (self()->getOption(TR_UseSymbolValidationManager))
+      {
+      TR::SymbolValidationManager *svm = self()->getSymbolValidationManager();
+      // TODO: below doesn't work on jitserver
+      auto offsets = (uintptr_t *)svm->wellKnownClassChainOffsets();
+      auto offsetLength = offsets[0];
+      for (size_t i = 1; i <= offsetLength; ++i)
+         _aotMethodDependencies.insert(offsets[i]);
+      }
 
    // TODO: document
    chainBuffer.reserve(_aotMethodDependencies.size() + 1);
