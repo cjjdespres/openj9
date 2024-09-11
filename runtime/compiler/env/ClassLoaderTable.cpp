@@ -848,9 +848,10 @@ TR_AOTDependencyTable::dumpTableDetails()
    {
    for (auto entry : _methodMap)
       {
+      TR_VerboseLog::CriticalSection vlogLock;
       if (entry.second._dependencyCount > 0)
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p still has %lu dependencies", entry.first, entry.second._dependencyCount);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "Table dump: method %p still has %lu dependencies", entry.first, entry.second._dependencyCount);
          auto chain = entry.second._dependencyChain;
          auto chainLength = chain[0];
          bool allDependenciesSatisfied = true;
@@ -860,27 +861,30 @@ TR_AOTDependencyTable::dumpTableDetails()
             if (it == _offsetMap.end())
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p waiting on offset %lu untracked", entry.first, chain[i]);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", entry.first, chain[i]);
                }
             else if (it->second._loadedClassCount == 0)
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p waiting on offset %lu with no loads", entry.first);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu no loads", entry.first);
+               }
+            else if (it->second._loadedClassCount > 100)
+               {
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu with anomalously huge loaded count %lu", entry.first, it->second._loadedClassCount);
                }
             }
          if (allDependenciesSatisfied)
             {
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p still has %lu dependencies but they're all satisfied!", entry.second._dependencyCount);
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Chain content:");
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tSomehow all dependencies are satisfied! Chain content:");
             for (size_t i = 1; i < chainLength; ++i)
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset: %lu", chain[i]);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\t\tOffset: %lu", chain[i]);
             }
          // TODO: this is triggering with SVM? at least with java -version. should look into that
          // TR_ASSERT_FATAL(foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!", entry.first);
          }
       else
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p is somehow in the map but has no dependencies!", entry.first, entry.second._dependencyCount);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table dump: method %p is somehow in the map but has no dependencies!", entry.first);
          }
       }
    }
