@@ -675,6 +675,9 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          pRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          pRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(owningMethod->constantPool()));
          pRecord->setCpIndex(reloTarget, cpIndexOrData);
+         // TODO: I think the fact that we setClassChainForInlinedMethod below
+         // means that we don't need to do the classChainOffsetInSharedCache
+         // thing in this exact call here.
          pRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, classChainOffsetInSharedCache, self(), classChainRecord);
          pRecord->setClassChainIdentifyingLoaderOffsetInSharedCache(reloTarget, classChainIdentifyingLoaderOffsetInSharedCache,
                                                                     self(), classChainRecord);
