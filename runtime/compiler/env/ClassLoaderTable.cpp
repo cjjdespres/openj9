@@ -524,7 +524,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          // TODO probably incorrectly allocated
          PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
          PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-         it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
+         it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
          }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
@@ -606,7 +606,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       // TODO probably incorrectly allocated
       PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
       PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-      it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
+      it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
       }
    auto &offsetEntry = it->second;
    offsetEntry._loadedClasses.insert(ramClass);
