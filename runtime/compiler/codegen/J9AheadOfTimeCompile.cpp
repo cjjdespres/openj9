@@ -571,12 +571,14 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
 
          TR_OpaqueClassBlock *inlinedMethodClass = resolvedMethod->containingClass();
          uintptr_t romClassOffsetInSharedCache = self()->offsetInSharedCacheFromClass(sharedCache, inlinedMethodClass);
+         // TODO: fix
+         uintptr_t classChainOffsetInSharedCache = sharedCache->classChainOffsetIfRemembered(inlinedMethodClass);
 
          imRecord->setReloFlags(reloTarget, flags);
          imRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          imRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(callSymRef->getOwningMethod(comp)->constantPool()));
          imRecord->setCpIndex(reloTarget, cpIndexOrData);
-         imRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, self(), inlinedMethodClass);
+         imRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, classChainOffsetInSharedCache, self(), inlinedMethodClass);
 
          if (kind != TR_InlinedInterfaceMethod
              && kind != TR_InlinedVirtualMethod
@@ -597,11 +599,13 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          TR::AOTClassInfo *aotCI = reinterpret_cast<TR::AOTClassInfo *>(relocation->getTargetAddress2());
 
          uintptr_t romClassOffsetInSharedCache = self()->offsetInSharedCacheFromClass(sharedCache, aotCI->_clazz);
+         // TODO: fix
+         uintptr_t chainOffsetInSharedCache = sharedCache->classChainOffsetIfRemembered(aotCI->_clazz);
 
          vsfRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          vsfRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(aotCI->_constantPool));
          vsfRecord->setCpIndex(reloTarget, aotCI->_cpIndex);
-         vsfRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache,
+         vsfRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, chainOffsetInSharedCache,
                                                    self(), aotCI->getAOTCacheClassChainRecord());
          }
          break;
@@ -671,7 +675,7 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          pRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          pRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(owningMethod->constantPool()));
          pRecord->setCpIndex(reloTarget, cpIndexOrData);
-         pRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, self(), classChainRecord);
+         pRecord->setRomClassOffsetInSharedCache(reloTarget, romClassOffsetInSharedCache, classChainOffsetInSharedCache, self(), classChainRecord);
          pRecord->setClassChainIdentifyingLoaderOffsetInSharedCache(reloTarget, classChainIdentifyingLoaderOffsetInSharedCache,
                                                                     self(), classChainRecord);
          pRecord->setClassChainForInlinedMethod(reloTarget, classChainOffsetInSharedCache, self(), classChainRecord);
