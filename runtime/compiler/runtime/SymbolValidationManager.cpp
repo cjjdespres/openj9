@@ -768,6 +768,8 @@ TR::SymbolValidationManager::skipFieldRefClassRecord(
          // If the class is well-known, it's still a dependency
          if (isWellKnownClass(definingClass))
             comp()->addAOTMethodDependency(wellKnownClassChainOffset(definingClass));
+         else // TODO: clean up, also see if this is actually needed
+            comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
          return true;
          }
       }
@@ -787,6 +789,8 @@ TR::SymbolValidationManager::addClassByNameRecord(TR_OpaqueClassBlock *clazz, TR
       }
    else if (clazz == beholder)
       {
+      // TODO: clean up, assess if needed
+      comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
       return true;
       }
    else if (anyClassFromCPRecordExists(clazz, beholder))
@@ -837,6 +841,8 @@ TR::SymbolValidationManager::addClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9
       }
    else if (clazz == beholder)
       {
+      // TODO: probably not needed if beholder is already validated?
+      comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
       return true;
       }
 
