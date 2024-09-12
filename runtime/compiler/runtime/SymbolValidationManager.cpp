@@ -744,6 +744,7 @@ TR::SymbolValidationManager::addMethodRecord(TR::MethodValidationRecord *record)
    return true;
    }
 
+// TODO HERE: do I need to add the beholder to the dependencies?
 bool
 TR::SymbolValidationManager::skipFieldRefClassRecord(
    TR_OpaqueClassBlock *definingClass,

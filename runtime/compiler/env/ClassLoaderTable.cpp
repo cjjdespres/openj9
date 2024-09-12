@@ -824,7 +824,7 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
          foundUnsatisfiedDependency = true;
          TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", chain[i]);
          }
-      else if (d_it->second._waitingMethods.find(methodEntryPtr) != d_it->second._waitingMethods.end())
+      else if (d_it->second._waitingMethods.find(methodEntryPtr) == d_it->second._waitingMethods.end())
          {
          TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tAssumption violated: method not tracked in entry for offset %lu", chain[i]);
          }
