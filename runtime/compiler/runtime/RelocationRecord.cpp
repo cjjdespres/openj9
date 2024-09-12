@@ -3888,6 +3888,19 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
       if (clazz)
          return TR_RelocationErrorCode::relocationOK;
       }
+   else
+      {
+      // TODO: duplication
+      uintptr_t *classChainForClassBeingValidated = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(classChainOffsetForClassBeingValidated(reloTarget));
+
+      auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
+      TR_OpaqueClassBlock *depTableClazz = dependencyTable->findClassFromOffset(classChainOffsetForClassBeingValidated(reloTarget));
+      // TODO: pretty sure this check is unnecessary!
+      bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChainForClassBeingValidated) : false;
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Validating arbitrary class: %s %p", isMatching ? "matching" : "unmatching", depTableClazz);
+      if (isMatching)
+         return TR_RelocationErrorCode::relocationOK;
+      }
 
    if (aotStats)
       aotStats->numClassValidationsFailed++;
