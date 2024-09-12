@@ -1258,19 +1258,20 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       auto depTableClazz = dependencyTable->findClassFromOffset(classOffset);
       // TODO: pretty sure this check is unnecessary, because we already know that depTableClazz has exactly the class chain corresponding to classOffset!
       bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion((TR_OpaqueClassBlock *)depTableClazz, (uintptr_t *)classChainForClassBeingValidated) : false;
-      if (!isMatching)
-         {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate didn't match!", loaderOffset, _comp->signature());
-         return false;
-         }
-      else if (!clazz)
+      if (!depTableClazz)
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and we couldn't find a candidate in dep table!", loaderOffset, _comp->signature());
+         return false;
+         }
+      else if (!isMatching)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate %p didn't match!", loaderOffset, _comp->signature(), depTableClazz);
          return false;
          }
       else
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Class loader for offset %lu when relocating %s isn't present but we got a dep table candidate!", loaderOffset, _comp->signature());
+         clazz = depTableClazz;
          }
       }
    else
