@@ -26,6 +26,7 @@
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/VerboseLog.hpp"
+#include "env/jittypes.h"
 #include "exceptions/AOTFailure.hpp"
 #include "compile/J9Compilation.hpp"
 #include "control/CompilationRuntime.hpp"
@@ -1256,7 +1257,7 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       uintptr_t classOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainForClassBeingValidated);
       auto depTableClazz = dependencyTable->findClassFromOffset(classOffset);
       // TODO: pretty sure this check is unnecessary, because we already know that depTableClazz has exactly the class chain corresponding to classOffset!
-      bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion(depTableClazz) : false;
+      bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion((TR_OpaqueClassBlock *)depTableClazz, (uintptr_t *)classChainForClassBeingValidated) : false;
       if (!isMatching)
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate didn't match!", loaderOffset, _comp->signature());
