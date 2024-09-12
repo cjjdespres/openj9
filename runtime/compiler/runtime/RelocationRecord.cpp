@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include <stdint.h>
+#include "env/VerboseLog.hpp"
 #include "jilconsts.h"
 #include "jitprotos.h"
 #include "jvminit.h"
@@ -3300,6 +3301,7 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
       }
    else
       {
+      // TODO: need to consult dep table and recover here!
       auto sharedCache = reloRuntime->fej9()->sharedCache();
       uintptr_t romClassOffset = romClassOffsetInSharedCache(reloTarget);
       J9ROMClass *inlinedCodeRomClass = sharedCache->romClassFromOffsetInSharedCache(romClassOffset);
@@ -3843,6 +3845,16 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
                                                     classChainOffsetForClassBeingValidated(reloTarget));
       TR_OpaqueClassBlock *clazz = sharedCache->lookupClassFromChainAndLoader(classChainForClassBeingValidated,
                                                                               classLoader, reloRuntime->comp());
+      auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
+      TR_OpaqueClassBlock *depTableClazz = dependencyTable->findClassFromOffset(classChainOffsetForClassBeingValidated(reloTarget));
+      bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChainForClassBeingValidated) : false;
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Validating arbitrary class: %s %s %s %p %p", clazz ? "redundant" : "unredundant", (clazz == depTableClazz) ? "equal" : "unequal",
+                                     isMatching ? "matching" : "unmatching",
+                                     clazz, depTableClazz);
+
+      if (clazz == NULL && isMatching)
+         clazz = depTableClazz;
+
       RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: clazz %p\n", clazz);
 
       if (clazz)
@@ -5671,9 +5683,11 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
    TR_RelocationRecordPointerPrivateData *reloPrivateData = &(privateData()->pointer);
 
    J9Class *classPointer = NULL;
+
+   auto sharedCache = reloRuntime->fej9()->sharedCache();
+   uintptr_t *classChain = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(classChainForInlinedMethod(reloTarget));
    if (getInlinedSiteMethod(reloRuntime, inlinedSiteIndex(reloTarget)) != (TR_OpaqueMethodBlock *)-1)
       {
-      auto sharedCache = reloRuntime->fej9()->sharedCache();
       J9ClassLoader *classLoader = NULL;
       void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(classChainIdentifyingLoaderOffsetInSharedCache(reloTarget));
       RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classChainIdentifyingLoader %p\n", classChainIdentifyingLoader);
@@ -5682,10 +5696,34 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
 
       if (classLoader != NULL)
          {
-         uintptr_t *classChain = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(classChainForInlinedMethod(reloTarget));
          RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classChain %p\n", classChain);
          classPointer = (J9Class *)sharedCache->lookupClassFromChainAndLoader(classChain, (void *) classLoader, reloRuntime->comp());
          RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classPointer %p\n", classPointer);
+         }
+      auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
+      auto depTableClazz = dependencyTable->findClassFromOffset(classChainForInlinedMethod(reloTarget));
+      bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChain) : false;
+      if (classPointer == NULL)
+         {
+         if (isMatching)
+            {
+            classPointer = (J9Class *)depTableClazz;
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
+            }
+         else
+            {
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: unmatched, no recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
+            }
+         }
+      else
+         {
+         if (isMatching)
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: could have recovered %s %p %p %s",
+                                           (classPointer == (J9Class *)  depTableClazz) ? "equal" : "unequal",
+                                           classPointer, depTableClazz, reloRuntime->comp()->signature());
+         else
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: actual mismatch %p %p %s",
+                                           classPointer, depTableClazz, reloRuntime->comp()->signature());
          }
       }
    else
