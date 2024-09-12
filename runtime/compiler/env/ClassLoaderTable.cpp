@@ -897,7 +897,7 @@ TR_AOTDependencyTable::findClassFromOffset(uintptr_t offset)
    OMR::CriticalSection cs(_tableMonitor);
 
    auto it = _offsetMap.find(offset);
-   if (it != _offsetMap.end())
+   if (it == _offsetMap.end())
       return NULL;
 
    auto c_it = it->second._loadedClasses.begin();
