@@ -493,7 +493,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    if (!_sharedCache)
       return;
 
-   uintptr_t dependencyChainLength = *dependencyChain;
+   uintptr_t totalDependencies = *dependencyChain;
 
    // TODO: verbose option
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(J9_CLASS_FROM_METHOD(method)->romClass);
@@ -509,11 +509,12 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 
    auto m_it = _methodMap.insert({method, {0, dependencyChain}});
    auto methodEntry = &(*m_it.first);
+   TR_ASSERT_FATAL(methodEntry == &*_methodMap.find(method), "Must be equal! %p %p", methodEntry, &*_methodMap.find(method));
 
-   uintptr_t numberRemainingDependencies = dependencyChainLength;
+   uintptr_t numberRemainingDependencies = totalDependencies;
 
    // TODO: sanity checking here!
-   for (size_t i = 1; i <= dependencyChainLength; ++i)
+   for (size_t i = 1; i <= totalDependencies; ++i)
       {
       uintptr_t offset = dependencyChain[i];
       TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset must be in the SCC!");
@@ -527,9 +528,18 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
    // TODO: assert is still non-neg.
       if (offsetEntry._loadedClasses.size() > 0)
          numberRemainingDependencies -= 1;
+      }
+
+   // TODO: temporary sanity check
+   for (size_t i = 1; i <= totalDependencies; ++i)
+      {
+      auto thing = _offsetMap.find(dependencyChain[i]);
+      auto foo = thing->second._waitingMethods.find(methodEntry);
+      TR_ASSERT_FATAL(foo != thing->second._waitingMethods.end(), "Must be tracked!");
       }
 
    if (numberRemainingDependencies == 0)
@@ -540,7 +550,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method scheduled for early AOT load %lu %lu: %p %.*s.%.*s%.*s",
                                         numberRemainingDependencies,
-                                        dependencyChainLength,
+                                        totalDependencies,
                                         method,
                                         J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                         J9UTF8_LENGTH(name), J9UTF8_DATA(name),
@@ -551,7 +561,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC with %lu %lu: %p %.*s.%.*s%.*s",
                                         numberRemainingDependencies,
-                                        dependencyChainLength,
+                                        totalDependencies,
                                         method,
                                         J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                         J9UTF8_LENGTH(name), J9UTF8_DATA(name),
@@ -677,12 +687,12 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    auto methodEntry = &*m_it;
    auto dependencyChain = m_it->second._dependencyChain;
    auto dependencyChainLength = *dependencyChain;
-   auto dependencyChainData = dependencyChain + 1;
 
-   for (size_t i = 0; i < dependencyChainLength; ++i)
+   for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
-      auto m_it = _offsetMap.find(dependencyChainData[i]);
+      auto m_it = _offsetMap.find(dependencyChain[i]);
       TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
+      TR_ASSERT_FATAL(m_it->second._waitingMethods.find(methodEntry) != m_it->second._waitingMethods.end(), "Not tracked??? %p %lu %p", method, dependencyChain[i], methodEntry);
       m_it->second._waitingMethods.erase(methodEntry);
       }
 
