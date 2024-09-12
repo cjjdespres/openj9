@@ -871,7 +871,7 @@ TR_AOTDependencyTable::dumpTableDetails()
          auto chain = entry.second._dependencyChain;
          auto chainLength = chain[0];
          bool allDependenciesSatisfied = true;
-         for (size_t i = 1; i < chainLength; ++i)
+         for (size_t i = 1; i <= chainLength; ++i)
             {
             auto it = _offsetMap.find(chain[i]);
             if (it == _offsetMap.end())
@@ -886,11 +886,10 @@ TR_AOTDependencyTable::dumpTableDetails()
                }
             }
          if (allDependenciesSatisfied)
-            {
-            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tSomehow all dependencies are satisfied! Chain content:");
-            for (size_t i = 1; i < chainLength; ++i)
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\t\tOffset: %lu", chain[i]);
-            }
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tSomehow all dependencies are satisfied!");
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tThe full chain data:");
+         for (size_t i = 1; i <= chainLength; ++i)
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\t\tOffset: %lu", chain[i]);
          // TODO: this is triggering with SVM? at least with java -version. should look into that
          // TR_ASSERT_FATAL(foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!", entry.first);
          }
