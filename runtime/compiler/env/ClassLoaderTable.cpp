@@ -522,15 +522,16 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          {
          // TODO probably incorrectly allocated
          PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
-         it = _offsetMap.insert(it, {offset, {0, waitingMethods}});
+         PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
+         it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
          }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
-      if (offsetEntry._loadedClassCount > 0)
+   // TODO: assert is still non-neg.
+      if (offsetEntry._loadedClasses.size() > 0)
          numberRemainingDependencies -= 1;
       }
 
-   // TODO: assert is still non-neg.
    if (numberRemainingDependencies == 0)
       {
       stopTracking(method);
@@ -576,17 +577,17 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
 
-   registerOffset(vmThread, classOffset);
+   registerOffset(vmThread, ramClass, classOffset);
 
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
-      registerOffset(vmThread, chainOffset);
+      registerOffset(vmThread, ramClass, chainOffset);
 
    _classMap.insert({ramClass, {classOffset, chainOffset}});
 
    }
 
 void
-TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
+TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset)
    {
    // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
    auto it = _offsetMap.find(offset);
@@ -594,14 +595,15 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, uintptr_t offset)
       {
       // TODO probably incorrectly allocated
       PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
-      it = _offsetMap.insert(it, {offset, {0, waitingMethods}});
+      PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
+      it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
       }
    auto &offsetEntry = it->second;
-   auto oldClassCount = ++offsetEntry._loadedClassCount;
+   offsetEntry._loadedClasses.insert(ramClass);
 
    std::vector<J9Method *> methodsToUntrack;
    // if this is the first load
-   if (oldClassCount == 1)
+   if (offsetEntry._loadedClasses.size() == 1)
       {
       for (auto entry : offsetEntry._waitingMethods)
          {
@@ -642,8 +644,8 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    if (c_it == _classMap.end())
       return;
 
-   unregisterOffset(c_it->second._classChainOffset);
-   unregisterOffset(c_it->second._classOffset);
+   unregisterOffset(ramClass, c_it->second._classChainOffset);
+   unregisterOffset(ramClass, c_it->second._classOffset);
 
    _classMap.erase(c_it);
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
@@ -651,17 +653,18 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    }
 
 void
-TR_AOTDependencyTable::unregisterOffset(uintptr_t offset)
+TR_AOTDependencyTable::unregisterOffset(J9Class *ramClass, uintptr_t offset)
    {
    auto it = _offsetMap.find(offset);
-   if ((it == _offsetMap.end()) || (it->second._loadedClassCount == 0))
+   if (it == _offsetMap.end())
       return;
 
-   it->second._loadedClassCount -= 1;
-   // TODO: this is wrong - only increase the dependency count if the loaded
-   // class count goes to zero.
-   for (auto entry: it->second._waitingMethods)
-      ++entry->second._dependencyCount;
+   size_t numErased = it->second._loadedClasses.erase(ramClass);
+   if ((numErased == 1) && (it->second._loadedClasses.size() == 0))
+      {
+      for (auto entry: it->second._waitingMethods)
+         ++entry->second._dependencyCount;
+      }
    }
 
 void
@@ -815,14 +818,14 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
          {
          TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tAssumption violated: method not tracked in entry for offset %lu", chain[i]);
          }
-      else if (d_it->second._loadedClassCount == 0)
+      else if (d_it->second._loadedClasses.size() == 0)
          {
          foundUnsatisfiedDependency = true;
          TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has no loads", chain[i]);
          }
-      else if (d_it->second._loadedClassCount > 0)
+      else if (d_it->second._loadedClasses.size() > 0)
          {
-         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has loads: %lu", chain[i], d_it->second._loadedClassCount);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has loads: %lu", chain[i], d_it->second._loadedClasses.size());
          }
       }
    if (!foundUnsatisfiedDependency)
@@ -866,14 +869,10 @@ TR_AOTDependencyTable::dumpTableDetails()
                allDependenciesSatisfied = false;
                TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", entry.first, chain[i]);
                }
-            else if (it->second._loadedClassCount == 0)
+            else if (it->second._loadedClasses.size() == 0)
                {
                allDependenciesSatisfied = false;
                TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu no loads", entry.first);
-               }
-            else if (it->second._loadedClassCount > 100)
-               {
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu with anomalously huge loaded count %lu", entry.first, it->second._loadedClassCount);
                }
             }
          if (allDependenciesSatisfied)
@@ -890,4 +889,20 @@ TR_AOTDependencyTable::dumpTableDetails()
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table dump: method %p is somehow in the map but has no dependencies!", entry.first);
          }
       }
+   }
+
+TR_OpaqueClassBlock *
+TR_AOTDependencyTable::findClassFromOffset(uintptr_t offset)
+   {
+   OMR::CriticalSection cs(_tableMonitor);
+
+   auto it = _offsetMap.find(offset);
+   if (it != _offsetMap.end())
+      return NULL;
+
+   auto c_it = it->second._loadedClasses.begin();
+   if (c_it == it->second._loadedClasses.end())
+      return NULL;
+
+   return (TR_OpaqueClassBlock *)(*c_it);
    }

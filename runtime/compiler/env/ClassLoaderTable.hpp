@@ -79,7 +79,8 @@ struct MethodEntry
 
 struct OffsetEntry
    {
-   uintptr_t _loadedClassCount;
+   // TODO: could have multi-map table?
+   PersistentUnorderedSet<J9Class *> _loadedClasses;
    PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingMethods;
    };
 
@@ -111,6 +112,7 @@ public:
    void onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *ramClass);
    void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
+   TR_OpaqueClassBlock *findClassFromOffset(uintptr_t offset);
 
    // TODO: probably remove this entirely!
    bool isTableActive() { return _sharedCache != NULL; }
@@ -123,8 +125,8 @@ public:
 
 private:
    bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
-   void registerOffset(J9VMThread *vmThread, uintptr_t offset);
-   void unregisterOffset(uintptr_t offset);
+   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset);
+   void unregisterOffset(J9Class *ramClass, uintptr_t offset);
 
    TR::Monitor *const _tableMonitor;
 
