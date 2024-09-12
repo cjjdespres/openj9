@@ -3847,6 +3847,7 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
                                                                               classLoader, reloRuntime->comp());
       auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
       TR_OpaqueClassBlock *depTableClazz = dependencyTable->findClassFromOffset(classChainOffsetForClassBeingValidated(reloTarget));
+      // TODO: pretty sure this check is unnecessary!
       bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChainForClassBeingValidated) : false;
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Validating arbitrary class: %s %s %s %p %p", clazz ? "redundant" : "unredundant", (clazz == depTableClazz) ? "equal" : "unequal",
                                      isMatching ? "matching" : "unmatching",
@@ -5702,6 +5703,7 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
          }
       auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
       auto depTableClazz = dependencyTable->findClassFromOffset(classChainForInlinedMethod(reloTarget));
+      // TODO: pretty sure this check is unnecessary!
       bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChain) : false;
       if (classPointer == NULL)
          {

@@ -1227,8 +1227,15 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       uintptr_t loaderOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainIdentifyingLoader);
       auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable();
       uintptr_t classOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainForClassBeingValidated);
-      clazz = dependencyTable->findClassFromOffset(classOffset);
-      if (!clazz)
+      auto depTableClazz = dependencyTable->findClassFromOffset(classOffset);
+      // TODO: pretty sure this check is unnecessary, because we already know that depTableClazz has exactly the class chain corresponding to classOffset!
+      bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion(depTableClazz) : false;
+      if (!isMatching)
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate didn't match!", loaderOffset, _comp->signature());
+         return false;
+         }
+      else if (!clazz)
          {
          TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and we couldn't find a candidate in dep table!", loaderOffset, _comp->signature());
          return false;
