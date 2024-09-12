@@ -3744,6 +3744,16 @@ TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache(
    reloTarget->storeRelocationRecordValue(romClassOffsetInSharedCache, addr);
 
    aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
+   if (classChainOffsetInSharedCache != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      {
+      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache);
+      }
+   else
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static field class didn't have a chain! %s %p", aotCompile->comp()->signature());
+      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
+      }
+
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
