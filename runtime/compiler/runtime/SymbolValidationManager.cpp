@@ -762,7 +762,12 @@ TR::SymbolValidationManager::skipFieldRefClassRecord(
 
       if (classRefLen == definingClassLen
           && !memcmp(classRefName, definingClassName, classRefLen))
+         {
+         // If the class is well-known, it's still a dependency
+         if (isWellKnownClass(definingClass))
+            comp()->addAOTMethodDependency(wellKnownClassChainOffset(definingClass));
          return true;
+         }
       }
 
    return false;
@@ -773,13 +778,23 @@ TR::SymbolValidationManager::addClassByNameRecord(TR_OpaqueClassBlock *clazz, TR
    {
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (isWellKnownClass(clazz))
+      {
+      // If the class is well-known, it's still a dependency
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz));
       return true;
+      }
    else if (clazz == beholder)
+      {
       return true;
+      }
    else if (anyClassFromCPRecordExists(clazz, beholder))
+      {
       return true; // already have an equivalent ClassFromCP
+      }
    else
+      {
       return addClassRecordWithChain(new (_region) ClassByNameRecord(clazz, beholder));
+      }
    }
 
 bool
@@ -813,9 +828,15 @@ TR::SymbolValidationManager::addClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9
    TR_OpaqueClassBlock *beholder = _fej9->getClassFromCP(constantPoolOfBeholder);
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (isWellKnownClass(clazz))
+      {
+       // If the class is well-known, it's still a dependency
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz));
       return true;
+      }
    else if (clazz == beholder)
+      {
       return true;
+      }
 
    ClassByNameRecord byName(clazz, beholder);
    if (recordExists(&byName))
@@ -894,9 +915,15 @@ bool
 TR::SymbolValidationManager::addSystemClassByNameRecord(TR_OpaqueClassBlock *systemClass)
    {
    if (isWellKnownClass(systemClass))
+      {
+       // If the class is well-known, it's still a dependency
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(systemClass));
       return true;
+      }
    else
+      {
       return addClassRecordWithChain(new (_region) SystemClassByNameRecord(systemClass));
+      }
    }
 
 bool
@@ -1622,6 +1649,16 @@ TR::SymbolValidationManager::validateIsClassVisibleRecord(uint16_t sourceClassID
    bool isVisible = _fej9->isClassVisible(sourceClass, destClass);
 
    return (isVisible == wasVisible);
+   }
+
+
+uintptr_t
+TR::SymbolValidationManager::wellKnownClassChainOffset(TR_OpaqueClassBlock *clazz)
+   {
+   // TODO: pretty sure this only works locally, and also we cache this already!
+   // though note that I don't set the offset array if doing an AOT cache
+   // compilation and ignoring the SCC, so that would have to be accounted for.
+   return _fej9->sharedCache()->classChainOffsetIfRemembered(clazz);
    }
 
 bool

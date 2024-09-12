@@ -883,6 +883,9 @@ private:
    void appendNewRecord(void *value, TR::SymbolValidationRecord *record);
    void appendRecordIfNew(void *value, TR::SymbolValidationRecord *record);
 
+   // TODO: fix up
+   uintptr_t wellKnownClassChainOffset(TR_OpaqueClassBlock *clazz);
+
    struct ClassChainInfo
       {
       ClassChainInfo()
