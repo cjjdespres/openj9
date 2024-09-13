@@ -1011,6 +1011,8 @@ TR::SymbolValidationManager::addVirtualMethodFromCPRecord(TR_OpaqueMethodBlock *
    {
    TR_OpaqueClassBlock *beholder = _fej9->getClassFromCP(cp);
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
+   // TODO: addition below may not be necessary
+   comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
    return addMethodRecord(new (_region) VirtualMethodFromCPRecord(method, beholder, cpIndex));
    }
 
