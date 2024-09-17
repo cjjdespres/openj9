@@ -2372,6 +2372,16 @@ J9::AheadOfTimeCompile::dumpRelocationData()
       cursor += 4;
       }
 
+   // TODO: improve dump here
+   if (isVerbose)
+      {
+      traceMsg(
+         self() ->comp(),
+         "SCC offset of dependency chain is: 0x%llx\n\n",
+         (unsigned long long)*(uintptr_t *)cursor);
+      cursor += sizeof(uintptr_t);
+      }
+
    if (self()->comp()->getOption(TR_UseSymbolValidationManager))
       {
       traceMsg(

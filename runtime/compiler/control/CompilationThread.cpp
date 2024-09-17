@@ -7439,6 +7439,9 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
             entry->_doNotAOTCompile = true;
             }
 
+         // TODO: could put a check in here to ensure that the method's
+         // dependencies are all satisfied, and if not then suppress aot
+         // compilation.
          if (*aotCachedMethod)
             {
 #ifdef COMPRESS_AOT_DATA
