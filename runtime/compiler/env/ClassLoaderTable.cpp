@@ -234,7 +234,8 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
       if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
          {
 #if defined(J9VM_OPT_JITSERVER)
-         if (useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer))
+         // TODO: fix log line category
+         if ((useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer)) || TR::Options::getVerboseOption(TR_VerboseHookDetailsClassLoading))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
                "ERROR: Failed to get class chain for %.*s loaded by %p",
                nameLength, (const char *)name, loader
@@ -269,7 +270,8 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
       // Probably not critical if multiple class loaders aren't routinely loading the exact same class.
       //TODO: Prevent this class loader from associating with a different class
 #if defined(J9VM_OPT_JITSERVER)
-      if (useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer))
+      // TODO: fix log line category
+      if ((useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer)) || TR::Options::getVerboseOption(TR_VerboseHookDetailsClassLoading))
          TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
             "ERROR: Failed to associate class %.*s chain %p with loader %p",
             nameLength, (const char *)name, chain, loader
@@ -291,7 +293,7 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
          // We have added this loader to _classLoaderTable, which has a nice side
          // benefit that we won't keep trying to add it, so leave it there.
 #if defined(J9VM_OPT_JITSERVER)
-         if (useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer))
+         if ((useAOTCache && TR::Options::getVerboseOption(TR_VerboseJITServer)) || TR::Options::getVerboseOption(TR_VerboseHookDetailsClassLoading))
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
                "ERROR: Class %.*s chain %p already associated with loader %p != %p",
                nameLength, (const char *)name, chain, otherInfo->_loader, loader
