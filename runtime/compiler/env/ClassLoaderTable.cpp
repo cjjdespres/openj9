@@ -505,7 +505,10 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 
    // TODO: below is just some sanity checking
    if (_methodMap.find(method) != _methodMap.end())
-      TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Existing entry for method %p", method);
+      {
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Existing entry for method %p", method);
+      }
 
    auto m_it = _methodMap.insert({method, {0, dependencyChain}});
    auto methodEntry = &(*m_it.first);
@@ -528,7 +531,9 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
+
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
    // TODO: assert is still non-neg.
       if (offsetEntry._loadedClasses.size() > 0)
          numberRemainingDependencies -= 1;

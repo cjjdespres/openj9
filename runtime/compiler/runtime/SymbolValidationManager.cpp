@@ -1270,17 +1270,20 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion((TR_OpaqueClassBlock *)depTableClazz, (uintptr_t *)classChainForClassBeingValidated) : false;
       if (!depTableClazz)
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and we couldn't find a candidate in dep table!", loaderOffset, _comp->signature());
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and we couldn't find a candidate in dep table!", loaderOffset, _comp->signature());
          return false;
          }
       else if (!isMatching)
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate %p didn't match!", loaderOffset, _comp->signature(), depTableClazz);
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate %p didn't match!", loaderOffset, _comp->signature(), depTableClazz);
          return false;
          }
       else
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Class loader for offset %lu when relocating %s isn't present but we got a dep table candidate!", loaderOffset, _comp->signature());
+         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Class loader for offset %lu when relocating %s isn't present but we got a dep table candidate!", loaderOffset, _comp->signature());
          clazz = depTableClazz;
          }
       }
@@ -1289,7 +1292,9 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable();
       uintptr_t classOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainForClassBeingValidated);
       auto otherClazz = dependencyTable->findClassFromOffset(classOffset);
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "We got a clazz from the indicated loader anyway, with %s %p %p ", (clazz == otherClazz ? "equality" : "inequality"), clazz, otherClazz);
+
+      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "We got a clazz from the indicated loader anyway, with %s %p %p ", (clazz == otherClazz ? "equality" : "inequality"), clazz, otherClazz);
       }
 
    return validateSymbol(classID, clazz);

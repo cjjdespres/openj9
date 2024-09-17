@@ -6799,7 +6799,7 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
 
    // TODO: vlog cleanup
    auto dependencyTable = _compInfo.getPersistentInfo()->getAOTDependencyTable();
-   if (dependencyTable->isTableActive())
+   if (dependencyTable->isTableActive() && TR::Options::getVerboseOption(TR_VerbosePerformance))
       {
       uintptr_t dependenciesLeft = 0;
       if (dependencyTable->isMethodTracked(method, dependenciesLeft))
