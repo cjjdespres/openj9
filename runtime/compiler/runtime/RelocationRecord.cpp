@@ -5772,9 +5772,9 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: unmatched, no recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
             }
          }
-      else
+      else if (TR::Options::getVerboseOption(TR_VerbosePerformance))
          {
-         if (isMatching && TR::Options::getVerboseOption(TR_VerbosePerformance))
+         if (isMatching)
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: could have recovered %s %p %p %s",
                                            (classPointer == (J9Class *)  depTableClazz) ? "equal" : "unequal",
                                            classPointer, depTableClazz, reloRuntime->comp()->signature());
