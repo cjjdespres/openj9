@@ -6806,24 +6806,24 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
          {
          dependencyTable->printTrackingStatus(method);
          }
-      else
-         {
-         auto status = dependencyTable->wasMethodPreviouslyTracked(method);
-         switch (status)
-            {
-            case TrackingSuccessful:
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p successfully tracked", method);
-               break;
-            case MethodCouldNotBeQueued:
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p could not be queued", method);
-               break;
-            case MethodWasntTracked:
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p was not tracked", method);
-               break;
-            default:
-               TR_ASSERT_FATAL(false, "Unhandled status %d", status);
-            }
-         }
+      // else
+      //    {
+      //    auto status = dependencyTable->wasMethodPreviouslyTracked(method);
+      //    switch (status)
+      //       {
+      //       case TrackingSuccessful:
+      //          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p successfully tracked", method);
+      //          break;
+      //       case MethodCouldNotBeQueued:
+      //          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p could not be queued", method);
+      //          break;
+      //       case MethodWasntTracked:
+      //          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Attempting to AOT load method %p was not tracked", method);
+      //          break;
+      //       default:
+      //          TR_ASSERT_FATAL(false, "Unhandled status %d", status);
+      //       }
+      //    }
       }
 
    metaData = reloRuntime()->prepareRelocateAOTCodeAndData(vmThread,

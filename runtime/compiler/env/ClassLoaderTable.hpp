@@ -95,7 +95,8 @@ enum DependencyTrackingStatus
    TrackingSuccessful,
    // CouldNotReduceCount,
    MethodCouldNotBeQueued,
-   MethodWasntTracked
+   MethodWasntTracked,
+   NotTrackingPreviousMethods
    };
 
 // TODO: move to own file
@@ -128,6 +129,9 @@ private:
    void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset);
    void unregisterOffset(J9Class *ramClass, uintptr_t offset);
 
+   bool checkInitialDependencySatisfaction(J9Method *method, const uintptr_t *dependencyChain, uintptr_t totalDependencies,
+                                           size_t &dependencyIndex, uintptr_t &numberRemainingDependencies, std::pair<J9Method *const, MethodEntry> *&methodEntry);
+
    TR::Monitor *const _tableMonitor;
 
    TR_PersistentMemory *const _persistentMemory;
@@ -138,7 +142,7 @@ private:
    PersistentUnorderedMap<J9Class *, ClassEntry> _classMap;
 
    // TODO: temporary debug thing.
-   PersistentUnorderedMap<J9Method *, DependencyTrackingStatus> _previouslyTrackedMethods;
+   // PersistentUnorderedMap<J9Method *, DependencyTrackingStatus> _previouslyTrackedMethods;
    };
 
 #endif

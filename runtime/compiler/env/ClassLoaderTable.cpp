@@ -484,8 +484,8 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    _tableMonitor(TR::Monitor::create("JIT-AOTDependencyTableMonitor")),
    _offsetMap(decltype(_offsetMap)::allocator_type(TR::Compiler->persistentAllocator())),
    _methodMap(decltype(_methodMap)::allocator_type(TR::Compiler->persistentAllocator())),
-   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator())),
-   _previouslyTrackedMethods(decltype(_previouslyTrackedMethods)::allocator_type(TR::Compiler->persistentAllocator()))
+   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
+   // _previouslyTrackedMethods(decltype(_previouslyTrackedMethods)::allocator_type(TR::Compiler->persistentAllocator()))
    {
    }
 
@@ -506,17 +506,17 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 
 
    // TODO: below is just some sanity checking
-   if (_methodMap.find(method) != _methodMap.end())
-      {
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Existing entry for method %p", method);
-      }
+   // if (_methodMap.find(method) != _methodMap.end())
+   //    {
+   //    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+   //       TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Existing entry for method %p", method);
+   //    }
 
-   auto m_it = _methodMap.insert({method, {0, dependencyChain}});
-   auto methodEntry = &(*m_it.first);
-   TR_ASSERT_FATAL(methodEntry == &*_methodMap.find(method), "Must be equal! %p %p", methodEntry, &*_methodMap.find(method));
+   // TR_ASSERT_FATAL(methodEntry == &*_methodMap.find(method), "Must be equal! %p %p", methodEntry, &*_methodMap.find(method));
 
    uintptr_t numberRemainingDependencies = totalDependencies;
+   auto m_it = _methodMap.insert({method, {0, dependencyChain}});
+   auto methodEntry = &(*m_it.first);
 
    // TODO: sanity checking here!
    for (size_t i = 1; i <= totalDependencies; ++i)
@@ -529,7 +529,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          // TODO probably incorrectly allocated
          PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
          PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-         it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
+         it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
          }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
@@ -542,26 +542,25 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       }
 
    // TODO: temporary sanity check
-   for (size_t i = 1; i <= totalDependencies; ++i)
-      {
-      auto thing = _offsetMap.find(dependencyChain[i]);
-      auto foo = thing->second._waitingMethods.find(methodEntry);
-      TR_ASSERT_FATAL(foo != thing->second._waitingMethods.end(), "Must be tracked!");
-      }
+   // for (size_t i = 1; i <= totalDependencies; ++i)
+   //    {
+   //    auto thing = _offsetMap.find(dependencyChain[i]);
+   //    auto foo = thing->second._waitingMethods.find(methodEntry);
+   //    TR_ASSERT_FATAL(foo != thing->second._waitingMethods.end(), "Must be tracked!");
+   //    }
 
    if (numberRemainingDependencies == 0)
       {
       stopTracking(method);
       dependenciesSatisfied = true;
-      _previouslyTrackedMethods.insert({method, TrackingSuccessful});
       if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method scheduled for early AOT load %lu %lu: %p %.*s.%.*s%.*s",
-                                        numberRemainingDependencies,
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependencies immediately satisfied. Scheduling for early AOT load %lu: %p %.*s.%.*s%.*s",
                                         totalDependencies,
                                         method,
                                         J9UTF8_LENGTH(className), J9UTF8_DATA(className),
                                         J9UTF8_LENGTH(name), J9UTF8_DATA(name),
                                         J9UTF8_LENGTH(signature), J9UTF8_DATA(signature));
+      // _previouslyTrackedMethods.insert({method, TrackingSuccessful});
       }
    else
       {
@@ -613,7 +612,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       // TODO probably incorrectly allocated
       PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
       PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-      it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
+      it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
       }
    auto &offsetEntry = it->second;
    offsetEntry._loadedClasses.insert(ramClass);
@@ -642,7 +641,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       stopTracking(entry);
       if (!queueAOTLoad(vmThread, entry, offset))
          status = MethodCouldNotBeQueued;
-      _previouslyTrackedMethods.insert({entry, status});
+      // _previouslyTrackedMethods.insert({entry, status});
       }
    // TR::CompilationInfo::get()->releaseCompMonitor(vmThread);
    }
@@ -806,12 +805,13 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
    // tracked, so I think we need to double-check here for now.
    if (m_it == _methodMap.end())
       {
-      auto it = _previouslyTrackedMethods.find(method);
-      if (it == _previouslyTrackedMethods.end())
-         TR_ASSERT_FATAL(false, "We lost track of method %p");
+      // auto it = _previouslyTrackedMethods.find(method);
+      // if (it == _previouslyTrackedMethods.end())
+      //    TR_ASSERT_FATAL(false, "We lost track of method %p");
 
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked! It got status %d", method, it->second);
-      return;
+      // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked! It got status %d", method, it->second);
+      // return;
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked!", method);
       }
 
    auto methodEntry = m_it->second;
@@ -849,24 +849,27 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
       TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tAssumption violated: method didn't have any unsatisfied dependencies, but wasn't queued");
    }
 
+// TODO: remove
 DependencyTrackingStatus
 TR_AOTDependencyTable::wasMethodPreviouslyTracked(J9Method *method)
    {
+   return NotTrackingPreviousMethods;
+
     if (!_sharedCache)
       return MethodWasntTracked;
 
-   OMR::CriticalSection cs(_tableMonitor);
-   auto it = _previouslyTrackedMethods.find(method);
-   if (it == _previouslyTrackedMethods.end())
-      return MethodWasntTracked;
+   // OMR::CriticalSection cs(_tableMonitor);
+   // auto it = _previouslyTrackedMethods.find(method);
+   // if (it == _previouslyTrackedMethods.end())
+   //    return MethodWasntTracked;
 
-   return it->second;
+   // return it->second;
    }
 
 void
 TR_AOTDependencyTable::dumpTableDetails()
    {
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending, %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
+   // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending, %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
    TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked offsets", _offsetMap.size());
    TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked classes", _classMap.size());
    for (auto entry : _methodMap)
