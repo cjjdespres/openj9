@@ -586,7 +586,6 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    if (!_sharedCache)
       return;
 
-   OMR::CriticalSection cs(_tableMonitor);
 
    auto ramClass = (J9Class *)clazz;
 
@@ -596,6 +595,8 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
+
+   OMR::CriticalSection cs(_tableMonitor);
 
    registerOffset(vmThread, ramClass, classOffset);
 
