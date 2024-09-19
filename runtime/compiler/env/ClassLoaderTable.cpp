@@ -25,6 +25,7 @@
 #include "control/CompilationThread.hpp"
 #include "control/OMROptions.hpp"
 #include "env/ClassLoaderTable.hpp"
+#include "env/FrontEnd.hpp"
 #include "env/J9PersistentInfo.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCollections.hpp"
@@ -487,6 +488,9 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
    // _previouslyTrackedMethods(decltype(_previouslyTrackedMethods)::allocator_type(TR::Compiler->persistentAllocator()))
    {
+   static const char *methodCountString = feGetEnv("TR_DependencyTableMethodCountToSet");
+   static int32_t count = methodCountString ? atoi(methodCountString) : 0;
+   _methodCountToSet = count;
    }
 
 void
@@ -755,10 +759,10 @@ TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uint
    if (count > 0)
       {
       // TODO: do I have to check not already compiled?
-      if (TR::CompilationInfo::setInvocationCount(method, 0))
+      if (TR::CompilationInfo::setInvocationCount(method, _methodCountToSet))
          {
          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to zero", method, offsetThatCausedQueue, count);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to %d", method, offsetThatCausedQueue, count, _methodCountToSet);
          loweredCount = true;
          }
       else

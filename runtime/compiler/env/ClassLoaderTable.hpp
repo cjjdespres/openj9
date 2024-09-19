@@ -124,6 +124,8 @@ public:
 
    void dumpTableDetails();
 
+   int32_t getMethodCountToSet() const { return _methodCountToSet; }
+
 private:
    bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
    void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset);
@@ -136,6 +138,8 @@ private:
 
    TR_PersistentMemory *const _persistentMemory;
    TR_J9SharedCache *_sharedCache;
+
+   int32_t _methodCountToSet;
 
    PersistentUnorderedMap<uintptr_t, OffsetEntry> _offsetMap; // TODO: must fill in rght types
    PersistentUnorderedMap<J9Method *, MethodEntry> _methodMap;
