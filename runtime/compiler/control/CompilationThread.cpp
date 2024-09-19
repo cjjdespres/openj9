@@ -7421,9 +7421,22 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
 
       if (canRelocateMethod && !entry->_oldStartPC)
          {
-         // Find the AOT body in the SCC
-         //
-         *aotCachedMethod = findAotBodyInSCC(vmThread, entry->getMethodDetails().getRomMethod(fe));
+         // TODO: clean this up, but basically we want to double-check that the
+         // method has had all of its dependencies satisfied before attempting a
+         // load. right now we just bail if not.
+         auto dependencyTable = persistentInfo->getAOTDependencyTable();
+         uintptr_t remainingDependencies = 0;
+         if (dependencyTable->isMethodTracked(method, remainingDependencies))
+            {
+            canRelocateMethod = false;
+            entry->_doNotAOTCompile = true;
+            }
+         else
+            {
+            // Find the AOT body in the SCC
+            //
+            *aotCachedMethod = findAotBodyInSCC(vmThread, entry->getMethodDetails().getRomMethod(fe));
+            }
 
          // Validate the class chain of the class of the method being AOT loaded
          if (*aotCachedMethod && !fe->sharedCache()->classMatchesCachedVersion(J9_CLASS_FROM_METHOD(method)))
@@ -7439,9 +7452,6 @@ TR::CompilationInfoPerThreadBase::preCompilationTasks(J9VMThread * vmThread,
             entry->_doNotAOTCompile = true;
             }
 
-         // TODO: could put a check in here to ensure that the method's
-         // dependencies are all satisfied, and if not then suppress aot
-         // compilation.
          if (*aotCachedMethod)
             {
 #ifdef COMPRESS_AOT_DATA
