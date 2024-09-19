@@ -2497,7 +2497,8 @@ void J9::AheadOfTimeCompile::processRelocations()
          TR::SymbolValidationManager *svm = comp->getSymbolValidationManager();
          void *offsets = const_cast<void *>(svm->wellKnownClassChainOffsets());
          uintptr_t *wkcOffsetAddr = (uintptr_t *)relocationDataCursor;
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has wkc %lu", comp->signature(), self()->offsetInSharedCacheFromWellKnownClasses(fej9->sharedCache(), offsets));
+         if (comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has wkc %lu", comp->signature(), self()->offsetInSharedCacheFromWellKnownClasses(fej9->sharedCache(), offsets));
          *wkcOffsetAddr = self()->offsetInSharedCacheFromWellKnownClasses(fej9->sharedCache(), offsets);
 #if defined(J9VM_OPT_JITSERVER)
          self()->addWellKnownClassesSerializationRecord(svm->aotCacheWellKnownClassesRecord(), wkcOffsetAddr);
@@ -2527,7 +2528,7 @@ void J9::AheadOfTimeCompile::processRelocations()
          auto dependencyChainOffset = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
          *dependencyChainOffsetCursor = dependencyChainOffset;
          // TODO: improve log
-         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         if (comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has %lu dependencies at offset %lu", comp->signature(), dependencies.size(), dependencyChainOffset);
          }
       }

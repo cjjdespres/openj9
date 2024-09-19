@@ -528,7 +528,7 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                   if (dependenciesSatisfied)
                      count = dependencyTable->getMethodCountToSet();
                   }
-               else if (TR::Options::getVerboseOption(TR_VerbosePerformance)) // TODO: verbose flag
+               else if (optionsJIT->getVerboseOption(TR_VerboseJITServerConns)) // TODO: verbose flag
                   TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "SCC method %p did not have any dependencies", method);
                }
             // AOT Body not in SCC, so scount was not set

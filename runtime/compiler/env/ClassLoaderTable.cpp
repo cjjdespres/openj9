@@ -512,7 +512,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    // TODO: below is just some sanity checking
    // if (_methodMap.find(method) != _methodMap.end())
    //    {
-   //    if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+   //    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
    //       TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Existing entry for method %p", method);
    //    }
 
@@ -538,7 +538,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
    // TODO: assert is still non-neg.
       if (offsetEntry._loadedClasses.size() > 0)
@@ -557,7 +557,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       {
       stopTracking(method);
       dependenciesSatisfied = true;
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependencies immediately satisfied. Scheduling for early AOT load %lu: %p %.*s.%.*s%.*s",
                                         totalDependencies,
                                         method,
@@ -568,7 +568,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       }
    else
       {
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking method in local SCC with %lu %lu: %p %.*s.%.*s%.*s",
                                         numberRemainingDependencies,
                                         totalDependencies,
@@ -593,7 +593,7 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
       return;
    uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
 
    OMR::CriticalSection cs(_tableMonitor);
@@ -669,7 +669,7 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    unregisterOffset(ramClass, c_it->second._classOffset);
 
    _classMap.erase(c_it);
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
    }
 
@@ -762,19 +762,19 @@ TR_AOTDependencyTable::queueAOTLoad(J9VMThread *vmThread, J9Method *method, uint
       // TODO: do I have to check not already compiled?
       if (TR::CompilationInfo::setInvocationCount(method, _methodCountToSet))
          {
-         if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu reduced from %d to %d", method, offsetThatCausedQueue, count, _methodCountToSet);
          loweredCount = true;
          }
       else
          {
-          if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+          if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu couldn't have its count %d reduced", method, offsetThatCausedQueue, count);
          }
       }
    else
       {
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p by %lu has ineligible count %d", method, offsetThatCausedQueue, count);
       }
 

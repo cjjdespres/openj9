@@ -458,7 +458,7 @@ TR_RelocationRecordGroup::wellKnownClassChainOffsets(
    // Skip these to reach the SCC offset of the well-known classes' class chain offsets.
    uintptr_t offset = *((uintptr_t *)_group + 2);
 
-   if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+   if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %s has wkc %lu", reloRuntime->comp()->signature(), offset);
    void *classChains =
       reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(offset);
@@ -2669,7 +2669,7 @@ TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache(
       {
       aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Inlined method class didn't have a chain! %s", aotCompile->comp()->signature());
       }
 #if defined(J9VM_OPT_JITSERVER)
@@ -2690,7 +2690,7 @@ TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache(TR_RelocationTa
    else
       {
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Inlined method class didn't have a chain! %s %p", aotCompile->comp()->signature(), ramClass);
       aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
       }
@@ -3756,7 +3756,7 @@ TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache(
    else
       {
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static field class didn't have a chain! %s %p", aotCompile->comp()->signature());
       aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
       }
@@ -3884,7 +3884,7 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
       // TODO: pretty sure this check is unnecessary!
       bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChainForClassBeingValidated) : false;
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Validating arbitrary class: %s %s %s %p %p", clazz ? "redundant" : "unredundant", (clazz == depTableClazz) ? "equal" : "unequal",
                                         isMatching ? "matching" : "unmatching",
                                         clazz, depTableClazz);
@@ -3907,7 +3907,7 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
       // TODO: pretty sure this check is unnecessary!
       bool isMatching = depTableClazz ? reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(depTableClazz, classChainForClassBeingValidated) : false;
 
-      if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Validating arbitrary class: %s %p", isMatching ? "matching" : "unmatching", depTableClazz);
       if (isMatching)
          return TR_RelocationErrorCode::relocationOK;
@@ -5762,17 +5762,17 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
             {
             classPointer = (J9Class *)depTableClazz;
 
-            if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
             }
          else
             {
 
-            if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+            if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
                TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: unmatched, no recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
             }
          }
-      else if (TR::Options::getVerboseOption(TR_VerbosePerformance))
+      else if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          {
          if (isMatching)
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: could have recovered %s %p %p %s",
