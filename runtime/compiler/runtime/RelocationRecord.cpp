@@ -3231,7 +3231,7 @@ TR_RelocationRecordProfiledInlinedMethod::setClassChainIdentifyingLoaderOffsetIn
    {
    uintptr_t *addr = &((TR_RelocationRecordProfiledInlinedMethodBinaryTemplate *)_record)->_classChainIdentifyingLoaderOffsetInSharedCache;
    reloTarget->storeRelocationRecordValue(classChainIdentifyingLoaderOffsetInSharedCache, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainIdentifyingLoaderOffsetInSharedCache);
+   // aotCompile->comp()->addAOTMethodDependency(classChainIdentifyingLoaderOffsetInSharedCache);
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassLoaderSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -3822,7 +3822,7 @@ TR_RelocationRecordValidateArbitraryClass::setClassChainIdentifyingLoaderOffset(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateArbitraryClassBinaryTemplate *)_record)->_loaderClassChainOffset;
    reloTarget->storeRelocationRecordValue(offset, addr);
-   aotCompile->comp()->addAOTMethodDependency(offset);
+   // aotCompile->comp()->addAOTMethodDependency(offset);
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassLoaderSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
