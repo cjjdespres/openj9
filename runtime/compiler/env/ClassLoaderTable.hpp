@@ -86,7 +86,7 @@ struct OffsetEntry
 
 struct ClassEntry
    {
-   uintptr_t _classOffset;
+   // uintptr_t _classOffset;
    uintptr_t _classChainOffset;
    };
 

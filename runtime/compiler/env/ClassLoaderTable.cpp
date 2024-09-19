@@ -589,21 +589,21 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
 
    auto ramClass = (J9Class *)clazz;
 
-   uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
-   if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
-      return;
+   // uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
+   // if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
+   //    return;
    uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %lu", ramClass, classOffset, chainOffset);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu", ramClass, chainOffset);
 
    OMR::CriticalSection cs(_tableMonitor);
 
-   registerOffset(vmThread, ramClass, classOffset);
+   // registerOffset(vmThread, ramClass, classOffset);
 
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       registerOffset(vmThread, ramClass, chainOffset);
 
-   _classMap.insert({ramClass, {classOffset, chainOffset}});
+   _classMap.insert({ramClass, {chainOffset}});
 
    }
 
@@ -666,7 +666,7 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
       return;
 
    unregisterOffset(ramClass, c_it->second._classChainOffset);
-   unregisterOffset(ramClass, c_it->second._classOffset);
+   // unregisterOffset(ramClass, c_it->second._classOffset);
 
    _classMap.erase(c_it);
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
