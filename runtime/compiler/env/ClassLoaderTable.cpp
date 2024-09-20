@@ -484,8 +484,8 @@ TR_AOTDependencyTable::TR_AOTDependencyTable(TR_PersistentMemory *persistentMemo
    _persistentMemory(persistentMemory), _sharedCache(NULL),
    _tableMonitor(TR::Monitor::create("JIT-AOTDependencyTableMonitor")),
    _offsetMap(decltype(_offsetMap)::allocator_type(TR::Compiler->persistentAllocator())),
-   _methodMap(decltype(_methodMap)::allocator_type(TR::Compiler->persistentAllocator())),
-   _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
+   _methodMap(decltype(_methodMap)::allocator_type(TR::Compiler->persistentAllocator()))
+   // _classMap(decltype(_classMap)::allocator_type(TR::Compiler->persistentAllocator()))
    // _previouslyTrackedMethods(decltype(_previouslyTrackedMethods)::allocator_type(TR::Compiler->persistentAllocator()))
    {
    static const char *methodCountString = feGetEnv("TR_DependencyTableMethodCountToSet");
@@ -593,23 +593,25 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    // if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
    //    return;
    uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
+   if (chainOffset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      return;
+
+
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu", ramClass, chainOffset);
 
-   OMR::CriticalSection cs(_tableMonitor);
 
-   // registerOffset(vmThread, ramClass, classOffset);
-
-   if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
-      registerOffset(vmThread, ramClass, chainOffset);
-
-   _classMap.insert({ramClass, {chainOffset}});
-
+   std::vector<J9Method *> methodsToQueue;
+   registerOffset(vmThread, ramClass, chainOffset, methodsToQueue);
+   for (auto entry : methodsToQueue)
+      queueAOTLoad(vmThread, entry, chainOffset);
    }
 
 void
-TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset)
+TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, std::vector<J9Method *> &methodsToQueue)
    {
+   OMR::CriticalSection cs(_tableMonitor);
+
    // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
    auto it = _offsetMap.find(offset);
    if (it == _offsetMap.end())
@@ -622,7 +624,6 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
    auto &offsetEntry = it->second;
    offsetEntry._loadedClasses.insert(ramClass);
 
-   std::vector<J9Method *> methodsToUntrack;
    // if this is the first load
    if (offsetEntry._loadedClasses.size() == 1)
       {
@@ -630,25 +631,13 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
          {
          uintptr_t existingCount = entry->second._dependencyCount;
          if (existingCount == 1)
-            methodsToUntrack.push_back(entry->first);
+            methodsToQueue.push_back(entry->first);
          else
             --entry->second._dependencyCount;
          }
+      for (auto entry : methodsToQueue)
+         stopTracking(entry);
       }
-
-   // TODO: unsure about this...
-   // TR::VMAccessCriticalSection vmaForQueue(_sharedCache->fe());
-   // TR::CompilationInfo::get()->acquireCompMonitor(vmThread);
-
-   for (auto entry : methodsToUntrack)
-      {
-      DependencyTrackingStatus status = TrackingSuccessful;
-      stopTracking(entry);
-      if (!queueAOTLoad(vmThread, entry, offset))
-         status = MethodCouldNotBeQueued;
-      // _previouslyTrackedMethods.insert({entry, status});
-      }
-   // TR::CompilationInfo::get()->releaseCompMonitor(vmThread);
    }
 
 void
@@ -657,25 +646,24 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    if (!_sharedCache)
       return;
 
-   OMR::CriticalSection cs(_tableMonitor);
 
-   auto ramClass = (J9Class *)clazz;
+   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
 
-   auto c_it = _classMap.find(ramClass);
-   if (c_it == _classMap.end())
-      return;
+   if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
+      {
+      auto ramClass = (J9Class *)clazz;
+      unregisterOffset(ramClass, chainOffset);
 
-   unregisterOffset(ramClass, c_it->second._classChainOffset);
-   // unregisterOffset(ramClass, c_it->second._classOffset);
-
-   _classMap.erase(c_it);
-   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Invalidated dependency class %p", ramClass);
+      }
    }
 
 void
 TR_AOTDependencyTable::unregisterOffset(J9Class *ramClass, uintptr_t offset)
    {
+   OMR::CriticalSection cs(_tableMonitor);
+
    auto it = _offsetMap.find(offset);
    if (it == _offsetMap.end())
       return;
@@ -703,7 +691,6 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
       {
       auto m_it = _offsetMap.find(dependencyChain[i]);
       TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
-      TR_ASSERT_FATAL(m_it->second._waitingMethods.find(methodEntry) != m_it->second._waitingMethods.end(), "Not tracked??? %p %lu %p", method, dependencyChain[i], methodEntry);
       m_it->second._waitingMethods.erase(methodEntry);
       }
 
@@ -817,6 +804,7 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
       // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked! It got status %d", method, it->second);
       // return;
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p became untracked!", method);
+      return;
       }
 
    auto methodEntry = m_it->second;
@@ -876,7 +864,7 @@ TR_AOTDependencyTable::dumpTableDetails()
    {
    // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending, %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
    TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked offsets", _offsetMap.size());
-   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked classes", _classMap.size());
+   // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked classes", _classMap.size());
    for (auto entry : _methodMap)
       {
       TR_VerboseLog::CriticalSection vlogLock;

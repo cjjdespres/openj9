@@ -84,12 +84,6 @@ struct OffsetEntry
    PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingMethods;
    };
 
-struct ClassEntry
-   {
-   // uintptr_t _classOffset;
-   uintptr_t _classChainOffset;
-   };
-
 enum DependencyTrackingStatus
    {
    TrackingSuccessful,
@@ -128,7 +122,7 @@ public:
 
 private:
    bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
-   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset);
+   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, std::vector<J9Method *> &methodsToQueue);
    void unregisterOffset(J9Class *ramClass, uintptr_t offset);
 
    bool checkInitialDependencySatisfaction(J9Method *method, const uintptr_t *dependencyChain, uintptr_t totalDependencies,
@@ -143,7 +137,6 @@ private:
 
    PersistentUnorderedMap<uintptr_t, OffsetEntry> _offsetMap; // TODO: must fill in rght types
    PersistentUnorderedMap<J9Method *, MethodEntry> _methodMap;
-   PersistentUnorderedMap<J9Class *, ClassEntry> _classMap;
 
    // TODO: temporary debug thing.
    // PersistentUnorderedMap<J9Method *, DependencyTrackingStatus> _previouslyTrackedMethods;
