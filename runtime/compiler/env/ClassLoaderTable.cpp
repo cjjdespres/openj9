@@ -36,6 +36,7 @@
 #include "infra/Assert.hpp"
 #include "infra/MonitorTable.hpp"
 #include <cstdint>
+#include <utility>
 
 #include "ilgen/IlGeneratorMethodDetails.hpp"
 #include "control/OptimizationPlan.hpp"
@@ -529,18 +530,17 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset must be in the SCC!");
       auto it = _offsetMap.find(offset);
       if (it == _offsetMap.end())
-         {
-         // TODO probably incorrectly allocated
-         PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
-         PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-         it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
-         }
+         it = _offsetMap.emplace_hint(
+            it,
+            offset,
+            PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator())),
+            PersistentUnorderedSet<J9Class *>(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator())));
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
 
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
-   // TODO: assert is still non-neg.
+      // TODO: assert is still non-neg.
       if (offsetEntry._loadedClasses.size() > 0)
          numberRemainingDependencies -= 1;
       }
@@ -612,15 +612,23 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
    {
    OMR::CriticalSection cs(_tableMonitor);
 
-   // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
+   // TODO: could be try_emplace in c++17
    auto it = _offsetMap.find(offset);
    if (it == _offsetMap.end())
-      {
-      // TODO probably incorrectly allocated
-      PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
-      PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
-      it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
-      }
+      it = _offsetMap.emplace_hint(
+         it,
+         offset,
+         PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator())),
+         PersistentUnorderedSet<J9Class *>(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator())));
+   // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
+   // auto it = _offsetMap.find(offset);
+   // if (it == _offsetMap.end())
+   //    {
+   //    // TODO probably incorrectly allocated
+   //    PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
+   //    PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
+   //    it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
+   //    }
    auto &offsetEntry = it->second;
    offsetEntry._loadedClasses.insert(ramClass);
 

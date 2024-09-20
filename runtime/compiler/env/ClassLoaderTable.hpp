@@ -79,6 +79,10 @@ struct MethodEntry
 
 struct OffsetEntry
    {
+   OffsetEntry(PersistentUnorderedSet<J9Class *>loadedClasses, PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods) :
+      _loadedClasses(loadedClasses), _waitingMethods(waitingMethods) {}
+
+
    // TODO: could have multi-map table?
    PersistentUnorderedSet<J9Class *> _loadedClasses;
    PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingMethods;
