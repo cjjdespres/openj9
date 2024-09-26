@@ -893,12 +893,12 @@ TR_AOTDependencyTable::dumpTableDetails()
             if (it == _offsetMap.end())
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", entry.first, chain[i]);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", chain[i]);
                }
             else if (it->second._loadedClasses.size() == 0)
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu no loads", entry.first);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu no loads", chain[i]);
                }
             }
          if (allDependenciesSatisfied)
