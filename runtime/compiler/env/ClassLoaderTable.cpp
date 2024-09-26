@@ -911,7 +911,7 @@ TR_AOTDependencyTable::dumpTableDetails()
          }
       else
          {
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table dump: method %p is somehow in the map but has no dependencies!", entry.first);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "Table dump: method %p is somehow in the map but has no dependencies!", entry.first);
          }
       }
    }
