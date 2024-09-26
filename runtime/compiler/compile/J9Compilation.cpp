@@ -1606,6 +1606,8 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset)
    // TODO: unsure if invalid offset should be an issue
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
       return;
+
+   TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu must be in the SCC", offset);
    _aotMethodDependencies.insert(offset);
 
    // if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
