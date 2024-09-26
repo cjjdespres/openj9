@@ -530,11 +530,11 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset must be in the SCC!");
       auto it = _offsetMap.find(offset);
       if (it == _offsetMap.end())
-         it = _offsetMap.emplace_hint(
-            it,
-            offset,
-            PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator())),
-            PersistentUnorderedSet<J9Class *>(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator())));
+         {
+         PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
+         PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
+         it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
+         }
       auto &offsetEntry = it->second;
       offsetEntry._waitingMethods.insert(methodEntry);
 
@@ -615,11 +615,11 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
    // TODO: could be try_emplace in c++17
    auto it = _offsetMap.find(offset);
    if (it == _offsetMap.end())
-      it = _offsetMap.emplace_hint(
-         it,
-         offset,
-         PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator())),
-         PersistentUnorderedSet<J9Class *>(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator())));
+      {
+      PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods(PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *>::allocator_type(TR::Compiler->persistentAllocator()));
+      PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
+      it = _offsetMap.insert({offset, {loadedClasses, waitingMethods}}).first;
+      }
    // TODO: duplication with tracking above! (registerOffset should just take an initial loaded count and return a pointer to the resulting entry)
    // auto it = _offsetMap.find(offset);
    // if (it == _offsetMap.end())
