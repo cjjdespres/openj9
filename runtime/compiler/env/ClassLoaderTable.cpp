@@ -687,6 +687,9 @@ TR_AOTDependencyTable::unregisterOffset(J9Class *ramClass, uintptr_t offset)
 void
 TR_AOTDependencyTable::stopTracking(J9Method *method)
    {
+   if (!_sharedCache)
+      return;
+
    auto m_it = _methodMap.find(method);
    if (m_it == _methodMap.end())
       return;
@@ -870,6 +873,8 @@ TR_AOTDependencyTable::wasMethodPreviouslyTracked(J9Method *method)
 void
 TR_AOTDependencyTable::dumpTableDetails()
    {
+   if (!_sharedCache)
+      return;
    // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu methods pending, %lu methods previously tracked", _methodMap.size(), _previouslyTrackedMethods.size());
    TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked offsets", _offsetMap.size());
    // TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Table has %lu tracked classes", _classMap.size());
@@ -914,6 +919,9 @@ TR_AOTDependencyTable::dumpTableDetails()
 TR_OpaqueClassBlock *
 TR_AOTDependencyTable::findClassFromOffset(uintptr_t offset)
    {
+   if (!_sharedCache)
+      return NULL;
+
    OMR::CriticalSection cs(_tableMonitor);
 
    auto it = _offsetMap.find(offset);
