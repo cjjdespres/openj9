@@ -3270,7 +3270,8 @@ void TR::CompilationInfo::stopCompilationThreads()
 
    // TODO: remove
    static bool shouldPrintDependencyStats = feGetEnv("TR_ShouldNotPrintDependencyStats") == NULL;
-   if (shouldPrintDependencyStats)
+
+   if (shouldPrintDependencyStats && TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       getPersistentInfo()->getAOTDependencyTable()->dumpTableDetails();
 
    static char * printCompStats = feGetEnv("TR_PrintCompStats");
