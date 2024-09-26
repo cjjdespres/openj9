@@ -518,7 +518,7 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
                loaderTable->setSharedCache(sharedCache);
 
                // TODO: fix this hack
-               static bool shouldMaintainDependencyTable = feGetEnv("TR_ShouldMaintainDependencyTable") != NULL;
+               static bool shouldMaintainDependencyTable = feGetEnv("TR_ShouldNotMaintainDependencyTable") == NULL;
                if (shouldMaintainDependencyTable)
                   {
                   TR_AOTDependencyTable *dependencyTable = persistentMemory->getPersistentInfo()->getAOTDependencyTable();

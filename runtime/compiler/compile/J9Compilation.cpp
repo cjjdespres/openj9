@@ -229,7 +229,7 @@ J9::Compilation::Compilation(int32_t id,
       _cachedClassPointers[i] = NULL;
 
    // TODO: replace with real option
-   static bool shouldTrackDependencies = feGetEnv("TR_ShouldTrackAOTDependencies") != NULL;
+   static bool shouldTrackDependencies = feGetEnv("TR_ShouldNotTrackAOTDependencies") == NULL;
    _trackingAOTMethodDependencies = shouldTrackDependencies;
 
    // Add known object index to parm 0 so that other optmizations can be unlocked.

@@ -3269,7 +3269,7 @@ void TR::CompilationInfo::stopCompilationThreads()
    J9VMThread * const vmThread = vm->internalVMFunctions->currentVMThread(vm);
 
    // TODO: remove
-   static bool shouldPrintDependencyStats = feGetEnv("TR_ShouldPrintDependencyStats") != NULL;
+   static bool shouldPrintDependencyStats = feGetEnv("TR_ShouldNotPrintDependencyStats") == NULL;
    if (shouldPrintDependencyStats)
       getPersistentInfo()->getAOTDependencyTable()->dumpTableDetails();
 
