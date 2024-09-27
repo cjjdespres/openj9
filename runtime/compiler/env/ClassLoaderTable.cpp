@@ -527,7 +527,9 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
    for (size_t i = 1; i <= totalDependencies; ++i)
       {
       uintptr_t offset = dependencyChain[i];
-      TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset %lu must be in the SCC!", offset);
+      // TODO: remove the J9SharedCache method below, or at least correct it - I'm pretty sure, now, that the
+      // underlying method that takes in a cache descriptor only looks at the top layer!
+      // TR_ASSERT_FATAL(_sharedCache->isOffsetInCache(offset), "Offset %lu must be in the SCC!", offset);
       auto it = _offsetMap.find(offset);
       if (it == _offsetMap.end())
          {
