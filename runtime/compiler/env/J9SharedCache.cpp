@@ -1496,6 +1496,8 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
                                              uintptr_t *classDependencyChain,
                                              size_t classDependencyChainSize)
    {
+   // TODO: improve log message
+   LOG(1, "storeAOTMethodDependencies class %p method %p\n", definingClass, method);
    uintptr_t methodOffset = 0;
    if (!isMethodInSharedCache(method, definingClass, &methodOffset))
       return TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET;
@@ -1512,6 +1514,8 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
    convertUnsignedOffsetToASCII(methodOffset, key);
    cursor += _numDigitsForCacheOffsets;
    *cursor = '\0';
+   size_t keyLength = cursor - key;
+   LOG(3, "\tDependency key created: %.*s\n", keyLength, key);
 
    J9SharedDataDescriptor dataDescriptor;
    dataDescriptor.address = (uint8_t *)classDependencyChain;
