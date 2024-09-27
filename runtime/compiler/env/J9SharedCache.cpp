@@ -1026,6 +1026,8 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    if (chainData)
       {
       LOG(1, "\tstored data, chain at %p\n", chainData);
+      if (TR::Options::getAOTCmdLineOptions()->getOption(TR_EnableClassChainValidationCaching))
+         cacheCCVResult(reinterpret_cast<TR_OpaqueClassBlock *>(clazz), CCVResult::success);
       }
    else
       {
