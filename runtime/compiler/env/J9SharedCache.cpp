@@ -950,6 +950,12 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    J9UTF8 *className = J9ROMCLASS_CLASSNAME(romClass);
    LOG(1, "rememberClass class %p romClass %p %.*s\n", clazz, romClass, J9UTF8_LENGTH(className), J9UTF8_DATA(className));
 
+   if (TR::Options::getAOTCmdLineOptions()->getOption(TR_EnableClassChainValidationCaching) && (getCachedCCVResult((TR_OpaqueClassBlock *)clazz) == CCVResult::failure))
+      {
+      LOG(1, "\tclass known not to match, returning\n");
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
    uintptr_t classOffsetInCache;
    if (!isROMClassInSharedCache(romClass, &classOffsetInCache))
       {
