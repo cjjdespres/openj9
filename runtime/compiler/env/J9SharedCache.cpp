@@ -1511,7 +1511,7 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
    memcpy(cursor, keyPrefix, keyPrefixLength);
    cursor += keyPrefixLength;
 
-   convertUnsignedOffsetToASCII(methodOffset, key);
+   convertUnsignedOffsetToASCII(methodOffset, cursor);
    cursor += _numDigitsForCacheOffsets;
    *cursor = '\0'; // TODO: pretty sure this isn't needed
    size_t keyLength = cursor - key;
