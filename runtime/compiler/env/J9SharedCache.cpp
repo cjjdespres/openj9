@@ -1513,7 +1513,7 @@ TR_J9SharedCache::storeAOTMethodDependencies(J9VMThread *vmThread,
 
    convertUnsignedOffsetToASCII(methodOffset, key);
    cursor += _numDigitsForCacheOffsets;
-   *cursor = '\0';
+   *cursor = '\0'; // TODO: pretty sure this isn't needed
    size_t keyLength = cursor - key;
    LOG(3, "\tDependency key created: %.*s\n", keyLength, key);
 
