@@ -3738,12 +3738,9 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
 
    // TODO: surely there is a better way of doing this
    getClassNameIfNecessary(vm, clazz, className, classNameLen);
-   if ((classNameLen == 23 && memcmp(className, "java/lang/J9VMInternals", 23) ||
-       (classNameLen == 17 && memcmp(className, "com/ibm/oti/vm/VM", 17))))
+   if (((classNameLen == 23) && !memcmp(className, "java/lang/J9VMInternals", 23) ||
+       ((classNameLen == 17) && !memcmp(className, "com/ibm/oti/vm/VM", 17))))
       compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
-
-   if (!strncmp(className, "com/ibm/oti/vm/VM", 17))
-      fprintf(stderr, "Name: %s, length %d\n", className, classNameLen);
 
 #if defined(J9VM_OPT_JITSERVER)
    if (auto deserializer = compInfo->getJITServerAOTDeserializer())
