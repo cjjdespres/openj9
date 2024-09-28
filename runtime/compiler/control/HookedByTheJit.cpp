@@ -3561,6 +3561,11 @@ static bool chTableOnClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *clazz,
                allocFailed = true;
                compInfo->getPersistentInfo()->getPersistentCHTable()->removeClass(vm, clazz, info, true);
                }
+            else
+               {
+               // TODO: unsure
+               compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
+               }
             }
          else if (vm->isClassArray(clazz))
             {
@@ -3855,6 +3860,7 @@ void jitHookClassPreinitializeHelper(J9VMThread *vmThread,
    // TODO: piggy-back on class table mutex if this works? also might want to
    // see if this is better on full class init.
    // also, again if this works, should rename to "onClass(Pre)Initialize" or something like that
+   // TODO: should this even check if (pre)initialization failed?
    if (!(*classPreinitializeEventFailed))
       compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
    }
