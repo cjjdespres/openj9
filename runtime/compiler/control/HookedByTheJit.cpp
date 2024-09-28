@@ -3743,7 +3743,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
       compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
 
    if (!strncmp(className, "com/ibm/oti/vm/VM", 17))
-      fprintf(stderr, "Name: %s, length %d\n", className, classNameLen)
+      fprintf(stderr, "Name: %s, length %d\n", className, classNameLen);
 
 #if defined(J9VM_OPT_JITSERVER)
    if (auto deserializer = compInfo->getJITServerAOTDeserializer())
