@@ -3846,17 +3846,17 @@ void jitHookClassPreinitializeHelper(J9VMThread *vmThread,
       TR_VerboseLog::writeLineLocked(TR_Vlog_HD, "--init-- %.*s", len, className);
       }
 
-   // TODO: piggy-back on class table mutex if this works? also might want to
-   // see if this is better on full class init, or at least check if
-   // preinitialize succeeded...
-   // also, again if this works, should rename to "onClass(Pre)Initialize" or something like that
-   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
-
    jitAcquireClassTableMutex(vmThread);
 
    *classPreinitializeEventFailed = chTableOnClassPreinitialize(vmThread, cl, clazz, compInfo, vm);
 
    jitReleaseClassTableMutex(vmThread);
+
+   // TODO: piggy-back on class table mutex if this works? also might want to
+   // see if this is better on full class init.
+   // also, again if this works, should rename to "onClass(Pre)Initialize" or something like that
+   if (!(*classPreinitializeEventFailed))
+      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
    }
 
 
