@@ -3068,7 +3068,7 @@ static void updateOverriddenFlag( J9VMThread *vm , J9Class *cl)
       }
    }
 
-static bool updateCHTable(J9VMThread * vmThread, J9Class  * cl)
+static bool updateCHTable(J9VMThread *vmThread, TR::CompilationInfo *compInfo, J9Class *cl)
    {
    typedef void JIT_METHOD_OVERRIDE_UPDATE(J9VMThread *, J9Class *, J9Method *, J9Method *);
 
@@ -3136,6 +3136,8 @@ static bool updateCHTable(J9VMThread * vmThread, J9Class  * cl)
             }
          }
       }
+   if (!updateFailed)
+      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
    }
    // method override
    if(!TR::Options::getCmdLineOptions()->getOption(TR_DisableNewMethodOverride))
@@ -3556,15 +3558,10 @@ static bool chTableOnClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *clazz,
          //
          if (vm->isInterfaceClass(clazz))
             {
-            if (!updateCHTable(vmThread, cl))
+            if (!updateCHTable(vmThread, compInfo, cl))
                {
                allocFailed = true;
                compInfo->getPersistentInfo()->getPersistentCHTable()->removeClass(vm, clazz, info, true);
-               }
-            else
-               {
-               // TODO: unsure
-               compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
                }
             }
          else if (vm->isClassArray(clazz))
@@ -3589,7 +3586,7 @@ static bool chTableOnClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *clazz,
                       !vm->isClassArray(compClazz) &&
                       !vm->isInterfaceClass(compClazz) &&
                       !vm->isPrimitiveClass(compClazz))
-                     initFailed = !updateCHTable(vmThread, ((J9Class *) compClazz));
+                     initFailed = !updateCHTable(vmThread, compInfo, ((J9Class *) compClazz));
 
                   if (initFailed)
                      {
@@ -3817,11 +3814,11 @@ static bool chTableOnClassPreinitialize(J9VMThread *vmThread,
 
          if (!initFailed &&
              !vm->isInterfaceClass(clazz))
-            updateCHTable(vmThread, cl);
+            updateCHTable(vmThread, compInfo, cl);
          }
       else
          {
-         if (!initFailed && !updateCHTable(vmThread, cl))
+         if (!initFailed && !updateCHTable(vmThread, compInfo, cl))
             initFailed = true;
          }
 
@@ -3861,8 +3858,10 @@ void jitHookClassPreinitializeHelper(J9VMThread *vmThread,
    // see if this is better on full class init.
    // also, again if this works, should rename to "onClass(Pre)Initialize" or something like that
    // TODO: should this even check if (pre)initialization failed?
-   if (!(*classPreinitializeEventFailed))
-      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
+   // TODO: might need to restore this, and add this method call back to the chtableonclass load bit where interface classes get
+   // loaded/updated (since they don't go through this function) if onClassLoad doesn't work in chTable
+   // if (!(*classPreinitializeEventFailed))
+   //   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
    }
 
 
