@@ -127,7 +127,7 @@ public:
 
 private:
    bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
-   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, bool isClassInitialization, uintptr_t offset, std::vector<J9Method *> &methodsToQueue);
+   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, bool isClassInitialization, std::vector<J9Method *> &methodsToQueue);
    void unregisterOffset(J9Class *ramClass, uintptr_t offset);
 
    bool checkInitialDependencySatisfaction(J9Method *method, const uintptr_t *dependencyChain, uintptr_t totalDependencies,

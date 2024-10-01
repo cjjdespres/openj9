@@ -613,7 +613,7 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
 
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu", ramClass, chainOffset);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %d", ramClass, chainOffset, isClassInitialization);
 
 
    std::vector<J9Method *> methodsToQueue;
@@ -623,7 +623,7 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    }
 
 void
-TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, bool isClassInitialization, uintptr_t offset, std::vector<J9Method *> &methodsToQueue)
+TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, bool isClassInitialization, std::vector<J9Method *> &methodsToQueue)
    {
    OMR::CriticalSection cs(_tableMonitor);
 
