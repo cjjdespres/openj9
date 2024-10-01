@@ -646,13 +646,44 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
    //    it = _offsetMap.insert(it, {offset, {loadedClasses, waitingMethods}});
    //    }
    auto &offsetEntry = it->second;
+
+   // TODO: this is really, really, hack-y. probably don't need this level of
+   // precision. also, need to confirm that classes currently being initialized
+   // won't have initialization status 1, so I can remove the entry != ramClass
+   // below.
+   size_t numExistingInit = 0;
+   bool anyPreviousLoads = offsetEntry._loadedClasses.size() > 0;
+   for (auto &entry : offsetEntry._loadedClasses)
+      {
+      if ((entry->initializeStatus == 1) && (entry != ramClass))
+         ++numExistingInit;
+      }
    offsetEntry._loadedClasses.insert(ramClass);
 
-   // if this is the first load
-   if (offsetEntry._loadedClasses.size() == 1)
+   if (!anyPreviousLoads)
       {
+      // if this is the first load
+      // TODO: fairly sure this must indeed be a load and not an init
+      // TODO: might want to confirm that everything that is initialized must first be loaded?
+      // in which case waitingMethods here will correctly be _waitingLoadMethods only, and
+      // the methods in the second if branch (for initialization) will correctly be _waitingInitMethods
+      // only
       auto waitingMethods = isClassInitialization ? offsetEntry._waitingInitMethods : offsetEntry._waitingLoadMethods;
       for (auto entry : waitingMethods)
+         {
+         uintptr_t existingCount = entry->second._dependencyCount;
+         if (existingCount == 1)
+            methodsToQueue.push_back(entry->first);
+         else
+            --entry->second._dependencyCount;
+         }
+      for (auto entry : methodsToQueue)
+         stopTracking(entry);
+      }
+   else if (isClassInitialization && (numExistingInit == 0))
+      {
+      // TODO: duplication with above
+      for (auto entry : offsetEntry._waitingInitMethods)
          {
          uintptr_t existingCount = entry->second._dependencyCount;
          if (existingCount == 1)
