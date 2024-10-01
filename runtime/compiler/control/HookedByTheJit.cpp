@@ -3136,8 +3136,6 @@ static bool updateCHTable(J9VMThread *vmThread, TR::CompilationInfo *compInfo, J
             }
          }
       }
-   if (!updateFailed)
-      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, true);
    }
    // method override
    if(!TR::Options::getCmdLineOptions()->getOption(TR_DisableNewMethodOverride))
@@ -3861,8 +3859,8 @@ void jitHookClassPreinitializeHelper(J9VMThread *vmThread,
    // TODO: should this even check if (pre)initialization failed?
    // TODO: might need to restore this, and add this method call back to the chtableonclass load bit where interface classes get
    // loaded/updated (since they don't go through this function) if onClassLoad doesn't work in chTable
-   // if (!(*classPreinitializeEventFailed))
-   //   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
+   if (!(*classPreinitializeEventFailed))
+      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, true);
    }
 
 
