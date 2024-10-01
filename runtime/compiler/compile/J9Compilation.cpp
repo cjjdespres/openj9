@@ -20,6 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
 
+#include "control/OMROptions.hpp"
 #include "env/FrontEnd.hpp"
 #if defined(J9ZOS390)
 #pragma csect(CODE,"TRJ9CompBase#C")
@@ -1596,19 +1597,29 @@ J9::Compilation::canAddOSRAssumptions()
 
 // Document: offset must be to class or class chain (can currently tell which by low bit)
 void
-J9::Compilation::addAOTMethodDependency(uintptr_t offset)
+J9::Compilation::addAOTMethodDependency(uintptr_t offset, const char *loc)
    {
    TR_ASSERT_FATAL(self()->compileRelocatableCode(), "Must be generating AOT code");
 
    if (!_trackingAOTMethodDependencies)
+      {
+      if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: not tracking dependencies %lu %loc %s", offset, loc, signature());
       return;
+      }
 
    // TODO: unsure if invalid offset should be an issue
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
+      {
+      if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %loc, %s", offset, loc, signature());
+      }
       return;
 
    TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu must be in the SCC", offset);
    _aotMethodDependencies.insert(offset);
+   if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: valid offset added %lu %loc %s", offset, loc, signature());
 
    // if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
    //    {

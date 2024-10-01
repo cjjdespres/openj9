@@ -744,7 +744,9 @@ TR::SymbolValidationManager::addMethodRecord(TR::MethodValidationRecord *record)
    return true;
    }
 
-// TODO HERE: do I need to add the beholder to the dependencies?
+// TODO HERE: do I need to add the beholder to the dependencies? also, should
+// both definingClass and beholder be added to the dependencies if this is to be
+// skipped? unsure about the necessity of adding either, honestly.
 bool
 TR::SymbolValidationManager::skipFieldRefClassRecord(
    TR_OpaqueClassBlock *definingClass,
@@ -765,11 +767,8 @@ TR::SymbolValidationManager::skipFieldRefClassRecord(
       if (classRefLen == definingClassLen
           && !memcmp(classRefName, definingClassName, classRefLen))
          {
-         // If the class is well-known, it's still a dependency
-         if (isWellKnownClass(definingClass))
-            comp()->addAOTMethodDependency(wellKnownClassChainOffset(definingClass));
-         else // TODO: clean up, also see if this is actually needed
-            comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
+         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(definingClass), "TR::SymbolValidationManager::skipFieldRefClassRecord-defining");
+         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder), "TR::SymbolValidationManager::skipFieldRefClassRecord-beholder");
          return true;
          }
       }
@@ -784,13 +783,11 @@ TR::SymbolValidationManager::addClassByNameRecord(TR_OpaqueClassBlock *clazz, TR
    if (isWellKnownClass(clazz))
       {
       // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz));
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), "TR::SymbolValidationManager::addClassByNameRecord");
       return true;
       }
    else if (clazz == beholder)
       {
-      // TODO: clean up, assess if needed
-      comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
       return true;
       }
    else if (anyClassFromCPRecordExists(clazz, beholder))
@@ -836,13 +833,11 @@ TR::SymbolValidationManager::addClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9
    if (isWellKnownClass(clazz))
       {
        // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz));
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), "TR::SymbolValidationManager::addClassFromCPRecord-wkc");
       return true;
       }
    else if (clazz == beholder)
       {
-      // TODO: probably not needed if beholder is already validated?
-      comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
       return true;
       }
 
@@ -925,7 +920,7 @@ TR::SymbolValidationManager::addSystemClassByNameRecord(TR_OpaqueClassBlock *sys
    if (isWellKnownClass(systemClass))
       {
        // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(systemClass));
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(systemClass), "TR::SymbolValidationManager::addSystemClassByNameRecord");
       return true;
       }
    else
@@ -1011,9 +1006,6 @@ TR::SymbolValidationManager::addVirtualMethodFromCPRecord(TR_OpaqueMethodBlock *
    {
    TR_OpaqueClassBlock *beholder = _fej9->getClassFromCP(cp);
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
-   // TODO: addition below may not be necessary (LATER - pretty sure not, in
-   // fact - doesn't seem to have resulted in fewer failures).
-   comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder));
    return addMethodRecord(new (_region) VirtualMethodFromCPRecord(method, beholder, cpIndex));
    }
 

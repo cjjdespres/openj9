@@ -432,7 +432,7 @@ class OMR_EXTENSIBLE Compilation : public OMR::CompilationConnector
    void setOSRProhibitedOverRangeOfTrees() { _osrProhibitedOverRangeOfTrees = true; }
    bool isOSRProhibitedOverRangeOfTrees() { return _osrProhibitedOverRangeOfTrees; }
 
-   void addAOTMethodDependency(uintptr_t offset);
+   void addAOTMethodDependency(uintptr_t offset, const char *loc);
    bool isTrackingAOTMethodDependencies() const { return _trackingAOTMethodDependencies; }
    void populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer);
 

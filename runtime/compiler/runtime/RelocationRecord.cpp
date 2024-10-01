@@ -2663,11 +2663,11 @@ TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache(
    reloTarget->storeRelocationRecordValue(romClassOffsetInSharedCache, addr);
    if (classChainOffsetInSharedCache != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       {
-      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache, "TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache-chain");
       }
    else
       {
-      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache, "TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache-rom");
 
       if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Inlined method class didn't have a chain! %s", aotCompile->comp()->signature());
@@ -2685,14 +2685,14 @@ TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache(TR_RelocationTa
    reloTarget->storeRelocationRecordValue(romClassOffsetInSharedCache, addr);
    if (classChainOffsetInSharedCache != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       {
-      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache, "TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache-chain");
       }
    else
       {
 
       if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Inlined method class didn't have a chain! %s %p", aotCompile->comp()->signature(), ramClass);
-      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache, "TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache-rom");
       }
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassSerializationRecord(ramClass, addr);
@@ -3251,7 +3251,7 @@ TR_RelocationRecordProfiledInlinedMethod::setClassChainForInlinedMethod(
    {
    uintptr_t *addr = &((TR_RelocationRecordProfiledInlinedMethodBinaryTemplate *)_record)->_classChainForInlinedMethod;
    reloTarget->storeRelocationRecordValue(classChainForInlinedMethod, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainForInlinedMethod);
+   aotCompile->comp()->addAOTMethodDependency(classChainForInlinedMethod, "TR_RelocationRecordProfiledInlinedMethod::setClassChainForInlinedMethod");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -3615,7 +3615,7 @@ TR_RelocationRecordValidateClass::setClassChainOffsetInSharedCache(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateClassBinaryTemplate *)_record)->_classChainOffsetInSharedCache;
    reloTarget->storeRelocationRecordValue(classChainOffsetInSharedCache, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache);
+   aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache, "TR_RelocationRecordValidateClass::setClassChainOffsetInSharedCache");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -3750,14 +3750,14 @@ TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache(
 
    if (classChainOffsetInSharedCache != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       {
-      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(classChainOffsetInSharedCache, "TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache-chain");
       }
    else
       {
 
       if (aotCompile->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static field class didn't have a chain! %s %p", aotCompile->comp()->signature());
-      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache);
+      aotCompile->comp()->addAOTMethodDependency(romClassOffsetInSharedCache, "TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache-rom");
       }
 
 #if defined(J9VM_OPT_JITSERVER)
@@ -3841,7 +3841,7 @@ TR_RelocationRecordValidateArbitraryClass::setClassChainOffsetForClassBeingValid
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateArbitraryClassBinaryTemplate *)_record)->_classChainOffsetForClassBeingValidated;
    reloTarget->storeRelocationRecordValue(offset, addr);
-   aotCompile->comp()->addAOTMethodDependency(offset);
+   aotCompile->comp()->addAOTMethodDependency(offset, "TR_RelocationRecordValidateArbitraryClass::setClassChainOffsetForClassBeingValidated");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -3975,7 +3975,7 @@ TR_RelocationRecordValidateClassByName::setClassChainOffset(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateClassByNameBinaryTemplate *)_record)->_classChainOffsetInSCC;
    reloTarget->storeRelocationRecordValue(classChainOffset, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainOffset);
+   aotCompile->comp()->addAOTMethodDependency(classChainOffset, "TR_RelocationRecordValidateClassByName::setClassChainOffset");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -4035,7 +4035,7 @@ TR_RelocationRecordValidateProfiledClass::setClassChainOffset(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateProfiledClassBinaryTemplate *)_record)->_classChainOffsetInSCC;
    reloTarget->storeRelocationRecordValue(classChainOffset, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainOffset);
+   aotCompile->comp()->addAOTMethodDependency(classChainOffset, "TR_RelocationRecordValidateProfiledClass::setClassChainOffset");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -4437,7 +4437,7 @@ TR_RelocationRecordValidateSystemClassByName::setClassChainOffset(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateSystemClassByNameBinaryTemplate *)_record)->_classChainOffsetInSCC;
    reloTarget->storeRelocationRecordValue(classChainOffset, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainOffset);
+   aotCompile->comp()->addAOTMethodDependency(classChainOffset, "TR_RelocationRecordValidateSystemClassByName::setClassChainOffset");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -4530,7 +4530,7 @@ TR_RelocationRecordValidateClassChain::setClassChainOffset(
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateClassChainBinaryTemplate *)_record)->_classChainOffsetInSCC;
    reloTarget->storeRelocationRecordValue(classChainOffset, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainOffset);
+   aotCompile->comp()->addAOTMethodDependency(classChainOffset, "TR_RelocationRecordValidateClassChain::setClassChainOffset");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -5716,7 +5716,7 @@ TR_RelocationRecordPointer::setClassChainForInlinedMethod(
    {
    uintptr_t *addr = &((TR_RelocationRecordPointerBinaryTemplate *)_record)->_classChainForInlinedMethod;
    reloTarget->storeRelocationRecordValue(classChainForInlinedMethod, addr);
-   aotCompile->comp()->addAOTMethodDependency(classChainForInlinedMethod);
+   aotCompile->comp()->addAOTMethodDependency(classChainForInlinedMethod, "TR_RelocationRecordPointer::setClassChainForInlinedMethod");
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
