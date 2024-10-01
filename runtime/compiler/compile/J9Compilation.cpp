@@ -1604,7 +1604,7 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset, const char *loc)
    if (!_trackingAOTMethodDependencies)
       {
       if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: not tracking dependencies %lu %loc %s", offset, loc, signature());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: not tracking dependencies %lu %s %s", offset, loc, signature());
       return;
       }
 
@@ -1612,14 +1612,14 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset, const char *loc)
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
       {
       if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %loc, %s", offset, loc, signature());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %s %s", offset, loc, signature());
       return;
       }
 
    TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu must be in the SCC", offset);
    _aotMethodDependencies.insert(offset);
    if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: valid offset added %lu %loc %s", offset, loc, signature());
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: valid offset added %lu %s %s", offset, loc, signature());
 
    // if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
    //    {
