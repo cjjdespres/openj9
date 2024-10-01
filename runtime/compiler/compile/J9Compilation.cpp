@@ -1597,29 +1597,35 @@ J9::Compilation::canAddOSRAssumptions()
 
 // Document: offset must be to class or class chain (can currently tell which by low bit)
 void
-J9::Compilation::addAOTMethodDependency(uintptr_t offset, const char *loc)
+J9::Compilation::addAOTMethodDependency(uintptr_t offset, bool ensureClassIsInitialized, const char *loc)
    {
    TR_ASSERT_FATAL(self()->compileRelocatableCode(), "Must be generating AOT code");
 
    if (!_trackingAOTMethodDependencies)
       {
       if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: not tracking dependencies %lu %s %s", offset, loc, signature());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: not tracking dependencies %lu %d %s %s", offset, ensureClassIsInitialized, loc, signature());
       return;
       }
-
+   // TODO: shouldn't have to do this manually here
+   TR_ASSERT_FATAL((offset & 1) == 1, "Offset must be from the end!");
    // TODO: unsure if invalid offset should be an issue
    if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
       {
       if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %s %s", offset, loc, signature());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %d %s %s", offset, ensureClassIsInitialized, loc, signature());
       return;
       }
 
-   TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu must be in the SCC", offset);
-   _aotMethodDependencies.insert(offset);
+   TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu %d must be in the SCC", offset, ensureClassIsInitialized);
+   auto it = _aotMethodDependencies.find(offset);
+   if (it != _aotMethodDependencies.end())
+      it->second = it->second || ensureClassIsInitialized;
+   else
+      _aotMethodDependencies.insert(it, {offset, ensureClassIsInitialized});
+
    if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: valid offset added %lu %s %s", offset, loc, signature());
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: valid offset added %lu %d %s %s", offset, ensureClassIsInitialized, loc, signature());
 
    // if ((offset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET) || (offset == TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET))
    //    {
@@ -1647,7 +1653,12 @@ J9::Compilation::populateAOTMethodDependencies(Vector<uintptr_t> &chainBuffer)
    // TODO: document
    chainBuffer.reserve(_aotMethodDependencies.size() + 1);
    chainBuffer.push_back(_aotMethodDependencies.size());
-   chainBuffer.insert(chainBuffer.end(), _aotMethodDependencies.begin(), _aotMethodDependencies.end());
+   // TODO: reference?
+   for (auto &entry : _aotMethodDependencies)
+      {
+      uintptr_t encodedOffset = entry.second ? entry.first : (entry.first & ~1);
+      chainBuffer.push_back(encodedOffset);
+      }
    }
 
 #if defined(J9VM_OPT_JITSERVER)

@@ -767,8 +767,11 @@ TR::SymbolValidationManager::skipFieldRefClassRecord(
       if (classRefLen == definingClassLen
           && !memcmp(classRefName, definingClassName, classRefLen))
          {
-         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(definingClass), "TR::SymbolValidationManager::skipFieldRefClassRecord-defining");
-         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder), "TR::SymbolValidationManager::skipFieldRefClassRecord-beholder");
+         // TODO: mustn't defining class always be initialized? possibly beholder as well?
+         bool isDefiningClassInitialized = _fej9->isClassInitialized(definingClass);
+         bool isBeholderInitialized = _fej9->isClassInitialized(beholder);
+         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(definingClass), isDefiningClassInitialized, "TR::SymbolValidationManager::skipFieldRefClassRecord-defining");
+         comp()->addAOTMethodDependency(_fej9->sharedCache()->classChainOffsetIfRemembered(beholder), isBeholderInitialized, "TR::SymbolValidationManager::skipFieldRefClassRecord-beholder");
          return true;
          }
       }
@@ -783,7 +786,8 @@ TR::SymbolValidationManager::addClassByNameRecord(TR_OpaqueClassBlock *clazz, TR
    if (isWellKnownClass(clazz))
       {
       // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), "TR::SymbolValidationManager::addClassByNameRecord");
+      bool isClassInitialized = _fej9->isClassInitialized(clazz);
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), isClassInitialized, "TR::SymbolValidationManager::addClassByNameRecord");
       return true;
       }
    else if (clazz == beholder)
@@ -833,7 +837,8 @@ TR::SymbolValidationManager::addClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9
    if (isWellKnownClass(clazz))
       {
        // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), "TR::SymbolValidationManager::addClassFromCPRecord-wkc");
+      bool isClassInitialized = _fej9->isClassInitialized(clazz);
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(clazz), isClassInitialized, "TR::SymbolValidationManager::addClassFromCPRecord-wkc");
       return true;
       }
    else if (clazz == beholder)
@@ -919,8 +924,9 @@ TR::SymbolValidationManager::addSystemClassByNameRecord(TR_OpaqueClassBlock *sys
    {
    if (isWellKnownClass(systemClass))
       {
-       // If the class is well-known, it's still a dependency
-      comp()->addAOTMethodDependency(wellKnownClassChainOffset(systemClass), "TR::SymbolValidationManager::addSystemClassByNameRecord");
+      // If the class is well-known, it's still a dependency
+      bool isClassInitialized = _fej9->isClassInitialized(systemClass);
+      comp()->addAOTMethodDependency(wellKnownClassChainOffset(systemClass), isClassInitialized, "TR::SymbolValidationManager::addSystemClassByNameRecord");
       return true;
       }
    else

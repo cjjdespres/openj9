@@ -3137,7 +3137,7 @@ static bool updateCHTable(J9VMThread *vmThread, TR::CompilationInfo *compInfo, J
          }
       }
    if (!updateFailed)
-      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
+      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, true);
    }
    // method override
    if(!TR::Options::getCmdLineOptions()->getOption(TR_DisableNewMethodOverride))
@@ -3736,12 +3736,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
 
    compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
 
-   // TODO: surely there is a better way of doing this
-   getClassNameIfNecessary(vm, clazz, className, classNameLen);
-   if ((classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", 23) ||
-       (classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", 17))))
-      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz);
-
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, false);
 #if defined(J9VM_OPT_JITSERVER)
    if (auto deserializer = compInfo->getJITServerAOTDeserializer())
       deserializer->onClassLoad(cl, vmThread);

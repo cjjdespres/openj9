@@ -79,13 +79,14 @@ struct MethodEntry
 
 struct OffsetEntry
    {
-   OffsetEntry(PersistentUnorderedSet<J9Class *>loadedClasses, PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods) :
-      _loadedClasses(loadedClasses), _waitingMethods(waitingMethods) {}
+   // OffsetEntry(PersistentUnorderedSet<J9Class *>loadedClasses, PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> waitingMethods) :
+   //    _loadedClasses(loadedClasses), _waitingMethods(waitingMethods) {}
 
 
    // TODO: could have multi-map table?
    PersistentUnorderedSet<J9Class *> _loadedClasses;
-   PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingMethods;
+   PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingLoadMethods;
+   PersistentUnorderedSet<std::pair<J9Method *const, MethodEntry> *> _waitingInitMethods;
    };
 
 enum DependencyTrackingStatus
@@ -108,7 +109,7 @@ public:
 
    void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied);
 
-   void onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *ramClass);
+   void onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *ramClass, bool isClassInitialization);
    void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
    TR_OpaqueClassBlock *findClassFromOffset(uintptr_t offset);
@@ -126,7 +127,7 @@ public:
 
 private:
    bool queueAOTLoad(J9VMThread *vmThread, J9Method *method, uintptr_t offsetThatCausedQueue);
-   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, std::vector<J9Method *> &methodsToQueue);
+   void registerOffset(J9VMThread *vmThread, J9Class *ramClass, bool isClassInitialization, uintptr_t offset, std::vector<J9Method *> &methodsToQueue);
    void unregisterOffset(J9Class *ramClass, uintptr_t offset);
 
    bool checkInitialDependencySatisfaction(J9Method *method, const uintptr_t *dependencyChain, uintptr_t totalDependencies,
