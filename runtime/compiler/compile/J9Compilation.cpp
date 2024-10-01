@@ -1613,8 +1613,8 @@ J9::Compilation::addAOTMethodDependency(uintptr_t offset, const char *loc)
       {
       if (getOptions()->getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "addAOTMethodDependency: offset invalid %lu %loc, %s", offset, loc, signature());
-      }
       return;
+      }
 
    TR_ASSERT_FATAL(fej9()->sharedCache()->isOffsetInSharedCache(offset), "Offset %lu must be in the SCC", offset);
    _aotMethodDependencies.insert(offset);
