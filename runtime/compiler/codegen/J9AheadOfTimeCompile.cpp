@@ -576,6 +576,11 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          uintptr_t classChainOffsetInSharedCache = sharedCache->rememberClass(inlinedMethodClass);
          bool isClassInitialized = fej9->isClassInitialized(inlinedMethodClass);
 
+         // TODO: should expand if this actually works
+         uintptr_t chainOffsetOfThisClass = sharedCache->rememberClass(thisClass);
+         bool isThisClassInitialized = fej9->isClassInitialized(thisClass);
+         comp->addAOTMethodDependency(chainOffsetOfThisClass, isThisClassInitialized, "VariousInlinedMethodStuffs");
+
          imRecord->setReloFlags(reloTarget, flags);
          imRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          imRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(callSymRef->getOwningMethod(comp)->constantPool()));
