@@ -547,7 +547,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          offsetEntry._waitingLoadMethods.insert(methodEntry);
 
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %p %p", dependencyChain[i], method, methodEntry);// TODO: fill in
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p", offset, waitingForInit, method, methodEntry);// TODO: fill in
       // TODO: assert is still non-neg.
       // TODO: kind of inelegant, prioritizes the first loaded class
       if (offsetEntry._loadedClasses.begin() != offsetEntry._loadedClasses.end())
@@ -719,7 +719,8 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
 
    for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
-      auto m_it = _offsetMap.find(dependencyChain[i]);
+      uintptr_t offset = dependencyChain[i] | 1;
+      auto m_it = _offsetMap.find(offset);
       TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
       m_it->second._waitingLoadMethods.erase(methodEntry);
       m_it->second._waitingInitMethods.erase(methodEntry);
@@ -849,25 +850,27 @@ TR_AOTDependencyTable::printTrackingStatus(J9Method *method)
    bool foundUnsatisfiedDependency = false;
    for (size_t i = 1; i < chainLength; ++i)
       {
-      auto d_it = _offsetMap.find(chain[i]);
+      uintptr_t offset = chain[i] | 1;
+      uintptr_t waitingForInit = (chain[i] & 1) == 1;
+      auto d_it = _offsetMap.find(offset);
       if (d_it == _offsetMap.end())
          {
          foundUnsatisfiedDependency = true;
-         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", chain[i]);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d untracked", offset, waitingForInit);
          }
       else if (d_it->second._waitingLoadMethods.find(methodEntryPtr) != d_it->second._waitingLoadMethods.end())
          {
          foundUnsatisfiedDependency = true;
-         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu waiting for load", chain[i]);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d waiting for load", offset, waitingForInit);
          }
       else if (d_it->second._waitingInitMethods.find(methodEntryPtr) != d_it->second._waitingInitMethods.end())
          {
          foundUnsatisfiedDependency = true;
-         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu waiting for init", chain[i]);
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d waiting for init", offset, waitingForInit);
          }
       else if (d_it->second._loadedClasses.size() > 0)
          {
-         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu has loads: %lu", chain[i], d_it->second._loadedClasses.size());
+         TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d has loads: %lu", offset, waitingForInit, d_it->second._loadedClasses.size());
          }
       }
    if (!foundUnsatisfiedDependency)
@@ -910,23 +913,29 @@ TR_AOTDependencyTable::dumpTableDetails()
          bool allDependenciesSatisfied = true;
          for (size_t i = 1; i <= chainLength; ++i)
             {
-            auto it = _offsetMap.find(chain[i]);
+            uintptr_t offset = chain[i] | 1;
+            bool waitingForInit = (chain[i] & 1) == 1;
+            auto it = _offsetMap.find(offset);
             if (it == _offsetMap.end())
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu untracked", chain[i]);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d untracked", offset, waitingForInit);
                }
             else if (it->second._loadedClasses.size() == 0)
                {
                allDependenciesSatisfied = false;
-               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu no loads", chain[i]);
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d no loads", offset, waitingForInit);
                }
             }
          if (allDependenciesSatisfied)
             TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tSomehow all dependencies are satisfied!");
          TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tThe full chain data:");
          for (size_t i = 1; i <= chainLength; ++i)
-            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\t\tOffset: %lu", chain[i]);
+            {
+            uintptr_t offset = chain[i] | 1;
+            bool waitingForInit = (chain[i] & 1) == 1;
+            TR_VerboseLog::writeLine(TR_Vlog_INFO, "\t\tOffset: %lu %lu %d", chain[i], offset, waitingForInit);
+            }
          // TODO: this is triggering with SVM? at least with java -version. should look into that
          // TR_ASSERT_FATAL(foundUnsatisfiedDependency, "Method %p has no unsatisfied dependencies!", entry.first);
          }
