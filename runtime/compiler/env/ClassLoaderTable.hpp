@@ -110,7 +110,7 @@ public:
 
    void trackStoredMethod(J9VMThread *vmThread, J9Method *method, const uintptr_t *dependencyChain, bool &dependenciesSatisfied);
 
-   void onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *ramClass, bool isClassInitialization);
+   void onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization);
    void invalidateClass(TR_OpaqueClassBlock *ramClass);
    void stopTracking(J9Method *method);
    TR_OpaqueClassBlock *findClassFromOffset(uintptr_t offset);

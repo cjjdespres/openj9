@@ -608,7 +608,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 
 // TODO: rename this
 void
-TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *clazz, bool isClassInitialization)
+TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *clazz, bool isClassLoad, bool isClassInitialization)
    {
    if (!_sharedCache)
       return;
@@ -621,19 +621,6 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_Opa
    uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
    if (chainOffset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       return;
-
-   // TODO: should probably just fix the hooks for these if possible, or exclude
-   // them from deps entirely.
-   // N.B. I'm fairly sure these two classes and also java/lang/J9VMInternals$ClassInitializationLock are the
-   // only ones that are marked initialized without triggering the hook, and that last class does
-   // not appear to be stored in the SCC ever, so it's currently irrelevant for us.
-   bool isClassLoad = !isClassInitialization;
-   char * className = NULL;
-   int32_t classNameLen = -1;
-   className = vm->getClassNameChars(clazz, classNameLen);
-   if ((classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", classNameLen)) ||
-       (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen)))
-       isClassLoad = true;
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %d", ramClass, chainOffset, isClassInitialization);
