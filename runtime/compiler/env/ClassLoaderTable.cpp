@@ -658,6 +658,8 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       if (((entry->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded) && (entry != ramClass))
          ++numExistingInit;
       }
+   bool ramClassIsItselfInitialized = (ramClass->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded;
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "About to track %p %lu %d %d %d", ramClass, numExistingInit, anyPreviousLoads, ramClassIsItselfInitialized, isClassInitialization);
    offsetEntry._loadedClasses.insert(ramClass);
 
    if (!anyPreviousLoads)
