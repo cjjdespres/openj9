@@ -3859,8 +3859,8 @@ void jitHookClassPreinitializeHelper(J9VMThread *vmThread,
    // TODO: should this even check if (pre)initialization failed?
    // TODO: might need to restore this, and add this method call back to the chtableonclass load bit where interface classes get
    // loaded/updated (since they don't go through this function) if onClassLoad doesn't work in chTable
-   if (!(*classPreinitializeEventFailed))
-      compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, true);
+   // if (!(*classPreinitializeEventFailed))
+   //    compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, true);
    }
 
 
@@ -3905,6 +3905,8 @@ static void jitHookClassInitialize(J9HookInterface * * hookInterface, UDATA even
    if (jitConfig == 0)
       return; // if a hook gets called after freeJitConfig then not much else we can do
 
+   TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, (TR_OpaqueClassBlock *)cl, true);
    loadingClasses = false;
    }
 
