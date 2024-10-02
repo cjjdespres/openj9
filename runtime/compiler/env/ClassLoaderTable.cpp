@@ -955,6 +955,12 @@ TR_AOTDependencyTable::dumpTableDetails()
                allDependenciesSatisfied = false;
                TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d no loads", offset, waitingForInit);
                }
+            else
+               {
+               J9Class *clazz = *it->second._loadedClasses.begin();
+               bool isClazzInitialized = clazz->initializeStatus == 1;
+               TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tOffset %lu %d has load %p %d", offset, waitingForInit, clazz, isClazzInitialized);
+               }
             }
          if (allDependenciesSatisfied)
             TR_VerboseLog::writeLine(TR_Vlog_INFO, "\tSomehow all dependencies are satisfied!");
