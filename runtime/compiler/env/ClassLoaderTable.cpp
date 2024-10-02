@@ -553,7 +553,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       if (offsetEntry._loadedClasses.begin() != offsetEntry._loadedClasses.end())
          {
          auto clazz = *offsetEntry._loadedClasses.begin();
-         bool isDepUnsatisfied = waitingForInit && ((clazz->initializeStatus & J9ClassInitStatusMask) != J9ClassInitSucceeded);
+         bool isDepUnsatisfied = waitingForInit && (clazz->initializeStatus != J9ClassInitSucceeded);
          if (!isDepUnsatisfied)
             numberRemainingDependencies -= 1;
          }
@@ -655,10 +655,10 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
    bool anyPreviousLoads = offsetEntry._loadedClasses.size() > 0;
    for (auto &entry : offsetEntry._loadedClasses)
       {
-      if (((entry->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded) && (entry != ramClass))
+      if ((entry->initializeStatus == J9ClassInitSucceeded) && (entry != ramClass))
          ++numExistingInit;
       }
-   bool ramClassIsItselfInitialized = (ramClass->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded;
+   bool ramClassIsItselfInitialized = ramClass->initializeStatus == J9ClassInitSucceeded;
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "About to track %p %lu %d %d %d", ramClass, numExistingInit, anyPreviousLoads, ramClassIsItselfInitialized, isClassInitialization);
    offsetEntry._loadedClasses.insert(ramClass);
