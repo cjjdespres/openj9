@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include <stdint.h>
+#include "control/OMROptions.hpp"
 #include "env/VerboseLog.hpp"
 #include "jilconsts.h"
 #include "jitprotos.h"
@@ -3323,7 +3324,6 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
       }
    else
       {
-      // TODO: need to consult dep table and recover here!
       auto sharedCache = reloRuntime->fej9()->sharedCache();
       uintptr_t romClassOffset = romClassOffsetInSharedCache(reloTarget);
       J9ROMClass *inlinedCodeRomClass = sharedCache->romClassFromOffsetInSharedCache(romClassOffset);
@@ -3355,6 +3355,14 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
                                                                                       reloRuntime->comp());
             }
 #endif /* defined(J9VM_OPT_JITSERVER) */
+         }
+      if (!inlinedCodeClass)
+         {
+         auto dependencyTable = reloRuntime->fej9()->_compInfo->getPersistentInfo()->getAOTDependencyTable();
+         auto depTableClazz = dependencyTable->findClassFromOffset(classChainForInlinedMethod(reloTarget));
+         if (depTableClazz && reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "TR_RelocationRecordProfiledInlinedMethod: unredundant findClassFromOffset %lu %p", classChainForInlinedMethod(reloTarget), depTableClazz);
+         inlinedCodeClass = depTableClazz;
          }
       }
 
@@ -5763,7 +5771,7 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
             classPointer = (J9Class *)depTableClazz;
 
             if (reloRuntime->comp()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: recovery %p %s", depTableClazz, reloRuntime->comp()->signature());
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "RelocationRecordPointer: unredundant %lu %p %s", classChainForInlinedMethod(reloTarget), depTableClazz, reloRuntime->comp()->signature());
             }
          else
             {
