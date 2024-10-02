@@ -3734,7 +3734,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
 
    compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
 
-   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, clazz, false);
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, clazz, false);
 #if defined(J9VM_OPT_JITSERVER)
    if (auto deserializer = compInfo->getJITServerAOTDeserializer())
       deserializer->onClassLoad(cl, vmThread);
@@ -3906,7 +3906,8 @@ static void jitHookClassInitialize(J9HookInterface * * hookInterface, UDATA even
       return; // if a hook gets called after freeJitConfig then not much else we can do
 
    TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
-   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, (TR_OpaqueClassBlock *)cl, true);
+   TR_J9VMBase *vm = TR_J9VMBase::get(jitConfig, vmThread);
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, (TR_OpaqueClassBlock *)cl, true);
    loadingClasses = false;
    }
 

@@ -608,11 +608,10 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 
 // TODO: rename this
 void
-TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *clazz, bool isClassInitialization)
+TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *clazz, bool isClassInitialization)
    {
    if (!_sharedCache)
       return;
-
 
    auto ramClass = (J9Class *)clazz;
 
@@ -623,19 +622,31 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_OpaqueClassBlock *cl
    if (chainOffset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       return;
 
+   // TODO: should probably just fix the hooks for these if possible, or exclude
+   // them from deps entirely.
+   // N.B. I'm fairly sure these two classes and also java/lang/J9VMInternals$ClassInitializationLock are the
+   // only ones that are marked initialized without triggering the hook, and that last class does
+   // not appear to be stored in the SCC ever, so it's currently irrelevant for us.
+   bool isClassLoad = !isClassInitialization;
+   char * className = NULL;
+   int32_t classNameLen = -1;
+   className = vm->getClassNameChars(clazz, classNameLen);
+   if ((classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", classNameLen)) ||
+       (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen)))
+       isClassLoad = true;
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Tracking class: %p %lu %d", ramClass, chainOffset, isClassInitialization);
 
 
    std::vector<J9Method *> methodsToQueue;
-   registerOffset(vmThread, ramClass, chainOffset, isClassInitialization, methodsToQueue);
+   registerOffset(vmThread, ramClass, chainOffset, isClassLoad, isClassInitialization, methodsToQueue);
    for (auto entry : methodsToQueue)
       queueAOTLoad(vmThread, entry, chainOffset);
    }
 
 void
-TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, bool isClassInitialization, std::vector<J9Method *> &methodsToQueue)
+TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization, std::vector<J9Method *> &methodsToQueue)
    {
    OMR::CriticalSection cs(_tableMonitor);
 
@@ -675,16 +686,9 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "About to track %p %lu %d %d %d", ramClass, numExistingInit, anyPreviousLoads, ramClassIsItselfInitialized, isClassInitialization);
    offsetEntry._loadedClasses.insert(ramClass);
 
-   if (!anyPreviousLoads)
+   if (isClassLoad && !anyPreviousLoads)
       {
-      // if this is the first load
-      // TODO: fairly sure this must indeed be a load and not an init
-      // TODO: might want to confirm that everything that is initialized must first be loaded?
-      // in which case waitingMethods here will correctly be _waitingLoadMethods only, and
-      // the methods in the second if branch (for initialization) will correctly be _waitingInitMethods
-      // only
-      auto waitingMethods = isClassInitialization ? offsetEntry._waitingInitMethods : offsetEntry._waitingLoadMethods;
-      for (auto entry : waitingMethods)
+      for (auto entry : offsetEntry._waitingLoadMethods)
          {
          uintptr_t existingCount = entry->second._dependencyCount;
          if (existingCount == 1)
@@ -693,7 +697,7 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
             --entry->second._dependencyCount;
          }
       }
-   else if (isClassInitialization && (numExistingInit == 0))
+   if (isClassInitialization && (numExistingInit == 0))
       {
       // TODO: duplication with above
       for (auto entry : offsetEntry._waitingInitMethods)
