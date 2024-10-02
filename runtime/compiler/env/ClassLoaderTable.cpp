@@ -561,7 +561,7 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          else
             {
             if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p no init %lu", offset, waitingForInit, method, methodEntry, clazz->initializeStatus);
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p no init %lu %lu", offset, waitingForInit, method, methodEntry, clazz->initializeStatus, clazz->initializeStatus & J9ClassInitStatusMask);
             }
          }
       else
