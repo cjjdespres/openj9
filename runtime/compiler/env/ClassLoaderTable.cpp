@@ -546,8 +546,6 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
       else
          offsetEntry._waitingLoadMethods.insert(methodEntry);
 
-      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p", offset, waitingForInit, method, methodEntry);// TODO: fill in
       // TODO: assert is still non-neg.
       // TODO: kind of inelegant, prioritizes the first loaded class
       if (offsetEntry._loadedClasses.begin() != offsetEntry._loadedClasses.end())
@@ -555,7 +553,21 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
          auto clazz = *offsetEntry._loadedClasses.begin();
          bool isDepUnsatisfied = waitingForInit && (clazz->initializeStatus != J9ClassInitSucceeded);
          if (!isDepUnsatisfied)
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p satisfied", offset, waitingForInit, method, methodEntry);
             numberRemainingDependencies -= 1;
+            }
+         else
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p no init %lu", offset, waitingForInit, method, methodEntry, clazz->initializeStatus);
+            }
+         }
+      else
+         {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Adding tracking entry %lu %d %p %p no loads", offset, waitingForInit, method, methodEntry);
          }
       }
 
