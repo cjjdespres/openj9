@@ -3918,6 +3918,9 @@ static void jitHookClassInitialize(J9HookInterface * * hookInterface, UDATA even
    TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
    TR_J9VMBase *vm = TR_J9VMBase::get(jitConfig, vmThread);
 
+   // TODO: not the most elegant - might just want to pass extra param in to the
+   // load indicating that we don't have the classtablemonitor at this moment.
+
    jitAcquireClassTableMutex(vmThread);
    compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, (TR_OpaqueClassBlock *)cl, false, true);
    jitReleaseClassTableMutex(vmThread);
