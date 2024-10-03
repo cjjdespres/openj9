@@ -232,7 +232,7 @@ TR_PersistentClassLoaderTable::associateClassLoaderWithClass(J9VMThread *vmThrea
    void *chain = NULL;
    if (_sharedCache)
       {
-      uintptr_t chainOffset = _sharedCache->rememberClass(clazz);
+      uintptr_t chainOffset = _sharedCache->rememberClassHoldingClassTableMutex(clazz);
       if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
          {
 #if defined(J9VM_OPT_JITSERVER)
@@ -610,6 +610,8 @@ TR_AOTDependencyTable::trackStoredMethod(J9VMThread *vmThread, J9Method *method,
 void
 TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_OpaqueClassBlock *clazz, bool isClassLoad, bool isClassInitialization)
    {
+   // TODO: convert to nonfatal
+   TR_ASSERT_FATAL(TR::MonitorTable::get()->getClassTableMutex()->owned_by_self(), "Must hold classTableMutex");
    if (!_sharedCache)
       return;
 
@@ -618,7 +620,7 @@ TR_AOTDependencyTable::onClassLoad(J9VMThread *vmThread, TR_J9VMBase *vm, TR_Opa
    // uintptr_t classOffset = TR_J9SharedCache::INVALID_ROM_CLASS_OFFSET;
    // if (!_sharedCache->isClassInSharedCache(ramClass, &classOffset))
    //    return;
-   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
+   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz, true);
    if (chainOffset == TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       return;
 
@@ -706,8 +708,10 @@ TR_AOTDependencyTable::invalidateClass(TR_OpaqueClassBlock *clazz)
    if (!_sharedCache)
       return;
 
+   // TODO: convert to nonfatal
+   TR_ASSERT_FATAL(TR::MonitorTable::get()->getClassTableMutex()->owned_by_self(), "Must hold classTableMutex");
 
-   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz);
+   uintptr_t chainOffset = _sharedCache->classChainOffsetIfRemembered(clazz, true);
 
    if (chainOffset != TR_J9SharedCache::INVALID_CLASS_CHAIN_OFFSET)
       {
