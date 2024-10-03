@@ -995,6 +995,8 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    else if (!TR::Options::getAOTCmdLineOptions()->getOption(TR_NoStoreAOT))
       {
       LOG(1, "\tChain data not found and cannot store; returning INVALID_CLASS_CHAIN_OFFSET\n");
+      if (TR::Options::getAOTCmdLineOptions()->getOption(TR_EnableClassChainValidationCaching))
+         cacheCCVResult(reinterpret_cast<TR_OpaqueClassBlock *>(clazz), CCVResult::failure);
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       }
 
