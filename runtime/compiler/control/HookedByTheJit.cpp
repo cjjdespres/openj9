@@ -3733,23 +3733,6 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
       TR::Options::_numberOfUserClassesLoaded ++;
       }
 
-   compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
-
-   // TODO: should probably just fix the hooks for these if possible, or exclude
-   // them from deps entirely.
-   // N.B. I'm fairly sure these two classes and also java/lang/J9VMInternals$ClassInitializationLock are the
-   // only ones that are marked initialized without triggering the hook, and that last class does
-   // not appear to be stored in the SCC ever, so it's currently irrelevant for us.
-   getClassNameIfNecessary(vm, clazz, className, classNameLen);
-   bool isClassInitialization = (classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", classNameLen)) ||
-                                (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen));
-
-   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, clazz, true, isClassInitialization);
-#if defined(J9VM_OPT_JITSERVER)
-   if (auto deserializer = compInfo->getJITServerAOTDeserializer())
-      deserializer->onClassLoad(cl, vmThread);
-#endif /* defined(J9VM_OPT_JITSERVER) */
-
    // Update the count for the newInstance
    //
    TR::Options * options = TR::Options::getCmdLineOptions();
@@ -3767,6 +3750,27 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
    cl->newInstanceCount = options->getInitialCount();
 
    allocFailed = chTableOnClassLoad(vmThread, clazz, compInfo, vm);
+
+   // TODO: I'm pretty sure this is okay - we need to have
+   // associateClassLoaderWithClass and the onClassLoad() for the dependency
+   // table happen here, after chTableOnClassLoad, because of (the possibility
+   // of) CCV caching, which uses the persistent ch table
+   compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
+
+   // TODO: should probably just fix the hooks for these if possible, or exclude
+   // them from deps entirely.
+   // N.B. I'm fairly sure these two classes and also java/lang/J9VMInternals$ClassInitializationLock are the
+   // only ones that are marked initialized without triggering the hook, and that last class does
+   // not appear to be stored in the SCC ever, so it's currently irrelevant for us.
+   getClassNameIfNecessary(vm, clazz, className, classNameLen);
+   bool isClassInitialization = (classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", classNameLen)) ||
+                                (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen));
+
+   compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, clazz, true, isClassInitialization);
+#if defined(J9VM_OPT_JITSERVER)
+   if (auto deserializer = compInfo->getJITServerAOTDeserializer())
+      deserializer->onClassLoad(cl, vmThread);
+#endif /* defined(J9VM_OPT_JITSERVER) */
 
    compInfo->getPersistentInfo()->ensureUnloadedAddressSetsAreInitialized();
    // TODO: change the above line to something like the following in order to handle allocation failures:
