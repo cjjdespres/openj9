@@ -976,7 +976,7 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    if (chainData != NULL)
       {
       uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
-      if (classMatchesCachedVersion(clazz, chainData))
+      if (classMatchesCachedVersion(clazz, chainData, holdingClassTableMutex))
          {
          if (isPointerInSharedCache(chainData, &chainOffset))
             {
