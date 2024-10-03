@@ -23,6 +23,7 @@
 #include "env/J9SharedCache.hpp"
 
 #include <algorithm>
+#include "control/OMROptions.hpp"
 #include "j9cfg.h"
 #include "control/CompilationRuntime.hpp"
 #include "control/Options.hpp"
@@ -943,6 +944,7 @@ uintptr_t
 TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create)
    {
    uintptr_t *chainData = NULL;
+   uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
 #if defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe();
    J9ROMClass *romClass = TR::Compiler->cls.romClassOf(fej9->convertClassPtrToClassOffset(clazz));
@@ -990,6 +992,11 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
          }
       return chainOffset;
       }
+   else if (!create && TR::Options::getAOTCmdLineOptions()->getOption(TR_NoStoreAOT))
+      {
+      LOG(1, "\tChain data not found, cannot store, not asked to create; returning INVALID_CLASS_CHAIN_OFFSET\n");
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
 
    int32_t numSuperclasses = fe()->numSuperclasses(clazz);
    int32_t numInterfaces = fe()->numInterfacesImplemented(clazz);
@@ -1036,6 +1043,15 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
       LOG(1, "\tstored data, chain at %p\n", chainData);
       if (TR::Options::getAOTCmdLineOptions()->getOption(TR_EnableClassChainValidationCaching))
          cacheCCVResult(reinterpret_cast<TR_OpaqueClassBlock *>(clazz), CCVResult::success);
+
+      if (isPointerInSharedCache(chainData, &chainOffset))
+         {
+         LOG(1, "\tchain has offset %lu\n", chainOffset);
+         }
+      else
+         {
+         LOG(1, "\tchain offset could not be immediately retrieved\n", chainOffset);
+         }
       }
    else
       {
@@ -1044,17 +1060,10 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
 
       setSharedCacheDisabledReason(SHARED_CACHE_CLASS_CHAIN_STORE_FAILED);
       setStoreSharedDataFailedLength(chainDataLength);
+      if (TR::Options::getAOTCmdLineOptions()->getOption(TR_EnableClassChainValidationCaching))
+         cacheCCVResult(reinterpret_cast<TR_OpaqueClassBlock *>(clazz), CCVResult::failure);
       }
 #endif
-   uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
-   if (isPointerInSharedCache(chainData, &chainOffset))
-      {
-      LOG(1, "\tchain has offset %lu\n", chainOffset);
-      }
-   else
-      {
-      LOG(1, "\tchain offset could not be immediately retrieved\n", chainOffset);
-      }
    return chainOffset;
    }
 
