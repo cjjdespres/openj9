@@ -21,6 +21,7 @@
  *******************************************************************************/
 
 #include "control/OMROptions.hpp"
+#include "j9protos.h"
 #include <algorithm>
 #include <limits.h>
 #ifdef LINUX
@@ -3916,7 +3917,11 @@ static void jitHookClassInitialize(J9HookInterface * * hookInterface, UDATA even
 
    TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
    TR_J9VMBase *vm = TR_J9VMBase::get(jitConfig, vmThread);
+
+   jitAcquireClassTableMutex(vmThread);
    compInfo->getPersistentInfo()->getAOTDependencyTable()->onClassLoad(vmThread, vm, (TR_OpaqueClassBlock *)cl, false, true);
+   jitReleaseClassTableMutex(vmThread);
+
    loadingClasses = false;
    }
 
