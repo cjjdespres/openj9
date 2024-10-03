@@ -670,9 +670,13 @@ TR_AOTDependencyTable::registerOffset(J9VMThread *vmThread, J9Class *ramClass, u
       if (((entry->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded) && (entry != ramClass))
          ++numExistingInit;
       }
-   bool ramClassIsItselfInitialized = (ramClass->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded;
+
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      bool ramClassIsItselfInitialized = (ramClass->initializeStatus & J9ClassInitStatusMask) == J9ClassInitSucceeded;
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "About to track %p %lu %d %d %d %d", ramClass, numExistingInit, anyPreviousLoads, ramClassIsItselfInitialized, isClassLoad, isClassInitialization);
+      }
+
    offsetEntry._loadedClasses.insert(ramClass);
 
    if (isClassLoad && !anyPreviousLoads)
@@ -759,10 +763,13 @@ TR_AOTDependencyTable::stopTracking(J9Method *method)
    for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
       uintptr_t offset = dependencyChain[i] | 1;
+      bool waitingForInit = (dependencyChain[i] & 1) == 1;
       auto m_it = _offsetMap.find(offset);
       TR_ASSERT_FATAL(m_it != _offsetMap.end(), "Offset of method %p cannot be untracked!", method);
-      m_it->second._waitingLoadMethods.erase(methodEntry);
-      m_it->second._waitingInitMethods.erase(methodEntry);
+      if (waitingForInit)
+         m_it->second._waitingInitMethods.erase(methodEntry);
+      else
+         m_it->second._waitingLoadMethods.erase(methodEntry);
       }
 
    _methodMap.erase(m_it);

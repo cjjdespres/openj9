@@ -880,7 +880,7 @@ TR::SymbolValidationManager::addStaticClassFromCPRecord(TR_OpaqueClassBlock *cla
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (skipFieldRefClassRecord(clazz, beholder, cpIndex))
        return true;
-    else
+   else
       return addClassRecord(clazz, new (_region) StaticClassFromCPRecord(clazz, beholder, cpIndex));
    }
 
@@ -1247,7 +1247,7 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
 
 bool
 TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader,
-                                                         void *classChainForClassBeingValidated)
+                                                         void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated)
    {
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
    TR_OpaqueClassBlock *clazz = NULL;
@@ -1257,42 +1257,12 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp);
       }
 
-   if (clazz == NULL)
-      {
-      // TODO: does not work with deserializer, also a bit of a hack obviously.
-      uintptr_t loaderOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainIdentifyingLoader);
-      auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable();
-      uintptr_t classOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainForClassBeingValidated);
-      auto depTableClazz = dependencyTable->findClassFromOffset(classOffset);
-      // TODO: pretty sure this check is unnecessary, because we already know that depTableClazz has exactly the class chain corresponding to classOffset!
-      bool isMatching = depTableClazz ? _fej9->sharedCache()->classMatchesCachedVersion((TR_OpaqueClassBlock *)depTableClazz, (uintptr_t *)classChainForClassBeingValidated) : false;
-      if (!depTableClazz)
-         {
-         if (_comp->getOptions()->getVerboseOption(TR_VerbosePerformance))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and we couldn't find a candidate in dep table!", loaderOffset, _comp->signature());
-         return false;
-         }
-      else if (!isMatching)
-         {
-         if (_comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_FAILURE, "Class loader for offset %lu when relocating %s isn't present and candidate %p didn't match!", loaderOffset, _comp->signature(), depTableClazz);
-         return false;
-         }
-      else
-         {
-         if (_comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Class loader for offset %lu when relocating %s isn't present but we got a dep table candidate!", loaderOffset, _comp->signature());
-         clazz = depTableClazz;
-         }
-      }
-   else
+   if (!clazz)
       {
       auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable();
-      uintptr_t classOffset = _fej9->sharedCache()->offsetInSharedCacheFromPointer(classChainForClassBeingValidated);
-      auto otherClazz = dependencyTable->findClassFromOffset(classOffset);
-
-      if (_comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "We got a clazz from the indicated loader anyway, with %s %p %p ", (clazz == otherClazz ? "equality" : "inequality"), clazz, otherClazz);
+      clazz = dependencyTable->findClassFromOffset(classChainOffsetForClassBeingValidated);
+      if (_comp->getOptions()->getVerboseOption(TR_VerbosePerformance))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "validateProfiledClassRecord: unredundant findClassFromOffset %lu %p %s", classChainOffsetForClassBeingValidated, _comp->signature());
       }
 
    return validateSymbol(classID, clazz);
