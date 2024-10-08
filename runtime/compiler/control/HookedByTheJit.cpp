@@ -1936,7 +1936,9 @@ static void jitHookClassesUnload(J9HookInterface * * hookInterface, UDATA eventN
    // Here we need to set CompilationShouldBeInterrupted. Currently if the TR_EnableNoVMAccess is not
    // set the compilation is stopped, but should be notify not to continue afterwards.
    //
+   vmj9->acquireCompilationLock();
    compInfo->setAllCompilationsShouldBeInterrupted();
+   vmj9->releaseCompilationLock();
 
    bool firstRange = true;
    bool coldRangeUninitialized = true;
