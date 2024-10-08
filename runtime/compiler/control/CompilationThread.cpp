@@ -1351,6 +1351,7 @@ TR::Compilation *TR::CompilationInfo::getCompilationWithID(int32_t ID)
 
 void TR::CompilationInfo::setAllCompilationsShouldBeInterrupted()
    {
+   TR_ASSERT_FATAL(getCompilationMonitor()->owned_by_self(), "We must own the monitor!");
    for (int32_t i = getFirstCompThreadID(); i <= getLastCompThreadID(); i++)
       {
       TR::CompilationInfoPerThread *curCompThreadInfoPT = _arrayOfCompilationInfoPerThread[i];
