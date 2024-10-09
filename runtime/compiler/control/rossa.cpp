@@ -1868,6 +1868,13 @@ onLoadInternal(
             return -1;
          compInfo->setJITServerAOTCacheMap(aotCacheMap);
          }
+
+      // The vector and mask name arrays must be initialized outside of a
+      // compilation at a JITServer, since they are global and initialized only
+      // once. Otherwise they might be allocated with per-client memory.
+      OMR::DataType::initVectorNames();
+      OMR::DataType::initMaskNames();
+
       }
    else if (compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::CLIENT)
       {
