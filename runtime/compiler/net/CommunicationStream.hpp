@@ -133,6 +133,23 @@ protected:
    static uint32_t CONFIGURATION_FLAGS;
 
 private:
+   // Handle a non-SSL read error
+   void handleReadError(uint32_t err, ssize_t bytesRead)
+      {
+      if((err == _lastReadError) && (EAGAIN != err))
+         _numConsecutiveReadErrorsOfSameType++;
+      else
+         _numConsecutiveReadErrorsOfSameType = 0;   // If its a new error or errno is EAGAIN then reset the counter
+      _lastReadError = err;
+      // For EAGAIN we set the flag retryConnectionImmediately to true in the
+      // thrown error. For EINTR we try the read again immediately if we still
+      // have some read attempts left.
+      if ((EINTR != err) || (_numConsecutiveReadErrorsOfSameType >= MAX_READ_RETRY))
+         throw JITServer::StreamFailure("JITServer I/O error: read error: " +
+                                        (bytesRead ? std::string(strerror(err)) : "connection closed by peer"), EAGAIN == err);
+
+      }
+
    void readBlocking(char *data, size_t size)
       {
       size_t totalBytesRead = 0;
@@ -156,14 +173,11 @@ private:
             ssize_t bytesRead = read(_connfd, data + totalBytesRead, size - totalBytesRead);
             if (bytesRead <= 0)
                {
-               if (EINTR != errno)
-                  {
-                  throw JITServer::StreamFailure("JITServer I/O error: read error: " +
-                                                 (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"), EAGAIN == errno);
-                  }
+               handleReadError(errno, bytesRead);
                }
             else
                {
+               _numConsecutiveReadErrorsOfSameType = 0;
                totalBytesRead += bytesRead;
                }
             }
@@ -189,21 +203,11 @@ private:
             bytesRead = read(_connfd, data, size);
             if (bytesRead <= 0)
                {
-               if (EINTR != errno)
-                  {
-		  if((errno == _lastReadError) && (EAGAIN != errno))
-		     _numConsecutiveReadErrorsOfSameType++;
-		  else
-		     _numConsecutiveReadErrorsOfSameType = 0;   // If its a new error or errno is EAGAIN then reset the counter
-					      // For EAGAIN we set the flag retryConnectionImmediately to true in the below line
-		  _lastReadError = errno;
-                  throw JITServer::StreamFailure("JITServer I/O error: read error: " +
-                                                 (bytesRead ? std::string(strerror(errno)) : "connection closed by peer"), EAGAIN == errno);
-                  }
+               handleReadError(errno, bytesRead);
                }
             else
                {
-	       _numConsecutiveReadErrorsOfSameType = 0;  // Successfull read so reset read retry counter
+               _numConsecutiveReadErrorsOfSameType = 0;
                break;
                }
             }
