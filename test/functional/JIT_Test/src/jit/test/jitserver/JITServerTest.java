@@ -325,7 +325,7 @@ public class JITServerTest {
                 return (runSCCCommand(cmd, cacheName));
         }
 
-	private static void destroyAndCheckProcess(final Process p, final ProcessBuilder builder) throws InterruptedException {
+	private static void destroyAndCheckProcess(final Process p, final ProcessBuilder builder) throws IOException, InterruptedException {
 		final int PROCESS_DESTROY_WAIT_TIME_MS = 5 * 1000;
 		// On *nix systems Process.destroy() sends SIGTERM to the process and (unless the process handles it and decides to return something else) the return value will be signum+128.
 		// SIGTERM is 15 on most *nix systems, but this can vary.
