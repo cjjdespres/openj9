@@ -339,6 +339,12 @@ public class JITServerTest {
 		}
 
 		if (p.isAlive()) {
+			logger.info("Process is alive. Attempting to generate a core.");
+			long pid = p.pid();
+			final String pkillCommandLine[] = {"kill", "-3", "" + pid};
+			Runtime.getRuntime().exec(pkillCommandLine).waitFor();
+			Thread.sleep(PROCESS_DESTROY_WAIT_TIME_MS * 4);
+
 			// The process wasn't destroyed after PROCESS_DESTROY_WAIT_TIME_MS * waitCount,
 			// so have to destroy it forcibly now and fail the test case
 			p.destroyForcibly().waitFor();
