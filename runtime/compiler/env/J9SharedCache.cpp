@@ -29,6 +29,7 @@
 #include "control/Options_inlines.hpp"
 #include "compile/ResolvedMethod.hpp"
 #include "env/ClassLoaderTable.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/ClassTableCriticalSection.hpp"
 #include "env/jittypes.h"
 #include "env/j9method.h"
@@ -904,11 +905,16 @@ TR_J9SharedCache::isPtrToROMClassesSectionInSharedCache(void *ptr, uintptr_t *ca
 J9ROMClass *
 TR_J9SharedCache::startingROMClassOfClassChain(UDATA *classChain)
    {
-   UDATA lengthInBytes = classChain[0];
-   TR_ASSERT_FATAL(lengthInBytes >= 2 * sizeof (UDATA), "class chain is too short!");
+   return romClassFromOffsetInSharedCache(startingROMClassOffsetOfClassChain(classChain));
+   }
 
-   UDATA romClassOffset = classChain[1];
-   return romClassFromOffsetInSharedCache(romClassOffset);
+uintptr_t
+TR_J9SharedCache::startingROMClassOffsetOfClassChain(void *chain)
+   {
+   auto classChain = (uintptr_t *)chain;
+   uintptr_t lengthInBytes = classChain[0];
+   TR_ASSERT_FATAL(lengthInBytes >= 2 * sizeof (UDATA), "class chain is too short!");
+   return classChain[1];
    }
 
 // convert an offset into a string of 8 characters
