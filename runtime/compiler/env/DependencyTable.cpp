@@ -20,8 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
 
-
-#include <control/CompilationRuntime.hpp>
+#include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
@@ -445,8 +444,14 @@ TR_AOTDependencyTable::resolvePendingLoads()
    }
 
 TR_OpaqueClassBlock *
-TR_AOTDependencyTable::findClassCandidate(uintptr_t romClassOffset)
+TR_AOTDependencyTable::findCandidateFromChainOffset(TR::Compilation *comp, uintptr_t chainOffset)
    {
+   if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
+      return NULL;
+
+   void *chain = _sharedCache->pointerFromOffsetInSharedCache(chainOffset);
+   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
+
    OMR::CriticalSection cs(_tableMonitor);
 
    if (!isActive())
