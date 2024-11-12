@@ -243,6 +243,7 @@ public:
    virtual bool needsContiguousCodeAndDataCacheAllocation() { return false; }
    virtual bool supportsJitMethodEntryAlignment() { return true; }
    virtual bool canUseSymbolValidationManager() { return false; }
+   virtual bool canTrackDependencies() { return false; }
 
 /////
    // Inlining optimization
@@ -1631,6 +1632,7 @@ public:
 
    // replacing calls to isAOT
    virtual bool               canUseSymbolValidationManager() { return true; }
+   virtual bool               canTrackDependencies()                          { return true; }
    virtual bool               supportsCodeCacheSnippets()                     { return false; }
    virtual bool               needClassAndMethodPointerRelocations()          { return true; }
    virtual bool               inlinedAllocationsMustBeVerified()              { return true; }
