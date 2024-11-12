@@ -1072,8 +1072,7 @@ class TR_RelocationRecordValidateClass : public TR_RelocationRecordConstantPoolW
 
       virtual bool isStaticFieldValidation() { return false ; }
 
-      void setClassChainOffsetInSharedCache(TR_RelocationTarget *reloTarget, uintptr_t classChainOffsetInSharedCache,
-                                            TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffsetInSharedCache(TR_RelocationTarget *reloTarget, const TR::AOTClassInfo *aotCI, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffsetInSharedCache(TR_RelocationTarget *reloTarget);
 
       virtual TR_RelocationErrorCode applyRelocation(TR_RelocationRuntime *reloRuntime, TR_RelocationTarget *reloTarget, uint8_t *reloLocation);
@@ -1128,8 +1127,7 @@ class TR_RelocationRecordValidateArbitraryClass : public TR_RelocationRecord
                                                 TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
       uintptr_t classChainIdentifyingLoaderOffset(TR_RelocationTarget *reloTarget);
 
-      void setClassChainOffsetForClassBeingValidated(TR_RelocationTarget *reloTarget, uintptr_t classChainOffset,
-                                                     TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffsetForClassBeingValidated(TR_RelocationTarget *reloTarget, const TR::AOTClassInfo *aotCI, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffsetForClassBeingValidated(TR_RelocationTarget *reloTarget);
 
       virtual void preparePrivateData(TR_RelocationRuntime *reloRuntime, TR_RelocationTarget *reloTarget);
@@ -1156,8 +1154,7 @@ class TR_RelocationRecordValidateClassByName : public TR_RelocationRecord
       void setBeholderID(TR_RelocationTarget *reloTarget, uint16_t beholderID);
       uint16_t beholderID(TR_RelocationTarget *reloTarget);
 
-      void setClassChainOffset(TR_RelocationTarget *reloTarget, uintptr_t classChainOffset,
-                               TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffset(TR_RelocationTarget *reloTarget, const TR::ClassValidationRecordWithChain *validationRecord, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffset(TR_RelocationTarget *reloTarget);
    };
 
@@ -1176,8 +1173,7 @@ class TR_RelocationRecordValidateProfiledClass : public TR_RelocationRecord
       void setClassID(TR_RelocationTarget *reloTarget, uint16_t classID);
       uint16_t classID(TR_RelocationTarget *reloTarget);
 
-      void setClassChainOffset(TR_RelocationTarget *reloTarget, uintptr_t classChainOffset,
-                               TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffset(TR_RelocationTarget *reloTarget, const TR::ProfiledClassRecord *validationRecord, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffset(TR_RelocationTarget *reloTarget);
 
       void setClassChainOffsetForClassLoader(TR_RelocationTarget *reloTarget, uintptr_t classChainOffsetForCL,
@@ -1322,8 +1318,7 @@ class TR_RelocationRecordValidateSystemClassByName : public TR_RelocationRecord
       void setSystemClassID(TR_RelocationTarget *reloTarget, uint16_t systemClassID);
       uint16_t systemClassID(TR_RelocationTarget *reloTarget);
 
-      void setClassChainOffset(TR_RelocationTarget *reloTarget, uintptr_t classChainOffset,
-                               TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffset(TR_RelocationTarget *reloTarget, const TR::ClassValidationRecordWithChain *validationRecord, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffset(TR_RelocationTarget *reloTarget);
    };
 
@@ -1370,8 +1365,7 @@ class TR_RelocationRecordValidateClassChain : public TR_RelocationRecord
       void setClassID(TR_RelocationTarget *reloTarget, uint16_t classID);
       uint16_t classID(TR_RelocationTarget *reloTarget);
 
-      void setClassChainOffset(TR_RelocationTarget *reloTarget, uintptr_t classChainOffset,
-                               TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setClassChainOffset(TR_RelocationTarget *reloTarget, const TR::ClassChainRecord *validationRecord, TR::AheadOfTimeCompile *aotCompile);
       uintptr_t classChainOffset(TR_RelocationTarget *reloTarget);
    };
 
