@@ -2692,7 +2692,7 @@ TR_RelocationRecordInlinedMethod::print(TR_RelocationRuntime *reloRuntime)
 void
 TR_RelocationRecordInlinedMethod::setRomClassOffsetInSharedCache(
    TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache,
-   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord
+   TR::AheadOfTimeCompile *aotCompile, TR_OpaqueClassBlock *ramClass, const AOTCacheClassChainRecord *classChainRecord
 )
    {
    uintptr_t *addr = &((TR_RelocationRecordInlinedMethodBinaryTemplate *)_record)->_romClassOffsetInSharedCache;
@@ -3752,13 +3752,13 @@ TR_RelocationRecordValidateStaticField::print(TR_RelocationRuntime *reloRuntime)
 void
 TR_RelocationRecordValidateStaticField::setRomClassOffsetInSharedCache(
    TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache,
-   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord
+   TR::AheadOfTimeCompile *aotCompile, TR::AOTClassInfo *aotCI
 )
    {
    uintptr_t *addr = &((TR_RelocationRecordValidateStaticFieldBinaryTemplate *)_record)->_romClassOffsetInSharedCache;
    reloTarget->storeRelocationRecordValue(romClassOffsetInSharedCache, addr);
 #if defined(J9VM_OPT_JITSERVER)
-   aotCompile->addClassSerializationRecord(classChainRecord, addr);
+   aotCompile->addClassSerializationRecord(aotCI->getAOTCacheClassChainRecord(), addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
    }
 

@@ -785,7 +785,7 @@ class TR_RelocationRecordInlinedMethod : public TR_RelocationRecordConstantPoolW
       virtual void print(TR_RelocationRuntime *reloRuntime);
 
       void setRomClassOffsetInSharedCache(TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache,
-                                          TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+                                          TR::AheadOfTimeCompile *aotCompile, TR_OpaqueClassBlock *ramClass, const AOTCacheClassChainRecord *classChainRecord);
       void setRomClassOffsetInSharedCache(TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache,
                                           TR::AheadOfTimeCompile *aotCompile, TR_OpaqueClassBlock *ramClass);
       uintptr_t romClassOffsetInSharedCache(TR_RelocationTarget *reloTarget);
@@ -1118,8 +1118,7 @@ class TR_RelocationRecordValidateStaticField : public TR_RelocationRecordValidat
 
       virtual bool isStaticFieldValidation() { return true; }
 
-      void setRomClassOffsetInSharedCache(TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache,
-                                          TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+      void setRomClassOffsetInSharedCache(TR_RelocationTarget *reloTarget, uintptr_t romClassOffsetInSharedCache, TR::AheadOfTimeCompile *aotCompile, TR::AOTClassInfo *aotCI);
       uintptr_t romClassOffsetInSharedCache(TR_RelocationTarget *reloTarget);
 
    protected:
