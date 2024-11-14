@@ -59,6 +59,7 @@
 #include "env/StackMemoryRegion.hpp"
 #include "env/jittypes.h"
 #include "env/ClassTableCriticalSection.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/VerboseLog.hpp"
@@ -8252,6 +8253,9 @@ TR::CompilationInfoPerThreadBase::compile(J9VMThread * vmThread,
    UDATA oldState = vmThread->omrVMThread->vmState;
    vmThread->omrVMThread->vmState = J9VMSTATE_JIT | J9VMSTATE_MINOR;
    vmThread->jitMethodToBeCompiled = method;
+
+   if (auto dependencyTable = getCompilationInfo()->getPersistentInfo()->getAOTDependencyTable())
+      dependencyTable->methodWillBeCompiled(method);
 
    try
       {
