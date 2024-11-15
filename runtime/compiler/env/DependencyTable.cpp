@@ -434,11 +434,11 @@ TR_AOTDependencyTable::resolvePendingLoads()
       auto method = entry->first;
       auto originalCount = TR::CompilationInfo::getInvocationCount(method);
       auto count = originalCount;
-      while ((count > 0) && !TR::CompilationInfo::setInvocationCount(method, count, 0))
+      while ((count > 1) && !TR::CompilationInfo::setInvocationCount(method, count, 1))
          count = TR::CompilationInfo::getInvocationCount(method);
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu",
-                                        (count == 0) ? "success" : "failure", entry->first, originalCount, count);
+                                        (count == 1) ? "success" : "failure", entry->first, originalCount, count);
       stopTracking(entry);
       }
    _pendingLoads.clear();
