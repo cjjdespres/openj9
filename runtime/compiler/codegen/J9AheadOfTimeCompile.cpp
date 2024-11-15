@@ -2626,10 +2626,13 @@ void J9::AheadOfTimeCompile::processRelocations()
 
          Vector<uintptr_t> dependencies(comp->trMemory()->currentStackRegion());
          uintptr_t totalDependencies = comp->populateAOTMethodDependencies(definingClass, dependencies);
+         bool printVerbose = comp->getOptions()->getVerboseOption(TR_VerboseJITServerConns);
 
          if (totalDependencies == 0)
             {
             comp->getAotMethodHeaderEntry()->flags |= TR_AOTMethodHeader_TracksDependencies;
+            if (printVerbose)
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency tracking success: method %p total %lu", method, totalDependencies);
             }
          else
             {
@@ -2637,7 +2640,15 @@ void J9::AheadOfTimeCompile::processRelocations()
             auto vmThread = fej9->getCurrentVMThread();
             auto dependencyChain = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
             if (dependencyChain)
+               {
                comp->getAotMethodHeaderEntry()->flags |= TR_AOTMethodHeader_TracksDependencies;
+               if (printVerbose)
+                  TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency tracking success: method %p total %lu", method, totalDependencies);
+               }
+            else if (printVerbose)
+               {
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency tracking failure: method %p", method);
+               }
             }
          }
 #endif /* !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */

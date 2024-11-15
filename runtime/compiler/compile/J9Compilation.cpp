@@ -1601,6 +1601,11 @@ J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz)
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
       self()->failCompilation<J9::ClassChainPersistenceFailure>("classChainOffset == INVALID_CLASS_CHAIN_OFFSET");
 
+   bool ensureClassIsInitialized = self()->fej9()->isClassInitialized(clazz);
+   if (self()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependency added for %p: %p %lu %d",
+                                     self()->getMethodBeingCompiled()->getPersistentIdentifier(), clazz, chainOffset, ensureClassIsInitialized);
+
    addAOTMethodDependency(chainOffset, self()->fej9()->isClassInitialized(clazz));
    }
 
@@ -1610,7 +1615,12 @@ J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz, uintptr_t ch
    if (getOption(TR_DisableDependencyTracking))
       return;
 
-   addAOTMethodDependency(chainOffset, self()->fej9()->isClassInitialized(clazz));
+   bool ensureClassIsInitialized = self()->fej9()->isClassInitialized(clazz);
+   if (self()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependency added for %p: %p %lu %d",
+                                     self()->getMethodBeingCompiled()->getPersistentIdentifier(), clazz, chainOffset, ensureClassIsInitialized);
+
+   addAOTMethodDependency(chainOffset, ensureClassIsInitialized);
    }
 
 void

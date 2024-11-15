@@ -45,6 +45,9 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
    if (!_sharedCache->methodHasAOTBodyWithDependencies(vmThread, romMethod, methodDependencies))
       return false;
 
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Starting to track method %p %p", method, methodDependencies);
+
    if (!methodDependencies)
       {
       dependenciesSatisfied = true;
@@ -87,6 +90,8 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          {
          methodEntry->second._remainingDependencies = numberRemainingDependencies;
          }
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p tracked with total dependencies %lu, remaining %lu", method, totalDependencies, numberRemainingDependencies);
       }
    catch (std::exception&)
       {
@@ -119,6 +124,8 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry)
    auto dependencyChain = methodEntry._dependencyChain;
    auto dependencyChainLength = *dependencyChain;
 
+   bool printUnsatisfiedDependency = TR::Options::getVerboseOption(TR_VerboseJITServerConns);
+
    for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
       bool needsInitialization = false;
@@ -126,6 +133,10 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry)
       uintptr_t offset = _sharedCache->startingROMClassOffsetOfClassChain(_sharedCache->pointerFromOffsetInSharedCache(chainOffset));
 
       auto o_it = _offsetMap.find(offset);
+
+      if (printUnsatisfiedDependency && !findCandidateForDependency(o_it->second._loadedClasses, needsInitialization))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: stopped tracking method %p with unsatisfied dependency %d %lu",
+                                        entry->first, needsInitialization, chainOffset);
 
       if (needsInitialization)
          o_it->second._waitingInitMethods.erase(entry);
@@ -185,14 +196,20 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
    }
 
 void
-TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods)
+TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods, J9Class *ramClass, bool checkingInit)
    {
    for (auto &entry: waitingMethods)
       {
       if (entry->second._remainingDependencies)
+         {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p queued by %p %d", entry->first, ramClass, checkingInit);
          _pendingLoads.insert(entry);
+         }
       else
+         {
          --entry->second._remainingDependencies;
+         }
       }
    }
 
@@ -202,16 +219,22 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
    auto offsetEntry = getOffsetEntry(offset, isClassLoad);
    TR_ASSERT(offsetEntry || !isClassLoad, "Class %p offset %lu initialized without loading", ramClass, offset);
 
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class load event %.*s %p %lu %d %d",
+                                     J9UTF8_LENGTH(name), J9UTF8_DATA(name), ramClass, offset, isClassLoad, isClassInitialization);
+      }
    // Check for dependency satisfaction if this is the first class initialized
    // for this offset
    if (isClassInitialization && (NULL != findCandidateForDependency(offsetEntry->_loadedClasses, true)))
-      checkForSatisfaction(offsetEntry->_waitingInitMethods);
+      checkForSatisfaction(offsetEntry->_waitingInitMethods, ramClass, true);
 
    // Track the class, and also check for dependency satisfaction if this is the
    // first class loaded for this offset
    if (isClassLoad)
       {
-      checkForSatisfaction(offsetEntry->_waitingLoadMethods);
+      checkForSatisfaction(offsetEntry->_waitingLoadMethods, ramClass, false);
       offsetEntry->_loadedClasses.insert(ramClass);
       }
    }
@@ -252,12 +275,14 @@ TR_AOTDependencyTable::invalidateUnloadedClass(TR_OpaqueClassBlock *clazz)
    }
 
 void
-TR_AOTDependencyTable::registerDissatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods)
+TR_AOTDependencyTable::registerDissatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods, J9Class *ramClass)
    {
    for (auto& entry: waitingMethods)
       {
       ++entry->second._remainingDependencies;
-      _pendingLoads.erase(entry);
+      bool entryWasPending = _pendingLoads.erase(entry) == 1;
+      if (entryWasPending && TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p unqueued by %p", entry->first, ramClass);
       }
    }
 
@@ -267,17 +292,19 @@ TR_AOTDependencyTable::invalidateClassAtOffset(J9Class *ramClass, uintptr_t romC
    auto entry = getOffsetEntry(romClassOffset, false);
    if (entry)
       {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: invalidating class %p", ramClass);
       entry->_loadedClasses.erase(ramClass);
 
       if (entry->_loadedClasses.empty())
          {
-         registerDissatisfaction(entry->_waitingLoadMethods);
-         registerDissatisfaction(entry->_waitingInitMethods);
+         registerDissatisfaction(entry->_waitingLoadMethods, ramClass);
+         registerDissatisfaction(entry->_waitingInitMethods, ramClass);
          eraseOffsetEntryIfEmpty(entry, romClassOffset);
          }
       else if (!findCandidateForDependency(entry->_loadedClasses, true))
          {
-         registerDissatisfaction(entry->_waitingInitMethods);
+         registerDissatisfaction(entry->_waitingInitMethods, ramClass);
          }
 
       return true;
@@ -320,6 +347,9 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
    uintptr_t oldClassOffset = TR_SharedCache::INVALID_ROM_CLASS_OFFSET;
    if (!_sharedCache->isClassInSharedCache(freshClass, &freshClassOffset) && !_sharedCache->isClassInSharedCache(oldClass, &oldClassOffset))
       return;
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: possible class redefinition %p %p", oldClass, freshClass);
 
    if (oldClassOffset == freshClassOffset)
       {
@@ -390,9 +420,13 @@ TR_AOTDependencyTable::resolvePendingLoads()
    for (auto& entry: _pendingLoads)
       {
       auto method = entry->first;
-      auto count = TR::CompilationInfo::getInvocationCount(method);
+      auto originalCount = TR::CompilationInfo::getInvocationCount(method);
+      auto count = originalCount;
       while ((count > 0) && !TR::CompilationInfo::setInvocationCount(method, count, 0))
          count = TR::CompilationInfo::getInvocationCount(method);
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu",
+                                        (count == 0) ? "success" : "failure", entry->first, originalCount, count);
       stopTracking(entry);
       }
    _pendingLoads.clear();

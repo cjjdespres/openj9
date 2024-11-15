@@ -181,8 +181,12 @@ private:
    // invalidate the pointer to OffsetEntry.
    void eraseOffsetEntryIfEmpty(OffsetEntry *entry, uintptr_t offset);
 
-   void checkForSatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods);
-   void registerDissatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods);
+   // Register a class event that will satisfy a dependcy for waitingMethods.
+   // The ramClass and checkingInit are only used for logging.
+   void checkForSatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods, J9Class *ramClass, bool checkingInit);
+   // Register a class invalidation event that will unsatisfy a dependency for
+   // waitingMethods. The ramClass is only used for logging.
+   void registerDissatisfaction(PersistentUnorderedSet<MethodEntryRef> waitingMethods, J9Class *ramClass);
 
    // Initially true, and set to false if there is a failure to allocate.
    bool _isActive;
