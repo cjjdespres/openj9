@@ -1628,7 +1628,8 @@ J9::Compilation::addAOTMethodDependency(uintptr_t chainOffset, bool ensureClassI
 
 
 // Populate the given dependencyBuffer with dependencies of this method, in the
-// format needed by TR_J9SharedCache::storeAOTMethodDependencies().
+// format needed by TR_J9SharedCache::storeAOTMethodDependencies(). Returns the
+// total number of dependencies.
 uintptr_t
 J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClass, Vector<uintptr_t> &dependencyBuffer)
    {
