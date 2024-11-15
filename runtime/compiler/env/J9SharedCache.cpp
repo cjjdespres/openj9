@@ -1560,7 +1560,7 @@ TR_J9SharedCache::buildAOTMethodDependenciesKey(uintptr_t offset, char *buffer, 
    cursor += dependencyKeyPrefixLength;
 
    convertUnsignedOffsetToASCII(offset, cursor);
-   keyLength = (cursor - buffer) + _numDigitsForCacheOffsets + 1; // NULL terminator not included in _numDigitsForCacheOffsets
+   keyLength = (cursor - buffer) + _numDigitsForCacheOffsets;
    }
 
 const void *
@@ -1616,10 +1616,10 @@ TR_J9SharedCache::methodHasAOTBodyWithDependencies(J9VMThread *vmThread, J9ROMMe
 
    J9SharedDataDescriptor dataDescriptor;
    dataDescriptor.address = NULL;
-   TR_J9VMBase *fej9 = (TR_J9VMBase *)(fe());
 
-   if (sharedCacheConfig()->findSharedData(vmThread, key, keyLength, J9SHR_DATA_TYPE_JITHINT, FALSE, &dataDescriptor, NULL) > 0)
-      methodDependencies = (uintptr_t *)dataDescriptor.address;
+   sharedCacheConfig()->findSharedData(vmThread, key, keyLength, J9SHR_DATA_TYPE_JITHINT, FALSE, &dataDescriptor, NULL);
+   methodDependencies = (uintptr_t *)dataDescriptor.address;
+
    return true;
 #else
    return false;
