@@ -205,6 +205,9 @@ J9::Compilation::Compilation(int32_t id,
    _serializationRecords(decltype(_serializationRecords)::allocator_type(heapMemoryRegion)),
    _thunkRecords(decltype(_thunkRecords)::allocator_type(heapMemoryRegion)),
 #endif /* defined(J9VM_OPT_JITSERVER) */
+#if !defined(PERSISTENT_COLLECIONS_UNSUPPORTED)
+   _aotMethodDependencies(decltype(_aotMethodDependencies)::allocator_type(heapMemoryRegion)),
+#endif /* !defined(PERSISTENT_COLLECIONS_UNSUPPORTED) */
    _osrProhibitedOverRangeOfTrees(false),
    _wasFearPointAnalysisDone(false)
    {
@@ -1582,6 +1585,74 @@ J9::Compilation::canAddOSRAssumptions()
       && self()->getOSRMode() == TR::voluntaryOSR
       && !self()->wasFearPointAnalysisDone();
    }
+
+#if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
+void
+J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz)
+   {
+   if (getOption(TR_DisableDependencyTracking))
+      return;
+
+   auto chainOffset = self()->fej9()->sharedCache()->rememberClass(clazz);
+
+   if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
+      self()->failCompilation<J9::ClassChainPersistenceFailure>("classChainOffset == INVALID_CLASS_CHAIN_OFFSET");
+
+   addAOTMethodDependency(chainOffset, self()->fej9()->isClassInitialized(clazz));
+   }
+
+void
+J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz, uintptr_t chainOffset)
+   {
+   if (getOption(TR_DisableDependencyTracking))
+      return;
+
+   addAOTMethodDependency(chainOffset, self()->fej9()->isClassInitialized(clazz));
+   }
+
+void
+J9::Compilation::addAOTMethodDependency(uintptr_t chainOffset, bool ensureClassIsInitialized)
+   {
+   TR_ASSERT(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != chainOffset, "Attempted to remember invalid chain offset");
+   TR_ASSERT(self()->compileRelocatableCode(), "Must be generating AOT code");
+
+   auto it = _aotMethodDependencies.find(chainOffset);
+   if (it != _aotMethodDependencies.end())
+      it->second = it->second || ensureClassIsInitialized;
+   else
+      _aotMethodDependencies.insert(it, {chainOffset, ensureClassIsInitialized});
+   }
+
+// Populate the given dependencyBuffer with dependencies of this method, in the
+// format needed by TR_J9SharedCache::storeAOTMethodDependencies(). Returns the
+// total number of dependencies.
+uintptr_t
+J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClass, Vector<uintptr_t> &dependencyBuffer)
+   {
+   // TODO: Methods may be able to run before their defining class is
+   // initialized. Adding this back in will save a fair amount of space in the
+   // SCC once that's figured out.
+   //
+   // uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
+   // TR_ASSERT_FATAL(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered");
+   // _aotMethodDependencies.erase(definingClassChainOffset);
+
+   uintptr_t totalDependencies = _aotMethodDependencies.size();
+   if (totalDependencies == 0)
+      return totalDependencies;
+
+   dependencyBuffer.reserve(totalDependencies + 1);
+   dependencyBuffer.push_back(totalDependencies);
+   for (auto &entry : _aotMethodDependencies)
+      {
+      // TODO: use TR_AOTDependencyTable::encodeDependencyOffset
+      uintptr_t encodedOffset = entry.second ? entry.first : (entry.first & ~1);
+      dependencyBuffer.push_back(encodedOffset);
+      }
+
+   return totalDependencies;
+   }
+#endif /* !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
 
 #if defined(J9VM_OPT_JITSERVER)
 void
