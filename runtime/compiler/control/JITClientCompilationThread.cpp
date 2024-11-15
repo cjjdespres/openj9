@@ -3277,6 +3277,13 @@ remoteCompile(J9VMThread *vmThread, TR::Compilation *compiler, TR_ResolvedMethod
       }
    compiler->setIgnoringLocalSCC(aotCacheStore && compiler->getPersistentInfo()->getJITServerAOTCacheIgnoreLocalSCC());
 
+   // To support dependency tracking with the JITServer AOT cache while using
+   // server offsets, we would have to store the dependencies at the server and
+   // detect (with the help of the server's serialization records) when they
+   // were satisfied.
+   if (compiler->ignoringLocalSCC())
+      compiler->setOption(TR_DisableDependencyTracking);
+
    // This thread may have been notified at some point in the past that the deserializer was reset.
    // Since this is the start of a new compilation, we must clear the reset flag in order to detect
    // a concurrent deserializer reset during the course of this compilation. This clearing must
