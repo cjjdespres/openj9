@@ -26,6 +26,7 @@
 /*
  * The following #define and typedef must appear before any #includes in this file
  */
+#include "env/jittypes.h"
 #ifndef TR_J9_COMPILATIONBASE_CONNECTOR
 #define TR_J9_COMPILATIONBASE_CONNECTOR
 namespace J9 { class Compilation; }
@@ -42,9 +43,7 @@ namespace J9 { typedef J9::Compilation CompilationConnector; }
 #include "env/OMRMemory.hpp"
 #include "compile/AOTClassInfo.hpp"
 #include "runtime/SymbolValidationManager.hpp"
-#if defined(J9VM_OPT_JITSERVER)
 #include "env/PersistentCollections.hpp"
-#endif /* defined(J9VM_OPT_JITSERVER) */
 
 
 class TR_AOTGuardSite;
@@ -432,6 +431,15 @@ class OMR_EXTENSIBLE Compilation : public OMR::CompilationConnector
    void setOSRProhibitedOverRangeOfTrees() { _osrProhibitedOverRangeOfTrees = true; }
    bool isOSRProhibitedOverRangeOfTrees() { return _osrProhibitedOverRangeOfTrees; }
 
+#if defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
+   void addAOTMethodDependency(uintptr_t offset, bool classIsInitialized) {}
+   void addAOTMethodDependency(TR_OpaqueClassBlock *ramClass) {}
+#else
+   void addAOTMethodDependency(TR_OpaqueClassBlock *ramClass);
+   void addAOTMethodDependency(TR_OpaqueClassBlock *ramClass, uintptr_t chainOffset);
+   void populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClass, Vector<uintptr_t> &chainBuffer);
+#endif
+
 private:
    enum CachedClassPointerId
       {
@@ -445,6 +453,10 @@ private:
       };
 
    TR_OpaqueClassBlock *getCachedClassPointer(CachedClassPointerId which);
+
+#if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
+   void addAOTMethodDependency(uintptr_t offset, bool classIsInitialized);
+#endif  /*  !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
 
    J9VMThread *_j9VMThread;
 
@@ -560,6 +572,14 @@ private:
    // Set of AOT cache thunk records that this compilation depends on; always empty at the client
    UnorderedSet<const AOTCacheThunkRecord *> _thunkRecords;
 #endif /* defined(J9VM_OPT_JITSERVER) */
+
+#if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
+   // A map recording the dependencies of an AOT method. The keys are the class
+   // chain offsets of classes this method depends on, and the values record
+   // whether the class needs to be initialized before method loading, or only
+   // loaded.
+   UnorderedMap<uintptr_t, bool> _aotMethodDependencies;
+#endif /* defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
 
    TR::SymbolValidationManager *_symbolValidationManager;
    bool _osrProhibitedOverRangeOfTrees;
