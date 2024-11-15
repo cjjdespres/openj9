@@ -46,10 +46,12 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
       return false;
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Starting to track method %p %p", method, methodDependencies);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: starting to track method %p %p", method, methodDependencies);
 
    if (!methodDependencies)
       {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p will have initial count 0", method);
       dependenciesSatisfied = true;
       return true;
       }
@@ -85,13 +87,16 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          {
          stopTracking(methodEntry);
          dependenciesSatisfied = true;
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p will have initial count 0", method);
          }
       else
          {
          methodEntry->second._remainingDependencies = numberRemainingDependencies;
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p tracked with total dependencies %lu, remaining %lu",
+                                           method, totalDependencies, numberRemainingDependencies);
          }
-      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p tracked with total dependencies %lu, remaining %lu", method, totalDependencies, numberRemainingDependencies);
       }
    catch (std::exception&)
       {
