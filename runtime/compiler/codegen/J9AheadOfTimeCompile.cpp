@@ -2625,9 +2625,9 @@ void J9::AheadOfTimeCompile::processRelocations()
          auto definingClass = comp->fe()->getClassOfMethod(method);
 
          Vector<uintptr_t> dependencies(comp->trMemory()->currentStackRegion());
-         comp->populateAOTMethodDependencies(definingClass, dependencies);
+         uintptr_t totalDependencies = comp->populateAOTMethodDependencies(definingClass, dependencies);
 
-         if (dependencies.empty())
+         if (totalDependencies == 0)
             {
             comp->getAotMethodHeaderEntry()->flags |= TR_AOTMethodHeader_TracksDependencies;
             }

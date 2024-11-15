@@ -1629,20 +1629,26 @@ J9::Compilation::addAOTMethodDependency(uintptr_t chainOffset, bool ensureClassI
 
 // Populate the given dependencyBuffer with dependencies of this method, in the
 // format needed by TR_J9SharedCache::storeAOTMethodDependencies().
-void
+uintptr_t
 J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClass, Vector<uintptr_t> &dependencyBuffer)
    {
    uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
    TR_ASSERT_FATAL(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered");
    _aotMethodDependencies.erase(definingClassChainOffset);
 
-   dependencyBuffer.reserve(_aotMethodDependencies.size() + 1);
-   dependencyBuffer.push_back(_aotMethodDependencies.size());
+   uintptr_t totalDependencies = _aotMethodDependencies.size();
+   if (totalDependencies == 0)
+      return totalDependencies;
+
+   dependencyBuffer.reserve(totalDependencies + 1);
+   dependencyBuffer.push_back(totalDependencies);
    for (auto &entry : _aotMethodDependencies)
       {
       uintptr_t encodedOffset = entry.second ? entry.first : (entry.first & ~1);
       dependencyBuffer.push_back(encodedOffset);
       }
+
+   return totalDependencies;
    }
 #endif /* !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
 
