@@ -3580,6 +3580,9 @@ void TR::CompilationInfo::stopCompilationThreads()
       }
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
+   if (auto dependencyTable = getPersistentInfo()->getAOTDependencyTable())
+      dependencyTable->dumpTable();
+
 #ifdef STATS
    if (compBudgetSupport() || dynamicThreadPriority())
       {

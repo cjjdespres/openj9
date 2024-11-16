@@ -506,6 +506,21 @@ TR_AOTDependencyTable::findCandidateForDependency(PersistentUnorderedSet<J9Class
    }
 
 void
+TR_AOTDependencyTable::dumpTable()
+   {
+   if (!TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      return;
+
+   OMR::CriticalSection cs(_tableMonitor);
+   TR_VerboseLog::CriticalSection vlogLock;
+
+   TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table methods remaining: %lu", _methodMap.size());
+
+   for (auto& entry : _methodMap)
+      stopTracking(&entry, true);
+   }
+
+void
 TR_AOTDependencyTable::deactivateTable()
    {
    _offsetMap.clear();

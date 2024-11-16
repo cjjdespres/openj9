@@ -134,6 +134,11 @@ public:
       return needsInitialization ? offset : (offset & ~1);
       }
 
+
+   // Print the total number of methods left unloaded, then remove all methods
+   // from tracking to print their unsatisfied dependencies.
+   void dumpTable();
+
 private:
    bool isActive() const { return _isActive; }
    void setInactive() { _isActive = false; }
