@@ -126,17 +126,17 @@ TR_AOTDependencyTable::methodWillBeCompiled(J9Method *method)
    // AOT load we might consider preventing the load from taking place (by
    // increasing the counts and continuing to track the method, or marking the
    // method as ineligible for loads and giving up on tracking it).
-   stopTracking(method);
+   stopTracking(method, true);
    }
 
 void
-TR_AOTDependencyTable::stopTracking(MethodEntryRef entry)
+TR_AOTDependencyTable::stopTracking(MethodEntryRef entry, bool isEarlyCompile)
    {
    auto methodEntry = entry->second;
    auto dependencyChain = methodEntry._dependencyChain;
    auto dependencyChainLength = *dependencyChain;
 
-   bool printUnsatisfiedDependency = TR::Options::getVerboseOption(TR_VerboseJITServerConns);
+   bool printUnsatisfiedDependency = isEarlyCompile && TR::Options::getVerboseOption(TR_VerboseJITServerConns);
 
    for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
@@ -162,11 +162,11 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry)
    }
 
 void
-TR_AOTDependencyTable::stopTracking(J9Method *method)
+TR_AOTDependencyTable::stopTracking(J9Method *method, bool isEarlyCompile)
    {
    auto entry = _methodMap.find(method);
    if (entry != _methodMap.end())
-      stopTracking(&*entry);
+      stopTracking(&*entry, isEarlyCompile);
    }
 
 void
@@ -467,7 +467,7 @@ TR_AOTDependencyTable::resolvePendingLoads()
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu",
                                         (count == 0) ? "success" : "failure", entry->first, originalCount, count);
-      stopTracking(entry);
+      stopTracking(entry, true);
       }
    _pendingLoads.clear();
    }

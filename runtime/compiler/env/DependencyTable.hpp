@@ -169,8 +169,8 @@ private:
 
    // Stop tracking the given method. This will invalidate the MethodEntryRef
    // for the method.
-   void stopTracking(MethodEntryRef entry);
-   void stopTracking(J9Method *method);
+   void stopTracking(MethodEntryRef entry, bool isEarlyCompile = false);
+   void stopTracking(J9Method *method, bool isEarlyCompile = false);
 
    // Queue and clear the _pendingLoads, and remove those methods from tracking.
    // Must be called at the end of any dependency table operation that could
