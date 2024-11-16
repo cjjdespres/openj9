@@ -137,6 +137,7 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry, bool isEarlyCompile)
    auto dependencyChainLength = *dependencyChain;
 
    bool printUnsatisfiedDependency = isEarlyCompile && TR::Options::getVerboseOption(TR_VerboseJITServerConns);
+   bool foundUnsatisfiedDependency = false;
 
    for (size_t i = 1; i <= dependencyChainLength; ++i)
       {
@@ -147,8 +148,11 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry, bool isEarlyCompile)
       auto o_it = _offsetMap.find(offset);
 
       if (printUnsatisfiedDependency && !findCandidateForDependency(o_it->second._loadedClasses, needsInitialization))
+         {
+         foundUnsatisfiedDependency = true;
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: stopped tracking method %p with unsatisfied dependency %d %lu",
                                         entry->first, needsInitialization, chainOffset);
+         }
 
       if (needsInitialization)
          o_it->second._waitingInitMethods.erase(entry);
@@ -156,6 +160,11 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry, bool isEarlyCompile)
          o_it->second._waitingLoadMethods.erase(entry);
 
       eraseOffsetEntryIfEmpty(&o_it->second, offset);
+      }
+
+   if (printUnsatisfiedDependency && !foundUnsatisfiedDependency)
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p stopped tracking early but it had no unsatisfied dependencies");
       }
 
    _methodMap.erase(entry->first);
@@ -512,8 +521,6 @@ TR_AOTDependencyTable::dumpTable()
       return;
 
    OMR::CriticalSection cs(_tableMonitor);
-   TR_VerboseLog::CriticalSection vlogLock;
-
    TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table methods remaining: %lu", _methodMap.size());
 
    for (auto& entry : _methodMap)
