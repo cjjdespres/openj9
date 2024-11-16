@@ -228,9 +228,14 @@ TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRe
 void
 TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization)
    {
-   // TODO: should change from true to isClassLoad, then assert that entry
-   // exists or this isn't a class load.
-   auto offsetEntry = getOffsetEntry(offset, true);
+   auto offsetEntry = getOffsetEntry(offset, isClassLoad);
+
+   // If we did not add ramClass at load time, then it didn't have a valid
+   // chain.
+   if (!offsetEntry)
+      return;
+   if (!isClassLoad && (offsetEntry->_loadedClasses.find(ramClass) == offsetEntry->_loadedClasses.end()))
+      return;
 
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       {
@@ -238,11 +243,6 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
       TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class load event %.*s %p %lu %d %d",
                                      J9UTF8_LENGTH(name), J9UTF8_DATA(name), ramClass, offset, isClassLoad, isClassInitialization);
       }
-
-   // TODO: There are a few jcl classes that seem to be initialized without load -
-   // java/lang/CharSequence is one - so for now we have to double-check here.
-   if (offsetEntry->_loadedClasses.find(ramClass) == offsetEntry->_loadedClasses.end())
-      isClassLoad = true;
 
    // Check for dependency satisfaction if this is the first class initialized
    // for this offset

@@ -570,7 +570,7 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                   {
                   bool dependenciesSatisfied = false;
                   if (dependencyTable->trackMethod(vmThread, method, romMethod, dependenciesSatisfied))
-                     count = dependenciesSatisfied ? 0 : 3003; // TODO: figure out what this should be
+                     count = dependenciesSatisfied ? 0 : 450; // TODO: figure out what this should be
                   }
 
                if (count == -1)
