@@ -25,7 +25,6 @@
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCHTable.hpp"
-#include "env/SharedCache.hpp"
 
 #if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
 
