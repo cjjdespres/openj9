@@ -246,8 +246,20 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
 
    // Check for dependency satisfaction if this is the first class initialized
    // for this offset
-   if (isClassInitialization && (NULL != findCandidateForDependency(offsetEntry->_loadedClasses, true)))
-      checkForSatisfaction(offsetEntry->_waitingInitMethods, ramClass, true);
+   if (isClassInitialization)
+      {
+      bool previousInitialization = false;
+      for (const auto& entry: offsetEntry->_loadedClasses)
+         {
+         if ((J9ClassInitSucceeded == entry->initializeStatus) && (entry != ramClass))
+            {
+            previousInitialization = true;
+            break;
+            }
+         }
+      if (!previousInitialization)
+         checkForSatisfaction(offsetEntry->_waitingInitMethods, ramClass, true);
+      }
 
    // Track the class, and also check for dependency satisfaction if this is the
    // first class loaded for this offset
