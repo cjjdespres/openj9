@@ -212,7 +212,7 @@ TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRe
    {
    for (auto &entry: waitingMethods)
       {
-      if (entry->second._remainingDependencies)
+      if (entry->second._remainingDependencies == 1)
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p queued by %p %d", entry->first, ramClass, checkingInit);
