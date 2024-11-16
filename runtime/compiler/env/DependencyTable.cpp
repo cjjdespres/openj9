@@ -78,8 +78,23 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          else
             entry->_waitingLoadMethods.insert(methodEntry);
 
-         if (findCandidateForDependency(entry->_loadedClasses, needsInitialization))
+         if (auto candidate = findCandidateForDependency(entry->_loadedClasses, needsInitialization))
+            {
+            if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p dep %lu %lu %d immediately satisfied by %p",
+                                              method, offset, chainOffset, needsInitialization, candidate);
             numberRemainingDependencies -= 1;
+            }
+         else
+            {
+            J9Class *loaded = NULL;
+            if (!needsInitialization)
+               loaded = findCandidateForDependency(entry->_loadedClasses, false);
+
+            if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p dep %lu %lu %d not satisfied and %p could be loaded",
+                                              method, offset, chainOffset, needsInitialization, loaded);
+            }
          }
 
       // // The defining class is not stored in the dependencies
@@ -229,6 +244,8 @@ TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRe
          }
       else
          {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p not queued by %p %d", entry->first, ramClass, checkingInit);
          --entry->second._remainingDependencies;
          }
       }
@@ -513,6 +530,21 @@ TR_AOTDependencyTable::findCandidateForDependency(PersistentUnorderedSet<J9Class
 
    return NULL;
    }
+
+// J9Class *
+// TR_AOTDependencyTable::findCandidateForDependency(OffsetEntry &offsetEntry, bool needsInitialization)
+//    {
+//    if (!needsInitialization)
+//       {
+//       if (!offsetEntry._loadedClasses.empty())
+//          return *offsetEntry._loadedClasses.begin();
+//       }
+//
+//    if (!offsetEntry._initializedClasses.empty())
+//       return *offsetEntry._initializedClasses.begin();
+//
+//    return NULL;
+//    }
 
 void
 TR_AOTDependencyTable::dumpTable()

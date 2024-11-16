@@ -60,6 +60,9 @@ struct OffsetEntry
    // Classes that have been loaded and have a particular valid class chain
    // offset
    PersistentUnorderedSet<J9Class *> _loadedClasses;
+// TODO: remove if not needed
+//    // Classes that have been loaded and initialized with this class chain offset
+//    PersistentUnorderedSet<J9Class *> _initializedClasses;
    // Methods waiting for a class with this chain offset to be loaded
    PersistentUnorderedSet<MethodEntryRef> _waitingLoadMethods;
    // Methods waiting for a class with this chain offset to be initialized
