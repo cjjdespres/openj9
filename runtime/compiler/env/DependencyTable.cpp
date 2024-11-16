@@ -467,7 +467,7 @@ TR_AOTDependencyTable::resolvePendingLoads()
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu",
                                         (count == 0) ? "success" : "failure", entry->first, originalCount, count);
-      stopTracking(entry, true);
+      stopTracking(entry);
       }
    _pendingLoads.clear();
    }
