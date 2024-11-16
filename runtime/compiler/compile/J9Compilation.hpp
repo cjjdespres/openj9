@@ -458,7 +458,7 @@ private:
    TR_OpaqueClassBlock *getCachedClassPointer(CachedClassPointerId which);
 
 #if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
-   void addAOTMethodDependency(uintptr_t offset, bool classIsInitialized);
+   void addAOTMethodDependency(TR_OpaqueClassBlock *ramClass, uintptr_t offset, bool classIsInitialized);
 #endif  /*  !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
 
    J9VMThread *_j9VMThread;

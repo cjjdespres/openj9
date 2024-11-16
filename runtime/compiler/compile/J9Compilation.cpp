@@ -1601,12 +1601,7 @@ J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz)
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
       self()->failCompilation<J9::ClassChainPersistenceFailure>("classChainOffset == INVALID_CLASS_CHAIN_OFFSET");
 
-   bool ensureClassIsInitialized = self()->fej9()->isClassInitialized(clazz);
-   if (self()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependency added for %p: %p %lu %d",
-                                     self()->getMethodBeingCompiled()->getPersistentIdentifier(), clazz, chainOffset, ensureClassIsInitialized);
-
-   addAOTMethodDependency(chainOffset, self()->fej9()->isClassInitialized(clazz));
+   addAOTMethodDependency(clazz, chainOffset, self()->fej9()->isClassInitialized(clazz));
    }
 
 void
@@ -1615,25 +1610,31 @@ J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz, uintptr_t ch
    if (getOption(TR_DisableDependencyTracking))
       return;
 
-   bool ensureClassIsInitialized = self()->fej9()->isClassInitialized(clazz);
-   if (self()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependency added for %p: %p %lu %d",
-                                     self()->getMethodBeingCompiled()->getPersistentIdentifier(), clazz, chainOffset, ensureClassIsInitialized);
-
-   addAOTMethodDependency(chainOffset, ensureClassIsInitialized);
+   addAOTMethodDependency(clazz, chainOffset, self()->fej9()->isClassInitialized(clazz));
    }
 
 void
-J9::Compilation::addAOTMethodDependency(uintptr_t chainOffset, bool ensureClassIsInitialized)
+J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz, uintptr_t chainOffset, bool ensureClassIsInitialized)
    {
    TR_ASSERT(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != chainOffset, "Attempted to remember invalid chain offset");
    TR_ASSERT(self()->compileRelocatableCode(), "Must be generating AOT code");
 
+   bool wasPresent = false;
+
    auto it = _aotMethodDependencies.find(chainOffset);
    if (it != _aotMethodDependencies.end())
+      {
+      wasPresent = it->second == ensureClassIsInitialized;
       it->second = it->second || ensureClassIsInitialized;
+      }
    else
+      {
       _aotMethodDependencies.insert(it, {chainOffset, ensureClassIsInitialized});
+      }
+
+   if (!wasPresent && self()->getOptions()->getVerboseOption(TR_VerboseJITServerConns))
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method dependency added for %p: %p %lu %d",
+                                     self()->getMethodBeingCompiled()->getPersistentIdentifier(), clazz, chainOffset, ensureClassIsInitialized);
    }
 
 
