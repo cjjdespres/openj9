@@ -164,7 +164,7 @@ TR_AOTDependencyTable::stopTracking(MethodEntryRef entry, bool isEarlyCompile)
 
    if (printUnsatisfiedDependency && !foundUnsatisfiedDependency)
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p stopped tracking early but it had no unsatisfied dependencies");
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p stopped tracking early but it had no unsatisfied dependencies", entry->first);
       }
 
    _methodMap.erase(entry->first);
