@@ -245,7 +245,8 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
    // first class loaded for this offset
    if (isClassLoad)
       {
-      checkForSatisfaction(offsetEntry->_waitingLoadMethods, ramClass, false);
+      if (NULL != findCandidateForDependency(offsetEntry->_loadedClasses, false))
+         checkForSatisfaction(offsetEntry->_waitingLoadMethods, ramClass, false);
       offsetEntry->_loadedClasses.insert(ramClass);
       }
    }
