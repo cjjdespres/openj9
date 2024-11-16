@@ -571,6 +571,11 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          TR_OpaqueClassBlock *inlinedMethodClass = resolvedMethod->containingClass();
          uintptr_t romClassOffsetInSharedCache = self()->offsetInSharedCacheFromClass(sharedCache, inlinedMethodClass);
 
+         // TODO: below doesn't seem to help...
+         if (thisClass)
+            comp->addAOTMethodDependency(thisClass);
+         comp->addAOTMethodDependency(callSymRef->getOwningMethod(comp)->containingClass());
+
          imRecord->setReloFlags(reloTarget, flags);
          imRecord->setInlinedSiteIndex(reloTarget, inlinedSiteIndex);
          imRecord->setConstantPool(reloTarget, reinterpret_cast<uintptr_t>(callSymRef->getOwningMethod(comp)->constantPool()));

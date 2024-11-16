@@ -1643,9 +1643,12 @@ J9::Compilation::addAOTMethodDependency(uintptr_t chainOffset, bool ensureClassI
 uintptr_t
 J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClass, Vector<uintptr_t> &dependencyBuffer)
    {
-   uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
-   TR_ASSERT_FATAL(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered");
-   _aotMethodDependencies.erase(definingClassChainOffset);
+   // TODO: I'd like to restore the below, but it seems that methods can be run
+   // before their parent class is initialized.
+   //
+   // uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
+   // TR_ASSERT_FATAL(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered");
+   // _aotMethodDependencies.erase(definingClassChainOffset);
 
    uintptr_t totalDependencies = _aotMethodDependencies.size();
    if (totalDependencies == 0)

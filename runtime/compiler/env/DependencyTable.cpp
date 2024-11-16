@@ -25,6 +25,7 @@
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCHTable.hpp"
+#include "env/SharedCache.hpp"
 
 #if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
 
@@ -81,6 +82,14 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          if (findCandidateForDependency(entry->_loadedClasses, needsInitialization))
             numberRemainingDependencies -= 1;
          }
+
+      // // The defining class is not stored in the dependencies
+      // auto definingClass = J9_CLASS_FROM_METHOD(method)->romClass;
+      // uintptr_t definingOffset = _sharedCache->offsetInSharedCacheFromROMClass(definingClass);
+
+
+
+
 
       if (numberRemainingDependencies == 0)
          {
