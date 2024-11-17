@@ -4197,10 +4197,39 @@ TR_RelocationRecordValidateStaticClassFromCP::applyRelocation(TR_RelocationRunti
    uint16_t beholderID = this->beholderID(reloTarget);
    uint32_t cpIndex = this->cpIndex(reloTarget);
 
+
+   J9Class *theClass = reloRuntime->comp()->getSymbolValidationManager()->getJ9ClassFromID(classID);
+   J9Class *beholder = reloRuntime->comp()->getSymbolValidationManager()->getJ9ClassFromID(beholderID);
+   J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+   auto vmStruct = reloRuntime->fej9();
+   J9Class *expectedResult = NULL;
+   J9Class *classWrapper = NULL;
+   UDATA initStatus = 0;
+	auto ramRefWrapper = ((J9RAMStaticFieldRef*) beholderCP) + cpIndex;
+	if (J9RAMSTATICFIELDREF_IS_RESOLVED(ramRefWrapper)) {
+		classWrapper = J9RAMSTATICFIELDREF_CLASS(ramRefWrapper);
+		initStatus = classWrapper->initializeStatus;
+		if ((J9ClassInitSucceeded == initStatus) || ((UDATA) vmStruct == initStatus)) {
+			expectedResult = classWrapper;
+		}
+	} else {
+   }
+
    if (reloRuntime->comp()->getSymbolValidationManager()->validateStaticClassFromCPRecord(classID, beholderID, cpIndex))
       return TR_RelocationErrorCode::relocationOK;
    else
+      {
+      TR_RelocationRuntimeLogger *reloLogger = reloRuntime->reloLogger();
+      reloLogger->printf("\tFAILING!!\n");
+      reloLogger->printf("\ttheClass: %p\n", theClass);
+      reloLogger->printf("\tbeholder: %p\n", beholder);
+      reloLogger->printf("\tclassWrapper: %p\n", classWrapper);
+      reloLogger->printf("\texpectedResult: %p\n", expectedResult);
+      reloLogger->printf("\tvmStruct: %p\n", vmStruct);
+      reloLogger->printf("\tcpIndex: %lu\n", cpIndex);
+      reloLogger->printf("\tinitStatus: %lu\n", initStatus);
       return TR_RelocationErrorCode::staticClassFromCPValidationFailure;
+      }
    }
 
 TR_RelocationErrorCode
