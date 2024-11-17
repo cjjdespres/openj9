@@ -4228,6 +4228,8 @@ TR_RelocationRecordValidateStaticClassFromCP::applyRelocation(TR_RelocationRunti
       reloLogger->printf("\tvmStruct: %p\n", vmStruct);
       reloLogger->printf("\tcpIndex: %lu\n", cpIndex);
       reloLogger->printf("\tinitStatus: %lu\n", initStatus);
+      reloLogger->printf("\tramRef->valueOffset: %lu\n", ramRefWrapper->valueOffset);
+      reloLogger->printf("\tramRef->flagsAndClass: %lu\n", ramRefWrapper->flagsAndClass);
       return TR_RelocationErrorCode::staticClassFromCPValidationFailure;
       }
    }
