@@ -81,8 +81,8 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          if (auto candidate = findCandidateForDependency(entry->_loadedClasses, needsInitialization))
             {
             if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p dep %lu %lu %d immediately satisfied by %p",
-                                              method, offset, chainOffset, needsInitialization, candidate);
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p in %p dep %lu %lu %d immediately satisfied in %p by %p",
+                                              method, methodEntry, offset, chainOffset, needsInitialization, entry, candidate);
             numberRemainingDependencies -= 1;
             }
          else
@@ -92,8 +92,8 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
                loaded = findCandidateForDependency(entry->_loadedClasses, false);
 
             if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p dep %lu %lu %d not satisfied and %p could be loaded",
-                                              method, offset, chainOffset, needsInitialization, loaded);
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p in %p dep %lu %lu %d not satisfied in %p and %p could be loaded",
+                                              method, methodEntry, offset, chainOffset, needsInitialization, entry, loaded);
             }
          }
 
@@ -239,13 +239,13 @@ TR_AOTDependencyTable::checkForSatisfaction(PersistentUnorderedSet<MethodEntryRe
       if (entry->second._remainingDependencies == 1)
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p queued by %p %d", entry->first, ramClass, checkingInit);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p in %p queued by %p %d", entry->first, entry, ramClass, checkingInit);
          _pendingLoads.insert(entry);
          }
       else
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p not queued by %p %d", entry->first, ramClass, checkingInit);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: method %p in %p not queued by %p %d %lu", entry->first, entry, ramClass, checkingInit, entry->second._remainingDependencies);
          --entry->second._remainingDependencies;
          }
       }
@@ -266,8 +266,8 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
    if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
       {
       auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class load event %.*s %p %lu %d %d",
-                                     J9UTF8_LENGTH(name), J9UTF8_DATA(name), ramClass, offset, isClassLoad, isClassInitialization);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class load event %.*s %p %lu %d %d %p",
+                                     J9UTF8_LENGTH(name), J9UTF8_DATA(name), ramClass, offset, isClassLoad, isClassInitialization, offsetEntry);
       }
 
    // Check for dependency satisfaction if this is the first class initialized
@@ -280,6 +280,8 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
          if ((J9ClassInitSucceeded == entry->initializeStatus) && (entry != ramClass))
             {
             previousInitialization = true;
+            if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class %p already initialized with %p", ramClass, entry);
             break;
             }
          }
@@ -291,7 +293,7 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
    // first class loaded for this offset
    if (isClassLoad)
       {
-      if (NULL != findCandidateForDependency(offsetEntry->_loadedClasses, false))
+      if (NULL == findCandidateForDependency(offsetEntry->_loadedClasses, false))
          checkForSatisfaction(offsetEntry->_waitingLoadMethods, ramClass, false);
       offsetEntry->_loadedClasses.insert(ramClass);
       }
