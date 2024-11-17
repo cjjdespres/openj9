@@ -477,24 +477,26 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
 void
 TR_AOTDependencyTable::resolvePendingLoads()
    {
+   static const char *countString = feGetEnv("TR_DependencyInitialCount");
+   static int targetCount = countString ? atoi(countString) : 0;
    for (auto& entry: _pendingLoads)
       {
       auto method = entry->first;
       auto originalCount = TR::CompilationInfo::getInvocationCount(method);
       auto count = originalCount;
-      while (count > 0)
+      while (count > targetCount)
          {
-         if (TR::CompilationInfo::setInvocationCount(method, count, 0))
+         if (TR::CompilationInfo::setInvocationCount(method, count, targetCount))
             {
-            count = 0; // recording success for the later log message
+            count = targetCount; // recording success for the later log message
             break;
             }
          count = TR::CompilationInfo::getInvocationCount(method);
          }
 
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu",
-                                        (count == 0) ? "success" : "failure", entry->first, originalCount, count);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: pending load %s method %p old count %lu new count %lu target %lu",
+                                        (count == targetCount) ? "success" : "failure", entry->first, originalCount, count, targetCount);
       stopTracking(entry);
       }
    _pendingLoads.clear();
