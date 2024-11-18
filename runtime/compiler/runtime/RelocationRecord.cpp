@@ -4228,6 +4228,7 @@ TR_RelocationRecordValidateStaticClassFromCP::applyRelocation(TR_RelocationRunti
       reloLogger->printf("\tvmStruct: %p\n", vmStruct);
       reloLogger->printf("\tcpIndex: %lu\n", cpIndex);
       reloLogger->printf("\tinitStatus: %lu\n", initStatus);
+      reloLogger->printf("\tramRef: %p\n", ramRefWrapper);
       reloLogger->printf("\tramRef->valueOffset: %lu\n", ramRefWrapper->valueOffset);
       reloLogger->printf("\tramRef->flagsAndClass: %lu\n", ramRefWrapper->flagsAndClass);
       return TR_RelocationErrorCode::staticClassFromCPValidationFailure;
@@ -4488,9 +4489,27 @@ TR_RelocationRecordValidateDeclaringClassFromFieldOrStatic::applyRelocation(TR_R
    uint16_t classID = this->classID(reloTarget);
    uint16_t beholderID = this->beholderID(reloTarget);
    uint32_t cpIndex = this->cpIndex(reloTarget);
+   auto reloLogger = reloRuntime->reloLogger();
+
+   auto svm = reloRuntime->comp()->getSymbolValidationManager();
+   J9Class *beholder = svm->getJ9ClassFromID(beholderID);
+   J9ROMClass *beholderRomClass = beholder->romClass;
+   J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+
+	auto ramClassRefWrapper = (J9RAMClassRef *)&beholderCP[cpIndex];
+
+   reloLogger->printf("\tbeholderCP %p\n", beholderCP);
+   reloLogger->printf("\tramClassRefWrapper %p\n", ramClassRefWrapper);
+   reloLogger->printf("\tramClassRefWrapper->value %p\n", ramClassRefWrapper->value);
+   reloLogger->printf("\tramClassRefWrapper->modifiers %lu\n", ramClassRefWrapper->modifiers);
+   // reloLogger->printf("\tramClassRefWrapper->field %p\n", ramClassRefWrapper->field);
 
    if (reloRuntime->comp()->getSymbolValidationManager()->validateDeclaringClassFromFieldOrStaticRecord(classID, beholderID, cpIndex))
+      {
+      reloLogger->printf("\tramClassRefWrapper->value %p\n", ramClassRefWrapper->value);
+      reloLogger->printf("\tramClassRefWrapper->modifiers %lu\n", ramClassRefWrapper->modifiers);
       return TR_RelocationErrorCode::relocationOK;
+      }
    else
       return TR_RelocationErrorCode::declaringClassFromFieldOrStaticValidationFailure;
    }
