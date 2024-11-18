@@ -1284,6 +1284,10 @@ TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID,
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+
+   auto vmThread = _comp->j9VMThread();
+   auto vm = vmThread->javaVM;
+   vm->internalVMFunctions->resolveClassRef(vmThread, beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
    return validateSymbol(classID, TR_ResolvedJ9Method::definingClassFromCPFieldRef(_comp, beholderCP, cpIndex, isStatic));
    }
 
