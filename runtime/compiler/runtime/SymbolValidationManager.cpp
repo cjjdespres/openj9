@@ -1370,6 +1370,8 @@ TR::SymbolValidationManager::validateDeclaringClassFromFieldOrStaticRecord(uint1
    J9Class *definingClass = NULL;
    J9Class *cpClass = (J9Class*)TR_ResolvedJ9Method::getClassFromCP(_fej9, beholderCP, _comp, classCPIndexOfFieldOrStatic);
 
+   bool caseIsRelevant = ((cpIndex != classCPIndexOfFieldOrStatic) || ((definingClassID == 40) && (beholderID == 30) && (cpIndex == 170))) &&
+                         TR::Options::getVerboseOption(TR_VerboseJITServerConns);
    if (cpClass)
       {
       TR::VMAccessCriticalSection getDeclaringClassFromFieldOrStatic(_fej9);
@@ -1390,9 +1392,15 @@ TR::SymbolValidationManager::validateDeclaringClassFromFieldOrStaticRecord(uint1
          &definingClass,
          NULL,
          J9_LOOK_NO_JAVA);
+
+      if (caseIsRelevant)
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Relevant! %lu %lu %p %p %p %p", cpIndex, classCPIndexOfFieldOrStatic, beholder, beholderCP, cpClass, definingClass);
       }
    else
       {
+      if (caseIsRelevant)
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Relevant! %lu %lu %p %p %p %p", cpIndex, classCPIndexOfFieldOrStatic, beholder, beholderCP, cpClass, definingClass);
+
       return false;
       }
 
