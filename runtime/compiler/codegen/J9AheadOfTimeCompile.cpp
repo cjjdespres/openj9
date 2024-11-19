@@ -823,6 +823,7 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          dcpRecord->setIsStatic(reloTarget, svmRecord->_isStatic);
          dcpRecord->setClassID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_class));
          dcpRecord->setBeholderID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_beholder));
+         dcpRecord->setMethodID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_method));
          dcpRecord->setCpIndex(reloTarget, svmRecord->_cpIndex);
          }
          break;

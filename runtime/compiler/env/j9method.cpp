@@ -1506,7 +1506,8 @@ TR_ResolvedRelocatableJ9Method::fieldAttributes(TR::Compilation * comp, int32_t 
                {
                TR_OpaqueClassBlock *clazz = TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, false);
 
-               fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, ramMethod());
+               fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addMethodFromClassRecord((TR_OpaqueMethodBlock *)ramMethod(), clazz, cpIndex);
+               fieldInfoCanBeUsed = fieldInfoCanBeUsed && comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, ramMethod());
                }
             else
                {
@@ -1622,7 +1623,8 @@ TR_ResolvedRelocatableJ9Method::staticAttributes(TR::Compilation * comp,
          {
          TR_OpaqueClassBlock *clazz = TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, true);
 
-         fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, ramMethod(), true);
+         fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addMethodFromClassRecord((TR_OpaqueMethodBlock *)ramMethod(), clazz, cpIndex);
+         fieldInfoCanBeUsed = fieldInfoCanBeUsed && comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, ramMethod(), true);
          }
       else
          {
@@ -1692,7 +1694,10 @@ TR_ResolvedRelocatableJ9Method::definingClassFromCPFieldRef(
 
    bool valid = false;
    if (comp->getOption(TR_UseSymbolValidationManager))
-      valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz , cp(), cpIndex, ramMethod(), isStatic);
+      {
+      valid = comp->getSymbolValidationManager()->addMethodFromClassRecord((TR_OpaqueMethodBlock *)ramMethod(), clazz, cpIndex);
+      valid = valid && comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz , cp(), cpIndex, ramMethod(), isStatic);
+      }
    else
       valid = storeValidationRecordIfNecessary(comp, cp(), cpIndex, isStatic ? TR_ValidateStaticField : TR_ValidateInstanceField, ramMethod());
 

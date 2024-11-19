@@ -4123,9 +4123,10 @@ TR_RelocationRecordValidateDefiningClassFromCP::applyRelocation(TR_RelocationRun
    uint16_t classID = this->classID(reloTarget);
    uint16_t beholderID = this->beholderID(reloTarget);
    uint32_t cpIndex = this->cpIndex(reloTarget);
+   uint16_t methodID = this->methodID(reloTarget);
    bool isStatic = this->isStatic(reloTarget);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateDefiningClassFromCPRecord(classID, beholderID, cpIndex, isStatic))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateDefiningClassFromCPRecord(classID, beholderID, cpIndex, methodID, isStatic))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::definingClassFromCPValidationFailure;
