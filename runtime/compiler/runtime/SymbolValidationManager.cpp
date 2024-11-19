@@ -1284,7 +1284,6 @@ TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID,
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
-   J9ROMFieldShape *fieldShape = NULL;
 
    return validateSymbol(classID, TR_ResolvedJ9Method::definingClassFromCPFieldRef(_comp, beholderCP, cpIndex, isStatic));
    }

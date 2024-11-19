@@ -241,7 +241,6 @@ struct TR_RelocationRecordValidateDefiningClassFromCPBinaryTemplate : public TR_
    uint16_t _classID;
    uint16_t _beholderID;
    uint32_t _cpIndex;
-   uint16_t _methodID;
    };
 
 struct TR_RelocationRecordValidateArrayFromCompBinaryTemplate : public TR_RelocationRecordBinaryTemplate
