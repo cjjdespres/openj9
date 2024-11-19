@@ -3892,10 +3892,11 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
                                                          classLoader, reloRuntime->comp());
       }
 
+   // TODO: this is slightly dubious, but perhaps no more dubious than the non-dependency-table way
    if (!clazz)
       {
       if (auto dependencyTable = TR::CompilationInfo::get()->getPersistentInfo()->getAOTDependencyTable())
-         clazz = dependencyTable->findCandidateFromChainOffset(reloRuntime->comp(), classChainIdentifyingLoaderOffset(reloTarget));
+         clazz = dependencyTable->findCandidateFromChainOffset(reloRuntime->comp(), classChainOffsetForClassBeingValidated(reloTarget));
       }
 
    RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: clazz %p\n", clazz);
