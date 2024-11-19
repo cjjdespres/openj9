@@ -1284,9 +1284,18 @@ TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID,
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
-   J9Method *method = getJ9MethodFromID(methodID);
 
    J9ROMFieldShape * fieldShape = 0;
+   J9Method *method;
+   uint32_t methodIndex = ((J9ROMFieldRef *)&beholderCP->romConstantPool[cpIndex])->classRefCPIndex;
+      {
+      TR::VMAccessCriticalSection getResolvedMethods(_fej9); // Prevent HCR
+      J9Method *methods = static_cast<J9Method *>(_fej9->getMethods((TR_OpaqueClassBlock *)beholder));
+      uint32_t numMethods = _fej9->getNumMethods((TR_OpaqueClassBlock *)beholder);
+      SVM_ASSERT(methodIndex < numMethods, "Index is not within the bounds of the ramMethods array");
+      method = &(methods[methodIndex]);
+      }
+
    jitCTResolveInstanceFieldRefWithMethod(_fej9->vmThread(), method, cpIndex, false, &fieldShape);
    return validateSymbol(classID, TR_ResolvedJ9Method::definingClassFromCPFieldRef(_comp, beholderCP, cpIndex, isStatic));
    }

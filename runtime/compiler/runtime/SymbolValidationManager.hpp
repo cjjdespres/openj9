@@ -842,7 +842,7 @@ public:
    bool validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain);
    bool validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader, void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated);
    bool validateClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
-   bool validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, uint16_t methodID, bool isStatic);
+   bool validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, bool isStatic);
    bool validateStaticClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
    bool validateArrayClassFromComponentClassRecord(uint16_t arrayClassID, uint16_t componentClassID);
    bool validateSuperClassFromClassRecord(uint16_t superClassID, uint16_t childClassID);
