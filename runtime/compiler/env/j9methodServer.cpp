@@ -2260,7 +2260,7 @@ TR_ResolvedRelocatableJ9JITServerMethod::definingClassFromCPFieldRef(TR::Compila
       {
       bool valid = false;
       if (comp->getOption(TR_UseSymbolValidationManager))
-         valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(resolvedClass, cp(), cpIndex, ramMethod(), isStatic);
+         valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(resolvedClass, cp(), cpIndex, isStatic);
       else
          valid = storeValidationRecordIfNecessary(comp, cp(), cpIndex, isStatic ? TR_ValidateStaticField : TR_ValidateInstanceField, ramMethod());
 
@@ -2514,8 +2514,7 @@ TR_ResolvedRelocatableJ9JITServerMethod::fieldAttributes(TR::Compilation * comp,
          {
          if (comp->getOption(TR_UseSymbolValidationManager))
             {
-            fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(reinterpret_cast<TR_OpaqueClassBlock *> (definingClass),
-                                                                                                  constantPool, cpIndex, ramMethod());
+            fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(reinterpret_cast<TR_OpaqueClassBlock *> (definingClass), constantPool, cpIndex);
             }
          else
             {
@@ -2596,8 +2595,7 @@ TR_ResolvedRelocatableJ9JITServerMethod::staticAttributes(TR::Compilation * comp
          {
          if (comp->getOption(TR_UseSymbolValidationManager))
             {
-            fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(reinterpret_cast<TR_OpaqueClassBlock *> (definingClass), constantPool,
-                                                                                                  cpIndex, ramMethod(), true);
+            fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(reinterpret_cast<TR_OpaqueClassBlock *> (definingClass), constantPool, cpIndex, true);
             }
          else
             {

@@ -1237,9 +1237,6 @@ class TR_RelocationRecordValidateDefiningClassFromCP : public TR_RelocationRecor
 
       void setCpIndex(TR_RelocationTarget *reloTarget, uint32_t cpIndex);
       uint32_t cpIndex(TR_RelocationTarget *reloTarget);
-
-      void setMethodID(TR_RelocationTarget *reloTarget, uint16_t methodID);
-      uint16_t methodID(TR_RelocationTarget *reloTarget);
    };
 
 class TR_RelocationRecordValidateStaticClassFromCP : public TR_RelocationRecordValidateClassFromCP

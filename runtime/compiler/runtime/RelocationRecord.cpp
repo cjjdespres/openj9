@@ -4124,10 +4124,9 @@ TR_RelocationRecordValidateDefiningClassFromCP::applyRelocation(TR_RelocationRun
    uint16_t classID = this->classID(reloTarget);
    uint16_t beholderID = this->beholderID(reloTarget);
    uint32_t cpIndex = this->cpIndex(reloTarget);
-   uint16_t methodID = this->methodID(reloTarget);
    bool isStatic = this->isStatic(reloTarget);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateDefiningClassFromCPRecord(classID, beholderID, cpIndex, methodID, isStatic))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateDefiningClassFromCPRecord(classID, beholderID, cpIndex, isStatic))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::definingClassFromCPValidationFailure;
@@ -4192,19 +4191,6 @@ TR_RelocationRecordValidateDefiningClassFromCP::cpIndex(TR_RelocationTarget *rel
    {
    return reloTarget->loadUnsigned32b((uint8_t *) &((TR_RelocationRecordValidateDefiningClassFromCPBinaryTemplate *)_record)->_cpIndex);
    }
-
-void
-TR_RelocationRecordValidateDefiningClassFromCP::setMethodID(TR_RelocationTarget *reloTarget, uint16_t methodID)
-   {
-   reloTarget->storeUnsigned16b(methodID, (uint8_t *) &((TR_RelocationRecordValidateDefiningClassFromCPBinaryTemplate *)_record)->_methodID);
-   }
-
-uint16_t
-TR_RelocationRecordValidateDefiningClassFromCP::methodID(TR_RelocationTarget *reloTarget)
-   {
-   return reloTarget->loadUnsigned16b((uint8_t *) &((TR_RelocationRecordValidateDefiningClassFromCPBinaryTemplate *)_record)->_methodID);
-   }
-
 
 TR_RelocationErrorCode
 TR_RelocationRecordValidateStaticClassFromCP::applyRelocation(TR_RelocationRuntime *reloRuntime, TR_RelocationTarget *reloTarget, uint8_t *reloLocation)

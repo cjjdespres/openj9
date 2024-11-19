@@ -241,12 +241,11 @@ struct ClassFromCPRecord : public ClassValidationRecord
 
 struct DefiningClassFromCPRecord : public ClassValidationRecord
    {
-   DefiningClassFromCPRecord(TR_OpaqueClassBlock *clazz, TR_OpaqueClassBlock *beholder, uint32_t cpIndex, TR_OpaqueMethodBlock *method, bool isStatic)
+   DefiningClassFromCPRecord(TR_OpaqueClassBlock *clazz, TR_OpaqueClassBlock *beholder, uint32_t cpIndex, bool isStatic)
       : ClassValidationRecord(TR_ValidateDefiningClassFromCP),
         _class(clazz),
         _beholder(beholder),
         _cpIndex(cpIndex),
-        _method(method),
         _isStatic(isStatic)
       {}
 
@@ -256,7 +255,6 @@ struct DefiningClassFromCPRecord : public ClassValidationRecord
    TR_OpaqueClassBlock * _class;
    TR_OpaqueClassBlock * _beholder;
    uint32_t  _cpIndex;
-   TR_OpaqueMethodBlock *_method;
    bool      _isStatic;
    };
 
@@ -798,7 +796,7 @@ public:
    bool addClassByNameRecord(TR_OpaqueClassBlock *clazz, TR_OpaqueClassBlock *beholder);
    bool addProfiledClassRecord(TR_OpaqueClassBlock *clazz);
    bool addClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9ConstantPool *constantPoolOfBeholder, uint32_t cpIndex);
-   bool addDefiningClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9ConstantPool *constantPoolOfBeholder, uint32_t cpIndex, J9Method *method, bool isStatic = false);
+   bool addDefiningClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9ConstantPool *constantPoolOfBeholder, uint32_t cpIndex, bool isStatic = false);
    bool addStaticClassFromCPRecord(TR_OpaqueClassBlock *clazz, J9ConstantPool *constantPoolOfBeholder, uint32_t cpIndex);
    bool addArrayClassFromComponentClassRecord(TR_OpaqueClassBlock *arrayClass, TR_OpaqueClassBlock *componentClass);
    bool addSuperClassFromClassRecord(TR_OpaqueClassBlock *superClass, TR_OpaqueClassBlock *childClass);
@@ -842,7 +840,7 @@ public:
    bool validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain);
    bool validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader, void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated);
    bool validateClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
-   bool validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, uint16_t methodID, bool isStatic);
+   bool validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, bool isStatic);
    bool validateStaticClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
    bool validateArrayClassFromComponentClassRecord(uint16_t arrayClassID, uint16_t componentClassID);
    bool validateSuperClassFromClassRecord(uint16_t superClassID, uint16_t childClassID);

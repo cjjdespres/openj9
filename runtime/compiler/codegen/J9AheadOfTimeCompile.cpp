@@ -823,7 +823,6 @@ J9::AheadOfTimeCompile::initializeCommonAOTRelocationHeader(TR::IteratedExternal
          dcpRecord->setIsStatic(reloTarget, svmRecord->_isStatic);
          dcpRecord->setClassID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_class));
          dcpRecord->setBeholderID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_beholder));
-         dcpRecord->setMethodID(reloTarget, symValManager->getSymbolIDFromValue(svmRecord->_method));
          dcpRecord->setCpIndex(reloTarget, svmRecord->_cpIndex);
          }
          break;
@@ -1884,7 +1883,6 @@ J9::AheadOfTimeCompile::dumpRelocationHeaderData(uint8_t *cursor, bool isVerbose
                                       (uint32_t)dcpRecord->classID(reloTarget),
                                       (uint32_t)dcpRecord->beholderID(reloTarget),
                                       dcpRecord->cpIndex(reloTarget),
-                                      dcpRecord->methodID(reloTarget),
                                       dcpRecord->isStatic(reloTarget) ? "true" : "false");
             }
          }

@@ -1622,7 +1622,7 @@ TR_ResolvedRelocatableJ9Method::staticAttributes(TR::Compilation * comp,
          {
          TR_OpaqueClassBlock *clazz = TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, true);
 
-         fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, ramMethod(), true);
+         fieldInfoCanBeUsed = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz, constantPool, cpIndex, true);
          }
       else
          {
@@ -1692,7 +1692,7 @@ TR_ResolvedRelocatableJ9Method::definingClassFromCPFieldRef(
 
    bool valid = false;
    if (comp->getOption(TR_UseSymbolValidationManager))
-      valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz , cp(), cpIndex, ramMethod(), isStatic);
+      valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(clazz , cp(), cpIndex, isStatic);
    else
       valid = storeValidationRecordIfNecessary(comp, cp(), cpIndex, isStatic ? TR_ValidateStaticField : TR_ValidateInstanceField, ramMethod());
 
