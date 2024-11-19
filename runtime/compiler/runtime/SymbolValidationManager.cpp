@@ -1280,7 +1280,7 @@ TR::SymbolValidationManager::validateClassFromCPRecord(uint16_t classID,  uint16
    }
 
 bool
-TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, uint16_t methodID, bool isStatic)
+TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, bool isStatic)
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
