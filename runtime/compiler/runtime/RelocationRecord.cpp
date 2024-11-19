@@ -1708,6 +1708,11 @@ TR_RelocationRecordConstantPoolWithIndex::getStaticMethodFromCP(TR_RelocationRun
    J9ConstantPool *cp = (J9ConstantPool *) void_cp;
    TR_RelocationRuntimeLogger *reloLogger = reloRuntime->reloLogger();
 
+      {
+      TR::VMAccessCriticalSection getInterfaceMethodFromCP(reloRuntime->fej9());
+      javaVM->internalVMFunctions->resolveClassRef(reloRuntime->currentThread(), cp, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
+      }
+
    TR_OpaqueMethodBlock *method = (TR_OpaqueMethodBlock *) jitResolveStaticMethodRef(javaVM->internalVMFunctions->currentVMThread(javaVM),
                                                                                      cp,
                                                                                      cpIndex,
