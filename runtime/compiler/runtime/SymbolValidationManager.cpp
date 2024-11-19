@@ -1295,7 +1295,10 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
 
    if (cpIndex >= 0)
+      {
+      TR::VMAccessCriticalSection validateStaticClass(_fej9);
       _fej9->_vmFunctionTable->resolveClassRef(_fej9->vmThread(), beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
+      }
    return validateSymbol(classID, TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex));
    }
 
