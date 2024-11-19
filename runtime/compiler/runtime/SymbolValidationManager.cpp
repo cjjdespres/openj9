@@ -1284,9 +1284,9 @@ TR::SymbolValidationManager::validateDefiningClassFromCPRecord(uint16_t classID,
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
-   J9Method *method = getJ9MethodFromID(methodID);
+   // J9Method *method = getJ9MethodFromID(methodID);
    J9ROMFieldShape *fieldShape = NULL;
-   jitCTResolveInstanceFieldRefWithMethod(_fej9->vmThread(), method, cpIndex, false, &fieldShape);
+   // jitCTResolveInstanceFieldRefWithMethod(_fej9->vmThread(), method, cpIndex, false, &fieldShape);
 
    return validateSymbol(classID, TR_ResolvedJ9Method::definingClassFromCPFieldRef(_comp, beholderCP, cpIndex, isStatic));
    }
@@ -1296,6 +1296,9 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+
+   if (cpIndex >= 0)
+      _fej9->_vmFunctionTable->resolveClassRef(_fej9->vmThread(), beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
    return validateSymbol(classID, TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex));
    }
 
