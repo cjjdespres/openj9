@@ -1880,10 +1880,11 @@ J9::AheadOfTimeCompile::dumpRelocationHeaderData(uint8_t *cursor, bool isVerbose
          self()->traceRelocationOffsets(startOfOffsets, offsetSize, endOfCurrentRecord, orderedPair);
          if (isVerbose)
             {
-            traceMsg(self()->comp(), "\n Validate Defining Class From CP: classID=%d, beholderID=%d, cpIndex=%d, isStatic=%s ",
+            traceMsg(self()->comp(), "\n Validate Defining Class From CP: classID=%d, beholderID=%d, cpIndex=%d, method=%d, isStatic=%s ",
                                       (uint32_t)dcpRecord->classID(reloTarget),
                                       (uint32_t)dcpRecord->beholderID(reloTarget),
                                       dcpRecord->cpIndex(reloTarget),
+                                      dcpRecord->methodID(reloTarget),
                                       dcpRecord->isStatic(reloTarget) ? "true" : "false");
             }
          }
