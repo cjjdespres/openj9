@@ -123,9 +123,7 @@ public:
    // J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t classChainOffset);
 
    // Return an initialized class with a valid class chain at classChainOffset,
-   // and a class loader whose first-loaded class has the given
-   // classLoaderChain. This provides a little extra validation in non-SVM AOT
-   // relocations, but is unnecessary in SVM relocations.
+   // and a class loader whose first-loaded class has the given classLoaderChain
    J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain);
 
    static uintptr_t decodeDependencyOffset(uintptr_t offset)
