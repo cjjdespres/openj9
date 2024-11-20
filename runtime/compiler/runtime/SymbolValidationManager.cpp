@@ -1257,17 +1257,19 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
                                                          void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated)
    {
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
-   if (classLoader == NULL)
-      return false;
+   TR_OpaqueClassBlock *clazz = NULL;
 
-   TR_OpaqueClassBlock *clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(
-      static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp
-   );
+   if (classLoader)
+      clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(
+         static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp
+      );
+
    if (!clazz)
       {
       if (auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable())
-         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChain(_comp, classChainOffsetForClassBeingValidated);
+         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
       }
+
    return validateSymbol(classID, clazz);
    }
 

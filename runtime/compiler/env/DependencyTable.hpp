@@ -120,7 +120,7 @@ public:
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass);
 
    // Return an initialized class with a valid class chain at classChainOffset
-   J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t classChainOffset);
+   // J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t classChainOffset);
 
    // Return an initialized class with a valid class chain at classChainOffset,
    // and a class loader whose first-loaded class has the given
