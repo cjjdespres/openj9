@@ -1641,12 +1641,14 @@ J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClas
    if (totalDependencies == 0)
       return totalDependencies;
 
+   static bool everythingIsLoad = feGetEnv("TR_DependencyTableAllLoads") != NULL;
+
    dependencyBuffer.reserve(totalDependencies + 1);
    dependencyBuffer.push_back(totalDependencies);
    for (auto &entry : _aotMethodDependencies)
       {
       // TODO: use TR_AOTDependencyTable::encodeDependencyOffset
-      uintptr_t encodedOffset = entry.second ? entry.first : (entry.first & ~1);
+      uintptr_t encodedOffset = (entry.second || everythingIsLoad) ? entry.first : (entry.first & ~1);
       dependencyBuffer.push_back(encodedOffset);
       }
 
