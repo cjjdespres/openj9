@@ -36,7 +36,7 @@ class TR_AOTDependencyTable
 public:
    bool trackMethod(J9VMThread *vmThread, J9Method *method, J9ROMMethod *romMethod, bool &dependenciesSatisfied) { return false; }
    void methodIsBeingCompiled(J9Method *method) {}
-   void classLoadEvent(TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization) {}
+   void classLoadEvent(TR_PersistentCHTable *chTable, TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization) {}
    void invalidateUnloadedClass(TR_OpaqueClassBlock *ramClass) {}
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass) {}
    J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t chainOffset) { return NULL; }
@@ -109,7 +109,7 @@ public:
    void methodWillBeCompiled(J9Method *method);
 
    // Update the table in response to a class load or initialization event.
-   void classLoadEvent(TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization);
+   void classLoadEvent(TR_PersistentCHTable *chTable, TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization);
 
    // Invalidate an unloaded class. Will invalidate the MethodEntryRef for every
    // RAM method of ramClass.
@@ -153,7 +153,7 @@ private:
    // Register a class load event for ramClass at offset. If any methods had
    // their dependencies satisfied by this event, they will be added to
    // methodsToQueue.
-   void classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization);
+   void classLoadEventAtOffset(TR_PersistentCHTable *chTable, J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization);
 
    // Invalidate a class with a particular ROM class offset. Returns false if
    // the class wasn't tracked. If pendingMethodQueue is not NULL, we will also
@@ -167,7 +167,7 @@ private:
    // method entry pointers are not collected in _pendingLoads.
    void invalidateMethodsOfClass(J9Class *ramClass);
 
-   void recheckSubclass(J9Class *ramClass, uintptr_t offset, bool shouldRevalidate);
+   void recheckSubclass(TR_PersistentCHTable *chTable, J9Class *ramClass, uintptr_t offset, bool shouldRevalidate);
 
    // Get the OffsetEntry corresponding to offset. If create is true this will
    // never return a NULL entry (but it may throw).

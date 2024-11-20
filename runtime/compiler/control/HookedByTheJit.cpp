@@ -3224,6 +3224,14 @@ static bool updateCHTable(J9VMThread * vmThread, J9Class  * cl)
             }
          }
       }
+   static bool earlyInitTrigger = feGetEnv("TR_DependencyTableEarlyInitEvent") != NULL;
+   if (earlyInitTrigger && !updateFailed)
+      {
+      if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
+         {
+         dependencyTable->classLoadEvent(table, clazz, false, true);
+         }
+      }
    }
    // method override
    if(!TR::Options::getCmdLineOptions()->getOption(TR_DisableNewMethodOverride))
@@ -3829,6 +3837,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
 
    if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
       {
+      auto table = compInfo->getPersistentInfo()->getPersistentCHTable();
       getClassNameIfNecessary(vm, clazz, className, classNameLen);
       // These two classes and java/lang/J9VMInternals$ClassInitializationLock are
       // the only ones that are marked initialized without going through the normal
@@ -3837,7 +3846,7 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
       // initialization.
       bool isClassInitialization = (classNameLen == 17 && !memcmp(className, "com/ibm/oti/vm/VM", classNameLen)) ||
                                    (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen));
-      dependencyTable->classLoadEvent(clazz, true, isClassInitialization);
+      dependencyTable->classLoadEvent(table, clazz, true, isClassInitialization);
       }
 
    // Update the count for the newInstance
@@ -3996,9 +4005,13 @@ static void jitHookClassInitialize(J9HookInterface * * hookInterface, UDATA even
    if (jitConfig == 0)
       return; // if a hook gets called after freeJitConfig then not much else we can do
 
-   TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
-   if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
-      dependencyTable->classLoadEvent((TR_OpaqueClassBlock *)cl, false, true);
+   static bool earlyInitTrigger = feGetEnv("TR_DependencyTableEarlyInitEvent") != NULL;
+   if (!earlyInitTrigger)
+      {
+      TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
+      if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
+         dependencyTable->classLoadEvent(NULL, (TR_OpaqueClassBlock *)cl, false, true);
+      }
 
    loadingClasses = false;
    }

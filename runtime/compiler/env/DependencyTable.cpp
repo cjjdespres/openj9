@@ -26,6 +26,8 @@
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCHTable.hpp"
+#include "env/jittypes.h"
+#include "j9nonbuilder.h"
 
 #if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
 
@@ -176,7 +178,7 @@ TR_AOTDependencyTable::eraseOffsetEntryIfEmpty(const OffsetEntry &entry, uintptr
    }
 
 void
-TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLoad, bool isClassInitialization)
+TR_AOTDependencyTable::classLoadEvent(TR_PersistentCHTable *chTable, TR_OpaqueClassBlock *clazz, bool isClassLoad, bool isClassInitialization)
    {
    auto ramClass = (J9Class *)clazz;
 
@@ -195,7 +197,7 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
 
    try
       {
-      classLoadEventAtOffset(ramClass, classOffset, isClassLoad, isClassInitialization);
+      classLoadEventAtOffset(chTable, ramClass, classOffset, isClassLoad, isClassInitialization);
       }
    catch (std::exception&)
       {
@@ -219,8 +221,10 @@ TR_AOTDependencyTable::registerSatisfaction(PersistentUnorderedSet<MethodEntryRe
    }
 
 void
-TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization)
+TR_AOTDependencyTable::classLoadEventAtOffset(TR_PersistentCHTable *chTable, J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization)
    {
+   static bool earlyInitTrigger = feGetEnv("TR_DependencyTableEarlyInitEvent") != NULL;
+
    auto offsetEntry = getOffsetEntry(offset, isClassLoad);
 
    // We only need to check for chain validity on load, because for
@@ -243,20 +247,38 @@ TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offse
    // for this offset.
    if (isClassInitialization)
       {
-      // TODO: need to confirm that ramClass->initializeStatus will never itself
-      // be J9ClassInitSucceeded, in which case the loop below can be replaced
-      // with !findCandidateForDependency()
-      bool existingInit = false;
-      for (const auto& entry: offsetEntry->_loadedClasses)
+      if (earlyInitTrigger)
          {
-         if ((J9ClassInitSucceeded == entry->initializeStatus) && (entry != ramClass))
+         bool existingInit = false;
+         for (const auto& entry: offsetEntry->_loadedClasses)
             {
-            existingInit = true;
-            break;
+            auto classInfo = chTable->findClassInfo((TR_OpaqueClassBlock *)ramClass);
+            if ((entry != ramClass) && classInfo->isInitialized(false))
+               {
+               existingInit = true;
+               break;
+               }
             }
+         if (!existingInit)
+            registerSatisfaction(offsetEntry->_waitingInitMethods);
          }
-      if (!existingInit)
-         registerSatisfaction(offsetEntry->_waitingInitMethods);
+      else
+         {
+         // TODO: need to confirm that ramClass->initializeStatus will never itself
+         // be J9ClassInitSucceeded, in which case the loop below can be replaced
+         // with !findCandidateForDependency()
+         bool existingInit = false;
+         for (const auto& entry: offsetEntry->_loadedClasses)
+            {
+            if ((J9ClassInitSucceeded == entry->initializeStatus) && (entry != ramClass))
+               {
+               existingInit = true;
+               break;
+               }
+            }
+         if (!existingInit)
+            registerSatisfaction(offsetEntry->_waitingInitMethods);
+         }
       }
 
    // Track the class, and also check for dependency satisfaction if this is the
@@ -354,7 +376,7 @@ TR_AOTDependencyTable::invalidateMethodsOfClass(J9Class *ramClass)
 // If an entry exists for a class, remove it. Otherwise, if we should
 // revalidate, add an entry if the class has a valid chain.
 void
-TR_AOTDependencyTable::recheckSubclass(J9Class *ramClass, uintptr_t offset, bool shouldRevalidate)
+TR_AOTDependencyTable::recheckSubclass(TR_PersistentCHTable *chTable, J9Class *ramClass, uintptr_t offset, bool shouldRevalidate)
    {
    if (invalidateClassAtOffset(ramClass, offset))
       return;
@@ -362,7 +384,7 @@ TR_AOTDependencyTable::recheckSubclass(J9Class *ramClass, uintptr_t offset, bool
    if (shouldRevalidate && _sharedCache->classMatchesCachedVersion(ramClass, NULL))
       {
       bool initialized = J9ClassInitSucceeded == ramClass->initializeStatus;
-      classLoadEventAtOffset(ramClass, offset, true, initialized);
+      classLoadEventAtOffset(chTable, ramClass, offset, true, initialized);
       }
    }
 
@@ -395,7 +417,7 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
             invalidateMethodsOfClass((J9Class *)oldClass);
             auto freshRamClass = (J9Class *)freshClass;
             bool initialized = J9ClassInitSucceeded == freshRamClass->initializeStatus;
-            classLoadEventAtOffset(freshRamClass, freshClassOffset, true, initialized);
+            classLoadEventAtOffset(table, freshRamClass, freshClassOffset, true, initialized);
             }
          }
       catch (std::exception&)
@@ -431,7 +453,7 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
          uintptr_t offset = TR_SharedCache::INVALID_ROM_CLASS_OFFSET;
          if (!_sharedCache->isClassInSharedCache(clazz, &offset))
             continue;
-         recheckSubclass(clazz, offset, revalidateUntrackedClasses);
+         recheckSubclass(table, clazz, offset, revalidateUntrackedClasses);
          }
       }
    catch (std::exception&)
