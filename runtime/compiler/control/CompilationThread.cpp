@@ -4982,6 +4982,9 @@ TR::CompilationInfo::addMethodToBeCompiled(TR::IlGeneratorMethodDetails & detail
    //
    else
       {
+      if (auto dependencyTable = getPersistentInfo()->getAOTDependencyTable())
+         dependencyTable->methodWillBeCompiled(method);
+
       // If we skipped searching, we cannot do the validation checks
       if (!skipSearchingForDuplicates)
          {
