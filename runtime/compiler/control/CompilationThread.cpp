@@ -6803,6 +6803,11 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       reloRuntime()->initializeHWProfilerRecords(compiler);
       }
 
+   // If method is being compiled, then the dependency table no longer needs to
+   // track it. Let the table know.
+   if (auto dependencyTable = _compInfo.getPersistentInfo()->getAOTDependencyTable())
+      dependencyTable->methodWillBeCompiled(method);
+
    metaData = reloRuntime()->prepareRelocateAOTCodeAndData(vmThread,
                                                            fe,
                                                            aotMCCRuntimeCodeCache,
