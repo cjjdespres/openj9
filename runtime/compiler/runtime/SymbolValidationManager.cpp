@@ -1266,7 +1266,7 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    if (!clazz)
       {
       if (auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable())
-         clazz = dependencyTable->findCandidateFromChainOffset(_comp, classChainOffsetForClassBeingValidated);
+         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChain(_comp, classChainOffsetForClassBeingValidated);
       }
    return validateSymbol(classID, clazz);
    }

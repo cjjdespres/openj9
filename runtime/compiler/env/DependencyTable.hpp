@@ -39,7 +39,8 @@ public:
    void classLoadEvent(TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization) {}
    void invalidateUnloadedClass(TR_OpaqueClassBlock *ramClass) {}
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass) {}
-   TR_OpaqueClassBlock *findClassCandidate(uintptr_t offset) { return NULL; }
+   J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t chainOffset) { return NULL; }
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain) { return NULL; }
    void methodWillBeCompiled(J9Method *method) {}
    };
 
@@ -117,9 +118,14 @@ public:
    // RAM method of ramClass.
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass);
 
-   // Given a class chain offset in the local SCC, return an initialized class
-   // with a valid class chain starting with that offset.
-   TR_OpaqueClassBlock *findCandidateFromChainOffset(TR::Compilation *comp, uintptr_t chainOffset);
+   // Return an initialized class with a valid class chain at classChainOffset
+   J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t classChainOffset);
+
+   // Return an initialized class with a valid class chain at classChainOffset,
+   // and a class loader whose first-loaded class has the given
+   // classLoaderChain. This provides a little extra validation in non-SVM AOT
+   // relocations, but is unnecessary in SVM relocations.
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain);
 
    static uintptr_t decodeDependencyOffset(uintptr_t offset)
       {

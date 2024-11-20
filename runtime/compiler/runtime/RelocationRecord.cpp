@@ -3381,8 +3381,8 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
          // already know it has a valid chain, so we can skip some later chain
          // lookups/validation. This applies to other dependency table lookups.
          if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
-            inlinedCodeClass = dependencyTable->findCandidateFromChainOffset(reloRuntime->comp(), classChainForInlinedMethod(reloTarget));
-         }
+            inlinedCodeClass = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
+            }
       }
 
    if (inlinedCodeClass && checkInlinedClassValidity(reloRuntime, inlinedCodeClass))
@@ -3896,11 +3896,10 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
                                                          classLoader, reloRuntime->comp());
       }
 
-   // TODO: this is slightly dubious, but perhaps no more dubious than the non-dependency-table way
    if (!clazz)
       {
       if (auto dependencyTable = TR::CompilationInfo::get()->getPersistentInfo()->getAOTDependencyTable())
-         clazz = dependencyTable->findCandidateFromChainOffset(reloRuntime->comp(), classChainOffsetForClassBeingValidated(reloTarget));
+         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainOffsetForClassBeingValidated(reloTarget), classChainIdentifyingLoader);
       }
 
    RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: clazz %p\n", clazz);
@@ -5962,17 +5961,17 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
       classLoader = (J9ClassLoader *)sharedCache->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
       RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classLoader %p\n", classLoader);
 
-      if (classLoader != NULL)
+      if (classLoader)
          {
          uintptr_t *classChain = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(classChainForInlinedMethod(reloTarget));
          RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classChain %p\n", classChain);
          classPointer = (J9Class *)sharedCache->lookupClassFromChainAndLoader(classChain, (void *) classLoader, reloRuntime->comp());
          }
 
-      if (classPointer == NULL)
+      if (!classPointer)
          {
          if (auto dependencyTable = TR::CompilationInfo::get()->getPersistentInfo()->getAOTDependencyTable())
-            classPointer = (J9Class *)dependencyTable->findCandidateFromChainOffset(reloRuntime->comp(), classChainForInlinedMethod(reloTarget));
+            classPointer = (J9Class *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
          }
 
       RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classPointer %p\n", classPointer);
