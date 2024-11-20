@@ -447,6 +447,9 @@ TR_AOTDependencyTable::findCandidateWithChain(TR::Compilation *comp, uintptr_t c
 J9Class *
 TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain)
    {
+   if (!classLoaderChain)
+      return NULL;
+
    auto candidate = findCandidateWithChain(comp, classChainOffset);
    if (candidate)
       {
