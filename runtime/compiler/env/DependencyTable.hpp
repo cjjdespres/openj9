@@ -42,6 +42,7 @@ public:
    J9Class *findCandidateWithChain(TR::Compilation *comp, uintptr_t chainOffset) { return NULL; }
    J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain) { return NULL; }
    void methodWillBeCompiled(J9Method *method) {}
+   void dumpTableStats() {}
    };
 
 #else
@@ -141,6 +142,8 @@ public:
       return needsInitialization ? offset : (offset & ~1);
       }
 
+   void dumpTableStats();
+
 private:
    bool isActive() const { return _isActive; }
    void setInactive() { _isActive = false; }
@@ -176,8 +179,12 @@ private:
 
    // Stop tracking the given method. This will invalidate the MethodEntryRef
    // for the method.
-   void stopTracking(MethodEntryRef entry);
-   void stopTracking(J9Method *method);
+   //
+   // The isEarlyStop parameter should be true if the method is being removed
+   // from the table due to something other than the dependencies being
+   // satisfied fully.
+   void stopTracking(MethodEntryRef entry, bool isEarlyStop);
+   void stopTracking(J9Method *method, bool isEarlyStop);
 
    // Queue and clear the _pendingLoads, and remove those methods from tracking.
    // Must be called at the end of any dependency table operation that could
