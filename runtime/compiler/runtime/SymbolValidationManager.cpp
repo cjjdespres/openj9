@@ -1296,7 +1296,8 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
 
-   if (cpIndex >= 0)
+   static bool noSVMStaticResolve = feGetEnv("TR_DependencyTableNoSVMStaticResolve") != NULL;
+   if (!noSVMStaticResolve && (cpIndex >= 0))
       {
       TR::VMAccessCriticalSection validateStaticClass(_fej9);
       _fej9->_vmFunctionTable->resolveClassRef(_fej9->vmThread(), beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);

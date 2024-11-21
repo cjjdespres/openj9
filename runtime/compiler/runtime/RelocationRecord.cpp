@@ -30,6 +30,7 @@
 #include "j9cp.h"
 #include "j9protos.h"
 #include "rommeth.h"
+#include "codegen/AheadOfTimeCompile.hpp"
 #include "codegen/CodeGenerator.hpp"
 #include "env/FrontEnd.hpp"
 #include "codegen/PicHelpers.hpp"
@@ -57,7 +58,6 @@
 #include "env/VMJ9.h"
 #include "control/rossa.h"
 #if defined(J9VM_OPT_JITSERVER)
-#include "codegen/AheadOfTimeCompile.hpp"
 #include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
 #include "control/MethodToBeCompiled.hpp"
@@ -1708,6 +1708,8 @@ TR_RelocationRecordConstantPoolWithIndex::getStaticMethodFromCP(TR_RelocationRun
    J9ConstantPool *cp = (J9ConstantPool *) void_cp;
    TR_RelocationRuntimeLogger *reloLogger = reloRuntime->reloLogger();
 
+   static bool noCPResolve = feGetEnv("TR_DependencyTableNoCPIndexResolve") != NULL;
+   if (!noCPResolve)
       {
       TR::VMAccessCriticalSection getInterfaceMethodFromCP(reloRuntime->fej9());
       javaVM->internalVMFunctions->resolveClassRef(reloRuntime->currentThread(), cp, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
@@ -3375,7 +3377,8 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
             }
 #endif /* defined(J9VM_OPT_JITSERVER) */
          }
-      if (!inlinedCodeClass)
+      static bool noFallback = feGetEnv("TR_DependencyTableNoInlinedCodeClassFallback") != NULL;
+      if (!noFallback && !inlinedCodeClass)
          {
          // TODO: if we get a candidate class from the dependency table, we
          // already know it has a valid chain, so we can skip some later chain
@@ -3896,7 +3899,8 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
                                                          classLoader, reloRuntime->comp());
       }
 
-   if (!clazz)
+   static bool noFallback = feGetEnv("TR_DependencyTableNoArbitraryClassFallback") != NULL;
+   if (!noFallback && !clazz)
       {
       if (auto dependencyTable = TR::CompilationInfo::get()->getPersistentInfo()->getAOTDependencyTable())
          clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainOffsetForClassBeingValidated(reloTarget), classChainIdentifyingLoader);
@@ -5968,7 +5972,8 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
          classPointer = (J9Class *)sharedCache->lookupClassFromChainAndLoader(classChain, (void *) classLoader, reloRuntime->comp());
          }
 
-      if (!classPointer)
+      static bool noFallback = feGetEnv("TR_DependencyTableNoPointerFallback") != NULL;
+      if (!noFallback && !classPointer)
          {
          if (auto dependencyTable = TR::CompilationInfo::get()->getPersistentInfo()->getAOTDependencyTable())
             classPointer = (J9Class *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
