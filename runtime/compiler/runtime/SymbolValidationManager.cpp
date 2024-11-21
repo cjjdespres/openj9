@@ -1259,16 +1259,20 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
    TR_OpaqueClassBlock *clazz = NULL;
 
+   static bool noProfiledFallback = feGetEnv("TR_DependencyTableNoProfiledClassFallback") != NULL;
    if (classLoader)
       clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(
          static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp
       );
 
-   if (!clazz)
+   if (!noProfiledFallback && !clazz)
       {
       if (auto dependencyTable = _fej9->_compInfo->getPersistentInfo()->getAOTDependencyTable())
          clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
       }
+
+   if (!clazz)
+      return false;
 
    return validateSymbol(classID, clazz);
    }
