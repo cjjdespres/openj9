@@ -2622,7 +2622,7 @@ void J9::AheadOfTimeCompile::processRelocations()
       if (!comp->getOption(TR_DisableDependencyTracking))
          {
          auto method = comp->getMethodBeingCompiled()->getPersistentIdentifier();
-         auto definingClass = comp->fe()->getClassOfMethod(method);
+         auto definingClass = fej9->getClassOfMethod(method);
 
          Vector<uintptr_t> dependencies(comp->trMemory()->currentStackRegion());
          uintptr_t totalDependencies = comp->populateAOTMethodDependencies(definingClass, dependencies);
