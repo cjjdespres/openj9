@@ -937,8 +937,11 @@ TR::SymbolValidationManager::addDeclaringClassFromFieldOrStaticRecord(TR_OpaqueC
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (skipFieldRefClassRecord(clazz, beholder, cpIndex))
       return true;
-   else
-      return addClassRecord(clazz, new (_region) DeclaringClassFromFieldOrStaticRecord(clazz, beholder, cpIndex));
+
+   if (!addClassFromCPRecord(clazz, constantPoolOfBeholder, cpIndex))
+       return false;
+
+   return addClassRecord(clazz, new (_region) DeclaringClassFromFieldOrStaticRecord(clazz, beholder, cpIndex));
    }
 
 bool
