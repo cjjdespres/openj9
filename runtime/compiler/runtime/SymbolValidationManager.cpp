@@ -858,11 +858,8 @@ TR::SymbolValidationManager::addDefiningClassFromCPRecord(TR_OpaqueClassBlock *c
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (skipFieldRefClassRecord(clazz, beholder, cpIndex))
       return true;
-
-   if (!addClassFromCPRecord(clazz, constantPoolOfBeholder, cpIndex))
-      return false;
-
-   return addClassRecord(clazz, new (_region) DefiningClassFromCPRecord(clazz, beholder, cpIndex, isStatic));
+   else
+      return addClassRecord(clazz, new (_region) DefiningClassFromCPRecord(clazz, beholder, cpIndex, isStatic));
    }
 
 bool
@@ -872,11 +869,8 @@ TR::SymbolValidationManager::addStaticClassFromCPRecord(TR_OpaqueClassBlock *cla
    SVM_ASSERT_ALREADY_VALIDATED(this, beholder);
    if (skipFieldRefClassRecord(clazz, beholder, cpIndex))
        return true;
-
-   if (!addClassFromCPRecord(clazz, constantPoolOfBeholder, cpIndex))
-      return false;
-
-   return addClassRecord(clazz, new (_region) StaticClassFromCPRecord(clazz, beholder, cpIndex));
+    else
+      return addClassRecord(clazz, new (_region) StaticClassFromCPRecord(clazz, beholder, cpIndex));
    }
 
 bool
