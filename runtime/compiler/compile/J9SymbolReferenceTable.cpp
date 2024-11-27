@@ -828,6 +828,8 @@ J9::SymbolReferenceTable::findOrFabricateShadowSymbol(
 
    TR_J9VM *fej9 = reinterpret_cast<TR_J9VM *>(fe());
    TR_OpaqueClassBlock *declaredClass = fej9->getClassFromSignature(signature, (int32_t)strlen(signature), containingClass);
+   if (declaredClass != NULL)
+      sym->setDeclaredClass(declaredClass);
 
    mcount_t methodIndex = mcount_t::valueOf(0);
    int32_t cpIndex = -1;
