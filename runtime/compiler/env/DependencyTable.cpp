@@ -22,6 +22,7 @@
 
 #include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
+#include "env/ClassLoaderTable.hpp"
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCHTable.hpp"
@@ -422,9 +423,17 @@ TR_AOTDependencyTable::resolvePendingLoads()
    _pendingLoads.clear();
    }
 
-TR_OpaqueClassBlock *
-TR_AOTDependencyTable::findClassCandidate(uintptr_t romClassOffset)
+J9Class *
+TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain)
    {
+   TR_ASSERT(classLoaderChain, "Must be given a loader chain");
+
+   if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
+      return NULL;
+
+   void *chain = _sharedCache->pointerFromOffsetInSharedCache(classChainOffset);
+   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
+
    OMR::CriticalSection cs(_tableMonitor);
 
    if (!isActive())
@@ -434,8 +443,17 @@ TR_AOTDependencyTable::findClassCandidate(uintptr_t romClassOffset)
    if (it == _offsetMap.end())
       return NULL;
 
-   return (TR_OpaqueClassBlock *)findCandidateForDependency(it->second._loadedClasses, true);
+   auto candidate = findCandidateForDependency(it->second._loadedClasses, true);
+   if (candidate)
+      {
+      auto candidateLoaderChain = _sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(candidate->classLoader);
+      if (candidateLoaderChain == classLoaderChain)
+         return candidate;
+      }
+
+   return NULL;
    }
+
 
 J9Class *
 TR_AOTDependencyTable::findCandidateForDependency(const PersistentUnorderedSet<J9Class *> &loadedClasses, bool needsInitialization)
