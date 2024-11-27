@@ -369,7 +369,7 @@ TR_J9ServerVM::getClassFromSignature(const char *sig, int32_t sigLength, J9Const
    // classname not found; ask the client and cache the answer
    JITServer::ServerStream *stream = _compInfoPT->getMethodBeingCompiled()->_stream;
    std::string str(sig, sigLength);
-   stream->write(JITServer::MessageType::VM_getClassFromSignature, str, cpClass);
+   stream->write(JITServer::MessageType::VM_getClassFromSignature, str, constantPool);
    auto recv = stream->read<TR_OpaqueClassBlock *, J9ClassLoader *>();
    TR_OpaqueClassBlock *clazz = std::get<0>(recv);
    J9ClassLoader *cl = std::get<1>(recv);
