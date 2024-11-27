@@ -204,6 +204,11 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
 
    TR::KnownObjectTable *knot = comp->getOrCreateKnownObjectTable();
 
+
+   static bool shouldPrintResponse = feGetEnv("TR_PrintMessageName") ? true : false;
+   if (shouldPrintResponse)
+      TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "Handling message %s on %d", JITServer::messageNames[response], compInfoPT->getCompThreadId());
+
    bool done = false;
    switch (response)
       {
