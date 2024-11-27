@@ -39,7 +39,7 @@ public:
    void classLoadEvent(TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization) {}
    void invalidateUnloadedClass(TR_OpaqueClassBlock *ramClass) {}
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass) {}
-   TR_OpaqueClassBlock *findClassCandidate(uintptr_t offset) { return NULL; }
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain) { return NULL; }
    void methodWillBeCompiled(J9Method *method) {}
    void printStats() {}
    };
@@ -118,9 +118,10 @@ public:
    // RAM method of ramClass.
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass);
 
-   // Given a ROM class offset, return an initialized class with a valid class
-   // chain starting with that offset.
-   TR_OpaqueClassBlock *findClassCandidate(uintptr_t offset);
+   // Given a class chain and class loader chain, return an initialized class
+   // with a valid class chain starting with that offset and with a class loader
+   // with that loader chain
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain);
 
    static uintptr_t decodeDependencyOffset(uintptr_t offset)
       {
