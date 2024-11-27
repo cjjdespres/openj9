@@ -23,6 +23,7 @@
 #include <string.h>
 #include "env/VMJ9.h"
 #include "env/ClassLoaderTable.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/JSR292Methods.h"
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
@@ -1253,15 +1254,20 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
 
 bool
 TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader,
-                                                         void *classChainForClassBeingValidated)
+                                                         void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated)
    {
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
-   if (classLoader == NULL)
-      return false;
+   TR_OpaqueClassBlock *clazz = NULL;
 
-   TR_OpaqueClassBlock *clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(
-      static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp
-   );
+   if (classLoader)
+      clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp);
+
+   if (!clazz)
+      {
+      if (auto dependencyTable = _comp->getPersistentInfo()->getAOTDependencyTable())
+         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
+      }
+
    return validateSymbol(classID, clazz);
    }
 
