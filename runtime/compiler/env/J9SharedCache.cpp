@@ -1453,6 +1453,7 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
    static bool noStrictChecking = feGetEnv("TR_DependencyTableStrictChecking") == NULL;
    bool actualNoStrictChecking = !allowCaching || !dependencyTable || noStrictChecking;
    uintptr_t dependencyChainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   bool depChainValidationSuccess = true;
    if (allowCaching && dependencyTableActualPriority)
       {
       dependencyChainOffset = dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz);
@@ -1466,8 +1467,9 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
             }
 
          LOG(1, "\tcached result: validation failed\n");
+         depChainValidationSuccess = false;
          if (actualNoStrictChecking)
-            return true;
+            return false;
          }
       else
          {
@@ -1481,6 +1483,7 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
          else
             {
             LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, dependencyChainOffset);
+            depChainValidationSuccess = false;
             if (actualNoStrictChecking)
                return false;
             }
@@ -1566,7 +1569,9 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
    if (success)
       LOG(1, "\tMatch!  return true\n");
 
-   TR_ASSERT_FATAL(actualNoStrictChecking || (dependencyChainOffset == validatedChainOffset), "Disagreement: %lu %lu", dependencyChainOffset, validatedChainOffset);
+   TR_ASSERT_FATAL(actualNoStrictChecking ||
+                   (!success && !depChainValidationSuccess) ||
+                   (dependencyChainOffset == validatedChainOffset), "Disagreement: %lu %lu", dependencyChainOffset, validatedChainOffset);
    return success;
    }
 
