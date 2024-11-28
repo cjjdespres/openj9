@@ -5995,7 +5995,7 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
    static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoPointerPriority") == NULL;
    bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
 
-   if (depTableHasPriority)
+   if (dependencyTableActualPriority)
       {
       auto sharedCache = reloRuntime->fej9()->sharedCache();
       void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(classChainIdentifyingLoaderOffsetInSharedCache(reloTarget));
