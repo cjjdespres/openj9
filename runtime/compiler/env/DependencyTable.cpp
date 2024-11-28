@@ -67,8 +67,9 @@ TR_AOTDependencyTable::trackMethod(J9VMThread *vmThread, J9Method *method, J9ROM
          {
          bool needsInitialization = false;
          uintptr_t chainOffset = decodeDependencyOffset(methodDependencies[i], needsInitialization);
+         auto classChain = (const uintptr_t *)_sharedCache->pointerFromOffsetInSharedCache(chainOffset);
          uintptr_t offset = _sharedCache->startingROMClassOffsetOfClassChain(_sharedCache->pointerFromOffsetInSharedCache(chainOffset));
-         auto entry = getOrCreateOffsetEntry(offset, chainOffset);
+         auto entry = getOrCreateOffsetEntry(offset, classChain);
          if (needsInitialization)
             entry->_waitingInitMethods.insert(methodEntry);
          else
@@ -165,9 +166,10 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
    // We only need to check if clazz matches its cached version on load; on
    // initialization, it will be in the _offsetMap if it did match.
    uintptr_t classChainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   const uintptr_t *classChain = NULL;
    if (isClassLoad)
       {
-      classChainOffset = _sharedCache->rememberClass(ramClass);
+      classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
       if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffset)
          return;
       }
@@ -178,7 +180,7 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
 
    try
       {
-      classLoadEventAtOffset(ramClass, classOffset, classChainOffset, isClassLoad, isClassInitialization);
+      classLoadEventAtOffset(ramClass, classOffset, classChain, isClassLoad, isClassInitialization);
       }
    catch (std::exception&)
       {
@@ -202,9 +204,9 @@ TR_AOTDependencyTable::registerSatisfaction(PersistentUnorderedSet<MethodEntryRe
    }
 
 void
-TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, uintptr_t classChainOffset, bool isClassLoad, bool isClassInitialization)
+TR_AOTDependencyTable::classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, const uintptr_t *classChain, bool isClassLoad, bool isClassInitialization)
    {
-   auto offsetEntry = isClassLoad ? getOrCreateOffsetEntry(offset, classChainOffset) : getOffsetEntry(offset);
+   auto offsetEntry = isClassLoad ? getOrCreateOffsetEntry(offset, classChain) : getOffsetEntry(offset);
 
    // We only need to check for chain validity on load, because for
    // initialization (that isn't a simultaneous load) we can simply check to see
@@ -255,7 +257,7 @@ TR_AOTDependencyTable::getOffsetEntry(uintptr_t offset)
    }
 
 OffsetEntry *
-TR_AOTDependencyTable::getOrCreateOffsetEntry(uintptr_t romClassOffset, uintptr_t classChainOffset)
+TR_AOTDependencyTable::getOrCreateOffsetEntry(uintptr_t romClassOffset, const uintptr_t *classChain)
    {
    auto it = _offsetMap.find(romClassOffset);
    if (it != _offsetMap.end())
@@ -264,7 +266,7 @@ TR_AOTDependencyTable::getOrCreateOffsetEntry(uintptr_t romClassOffset, uintptr_
    PersistentUnorderedSet<J9Class *> loadedClasses(PersistentUnorderedSet<J9Class *>::allocator_type(TR::Compiler->persistentAllocator()));
    PersistentUnorderedSet<MethodEntryRef> waitingLoadMethods(PersistentUnorderedSet<MethodEntryRef>::allocator_type(TR::Compiler->persistentAllocator()));
    PersistentUnorderedSet<MethodEntryRef> waitingInitMethods(PersistentUnorderedSet<MethodEntryRef>::allocator_type(TR::Compiler->persistentAllocator()));
-   return &(*_offsetMap.insert(it, {romClassOffset, {classChainOffset, loadedClasses, waitingLoadMethods, waitingInitMethods}})).second;
+   return &(*_offsetMap.insert(it, {romClassOffset, {classChain, loadedClasses, waitingLoadMethods, waitingInitMethods}})).second;
    }
 
 void
@@ -336,12 +338,13 @@ TR_AOTDependencyTable::recheckSubclass(J9Class *ramClass, uintptr_t offset, bool
    if (invalidateClassAtOffset(ramClass, offset) || !shouldRevalidate)
       return;
 
-   uintptr_t classChainOffset = _sharedCache->rememberClass(ramClass);
+   const uintptr_t *classChain = NULL;
+   uintptr_t classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffset)
       return;
 
    bool initialized = J9ClassInitSucceeded == ramClass->initializeStatus;
-   classLoadEventAtOffset(ramClass, offset, classChainOffset, true, initialized);
+   classLoadEventAtOffset(ramClass, offset, classChain, true, initialized);
    }
 
 // In a class redefinition event, an old class is replaced by a fresh class. If
@@ -372,13 +375,13 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
          // TODO: elegance, but we need to save the old offset in case the entry
          // gets deleted because of invalidation here.
          auto oldEntry = getOffsetEntry(oldClassOffset);
-         auto classChainOffset = oldEntry ? oldEntry->_chainOffset : TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+         auto classChain = oldEntry ? oldEntry->_classChain : NULL;
          if (invalidateClassAtOffset((J9Class *)oldClass, oldClassOffset))
             {
             invalidateMethodsOfClass((J9Class *)oldClass);
             auto freshRamClass = (J9Class *)freshClass;
             bool initialized = J9ClassInitSucceeded == freshRamClass->initializeStatus;
-            classLoadEventAtOffset(freshRamClass, freshClassOffset, classChainOffset, true, initialized);
+            classLoadEventAtOffset(freshRamClass, freshClassOffset, classChain, true, initialized);
             }
          }
       catch (std::exception&)
@@ -502,7 +505,7 @@ TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
    if (it == entry->_loadedClasses.end())
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
 
-   return entry->_chainOffset;
+   return _sharedCache->offsetInSharedCacheFromPointer((void *)entry->_classChain);
    }
 
 void

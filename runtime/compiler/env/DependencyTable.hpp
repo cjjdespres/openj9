@@ -60,8 +60,8 @@ typedef std::pair<J9Method *const, MethodEntry>* MethodEntryRef;
 
 struct OffsetEntry
    {
-   // The actual chain offset of this entry
-   uintptr_t _chainOffset;
+   // The actual chain of this entry
+   const uintptr_t *_classChain;
    // Classes that have been loaded and have a particular valid class chain
    // offset
    PersistentUnorderedSet<J9Class *> _loadedClasses;
@@ -153,7 +153,7 @@ private:
    // Register a class load event for ramClass at offset. If any methods had
    // their dependencies satisfied by this event, they will be added to
    // methodsToQueue.
-   void classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, uintptr_t classChainOffset, bool isClassLoad, bool isClassInitialization);
+   void classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, const uintptr_t *classChain, bool isClassLoad, bool isClassInitialization);
 
    // Invalidate a class with a particular ROM class offset. Returns false if
    // the class wasn't tracked. If pendingMethodQueue is not NULL, we will also
@@ -170,7 +170,7 @@ private:
    void recheckSubclass(J9Class *ramClass, uintptr_t offset, bool shouldRevalidate);
 
    OffsetEntry *getOffsetEntry(uintptr_t offset);
-   OffsetEntry *getOrCreateOffsetEntry(uintptr_t romClassOffset, uintptr_t classChainOffset);
+   OffsetEntry *getOrCreateOffsetEntry(uintptr_t romClassOffset, const uintptr_t *classChainOffset);
 
    J9Class *findCandidateForDependency(const PersistentUnorderedSet<J9Class *> &loadedClasses, bool needsInitialization);
 

@@ -1021,7 +1021,7 @@ TR_J9SharedCache::createClassKey(UDATA classOffsetInCache, char *key, uint32_t &
    }
 
 uintptr_t
-TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create)
+TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create, const uintptr_t **classChain)
    {
    uintptr_t *chainData = NULL;
 #if defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
@@ -1104,6 +1104,9 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
 
    J9VMThread *vmThread = fej9->getCurrentVMThread();
    chainData = (uintptr_t *)sharedCacheConfig()->storeSharedData(vmThread, key, keyLength, &dataDescriptor);
+   if (classChain)
+      *classChain = chainData;
+
    if (chainData)
       {
       LOG(1, "\tstored data, chain at %p\n", chainData);
@@ -1667,10 +1670,11 @@ TR_J9JITServerSharedCache::TR_J9JITServerSharedCache(TR_J9VMBase *fe)
    }
 
 uintptr_t
-TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create)
+TR_J9JITServerSharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create, const uintptr_t **classChain)
    {
    TR::Compilation *comp = _compInfoPT->getCompilation();
    TR_ASSERT_FATAL(classChainRecord || !create || !comp->isAOTCacheStore(), "Must pass classChainRecord if creating class chain at JITServer");
+   TR_ASSERT_FATAL(!classChain, "Can't pass classChain at the server");
    TR_ASSERT(_stream, "stream must be initialized by now");
 
    uintptr_t clientClassChainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
