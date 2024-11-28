@@ -1342,14 +1342,15 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
    if (dependencyTableActualPriority)
       {
       uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
-      if (chainOffset != dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz))
+      uintptr_t cachedOffset = dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz);
+      if (chainOffset == cachedOffset)
          {
-         LOG(1, "\tcached result: validation succeeded");
+         LOG(1, "\tcached result: validation succeeded\n");
          return true;
          }
       else
          {
-         LOG(1, "\tcached result: validation failed");
+         LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, cachedOffset);
          return false;
          }
       }
