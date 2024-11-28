@@ -60,6 +60,8 @@ typedef std::pair<J9Method *const, MethodEntry>* MethodEntryRef;
 
 struct OffsetEntry
    {
+   // The actual chain offset of this entry
+   uintptr_t _chainOffset;
    // Classes that have been loaded and have a particular valid class chain
    // offset
    PersistentUnorderedSet<J9Class *> _loadedClasses;
@@ -124,6 +126,8 @@ public:
    // with that loader chain
    J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain);
 
+   uintptr_t getChainOffsetOfClass(TR_OpaqueClassBlock *clazz);
+
    static uintptr_t decodeDependencyOffset(uintptr_t offset)
       {
       return offset | 1;
@@ -149,7 +153,7 @@ private:
    // Register a class load event for ramClass at offset. If any methods had
    // their dependencies satisfied by this event, they will be added to
    // methodsToQueue.
-   void classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, bool isClassLoad, bool isClassInitialization);
+   void classLoadEventAtOffset(J9Class *ramClass, uintptr_t offset, uintptr_t classChainOffset, bool isClassLoad, bool isClassInitialization);
 
    // Invalidate a class with a particular ROM class offset. Returns false if
    // the class wasn't tracked. If pendingMethodQueue is not NULL, we will also
@@ -165,9 +169,8 @@ private:
 
    void recheckSubclass(J9Class *ramClass, uintptr_t offset, bool shouldRevalidate);
 
-   // Get the OffsetEntry corresponding to offset. If create is true this will
-   // never return a NULL entry (but it may throw).
-   OffsetEntry *getOffsetEntry(uintptr_t offset, bool create);
+   OffsetEntry *getOffsetEntry(uintptr_t offset);
+   OffsetEntry *getOrCreateOffsetEntry(uintptr_t romClassOffset, uintptr_t classChainOffset);
 
    J9Class *findCandidateForDependency(const PersistentUnorderedSet<J9Class *> &loadedClasses, bool needsInitialization);
 

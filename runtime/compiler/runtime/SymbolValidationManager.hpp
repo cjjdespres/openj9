@@ -29,7 +29,6 @@
 #include <vector>
 #include <stddef.h>
 #include <stdint.h>
-#include "env/jittypes.h"
 #include "j9.h"
 #include "j9nonbuilder.h"
 #include "infra/TRlist.hpp"
@@ -837,7 +836,7 @@ public:
 
 
 
-   bool validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain);
+   bool validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain, uintptr_t classChainOffset);
    bool validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader, void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated);
    bool validateClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
    bool validateDefiningClassFromCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex, bool isStatic);
@@ -845,7 +844,7 @@ public:
    bool validateArrayClassFromComponentClassRecord(uint16_t arrayClassID, uint16_t componentClassID);
    bool validateSuperClassFromClassRecord(uint16_t superClassID, uint16_t childClassID);
    bool validateClassInstanceOfClassRecord(uint16_t classOneID, uint16_t classTwoID, bool objectTypeIsFixed, bool castTypeIsFixed, bool wasInstanceOf);
-   bool validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain);
+   bool validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain, uintptr_t classChainOffset);
    bool validateClassFromITableIndexCPRecord(uint16_t classID, uint16_t beholderID, uint32_t cpIndex);
    bool validateDeclaringClassFromFieldOrStaticRecord(uint16_t definingClassID, uint16_t beholderID, int32_t cpIndex);
    bool validateConcreteSubClassFromClassRecord(uint16_t childClassID, uint16_t superClassID);

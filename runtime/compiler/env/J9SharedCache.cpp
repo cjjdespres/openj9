@@ -31,6 +31,7 @@
 #include "compile/ResolvedMethod.hpp"
 #include "env/ClassLoaderTable.hpp"
 #include "env/ClassTableCriticalSection.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/jittypes.h"
 #include "env/j9method.h"
 #include "env/PersistentCHTable.hpp"
@@ -1334,6 +1335,24 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
    J9ROMClass *romClass = TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(clazz));
    J9UTF8 * className = J9ROMCLASS_CLASSNAME(romClass);
    LOG(1, "classMatchesCachedVersion class %p %.*s\n", clazz, J9UTF8_LENGTH(className), J9UTF8_DATA(className));
+
+   auto dependencyTable = _compInfo->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoClassMatchesCachedPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+   if (dependencyTableActualPriority)
+      {
+      uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
+      if (chainOffset != dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz))
+         {
+         LOG(1, "\tcached result: validation succeeded");
+         return true;
+         }
+      else
+         {
+         LOG(1, "\tcached result: validation failed");
+         return false;
+         }
+      }
 
    uintptr_t classOffsetInCache;
 

@@ -27,6 +27,7 @@
 #include "env/JSR292Methods.h"
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
+#include "env/jittypes.h"
 #include "exceptions/AOTFailure.hpp"
 #include "compile/J9Compilation.hpp"
 #include "control/CompilationRuntime.hpp"
@@ -357,8 +358,19 @@ TR::SymbolValidationManager::validateWellKnownClasses(const uintptr_t *wellKnown
       if (clazz == NULL)
          return false;
 
-      if (!_fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain))
-         return false;
+      auto dependencyTable = _comp->getPersistentInfo()->getAOTDependencyTable();
+      static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoClassByNamePriority") == NULL;
+      bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+      if (dependencyTableActualPriority)
+         {
+         if (dependencyTable->getChainOffsetOfClass(clazz) != classChainOffset)
+            return false;
+         }
+      else
+         {
+         if (!_fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain))
+            return false;
+         }
 
       _seenValuesSet.insert(clazz);
       if (assignNewIDs)
@@ -1239,7 +1251,7 @@ TR::SymbolValidationManager::validateSymbol(uint16_t methodID, uint16_t defining
    }
 
 bool
-TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain)
+TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain, uintptr_t classChainOffset)
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
@@ -1248,6 +1260,17 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
    char *className = reinterpret_cast<char *>(J9UTF8_DATA(classNameData));
    uint32_t classNameLength = J9UTF8_LENGTH(classNameData);
    TR_OpaqueClassBlock *clazz = _fej9->getClassFromSignature(className, classNameLength, beholderCP);
+
+   auto dependencyTable = _comp->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoClassByNamePriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+   if (dependencyTableActualPriority)
+      {
+      if (!validateSymbol(classID, clazz))
+         return false;
+      return dependencyTable->getChainOffsetOfClass(clazz) == classChainOffset;
+      }
+
    return validateSymbol(classID, clazz)
       && _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain);
    }
@@ -1258,6 +1281,15 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    {
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
    TR_OpaqueClassBlock *clazz = NULL;
+
+   auto dependencyTable = _comp->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoProfiledClassPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
+   if (dependencyTableActualPriority)
+      {
+      return validateSymbol(classID, (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader));
+      }
 
    if (classLoader)
       clazz = _fej9->sharedCache()->lookupClassFromChainAndLoader(static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp);
@@ -1341,12 +1373,23 @@ TR::SymbolValidationManager::validateClassInstanceOfClassRecord(uint16_t classOn
    }
 
 bool
-TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain)
+TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain, uintptr_t classChainOffset)
    {
    J9ROMClass *romClass = _fej9->sharedCache()->startingROMClassOfClassChain(classChain);
    J9UTF8 * className = J9ROMCLASS_CLASSNAME(romClass);
    TR_OpaqueClassBlock *systemClassByName = _fej9->getSystemClassFromClassName(reinterpret_cast<const char *>(J9UTF8_DATA(className)),
                                                                               J9UTF8_LENGTH(className));
+   auto dependencyTable = _comp->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoProfiledClassPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
+   if (dependencyTableActualPriority)
+      {
+      if (!validateSymbol(systemClassID, systemClassByName))
+         return false;
+      return dependencyTable->getChainOffsetOfClass(systemClassByName) == classChainOffset;
+      }
+
    return validateSymbol(systemClassID, systemClassByName)
       && _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain);
    }

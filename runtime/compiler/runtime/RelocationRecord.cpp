@@ -3329,11 +3329,26 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
    reloPrivateData->_guardValue = 0;
    bool failValidation = true;
    TR_OpaqueClassBlock *inlinedCodeClass = NULL;
+   auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoInlinedMethodPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
+   bool inlinedSiteIsValid = true;
+   TR_OpaqueClassBlock *dependencyTableCandidate = NULL;
 
    if (reloRuntime->comp()->getOption(TR_UseSymbolValidationManager))
       {
       uint16_t inlinedCodeClassID = (uint16_t)cpIndex(reloTarget);
       inlinedCodeClass = (TR_OpaqueClassBlock *)reloRuntime->comp()->getSymbolValidationManager()->getJ9ClassFromID(inlinedCodeClassID);
+      inlinedSiteIsValid = dependencyTableActualPriority ? (dependencyTable->getChainOffsetOfClass(inlinedCodeClass) == classChainForInlinedMethod(reloTarget)) : true;
+      }
+   else if (dependencyTableActualPriority)
+      {
+      auto sharedCache = reloRuntime->fej9()->sharedCache();
+      void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(
+                                          classChainIdentifyingLoaderOffsetInSharedCache(reloTarget));
+      // this class is guaranteed to have the same chain and loader as what was recorded at compile time
+      dependencyTableCandidate = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
       }
    else
       {
@@ -3386,12 +3401,14 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
       RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: inlined class valid\n");
       reloPrivateData->_inlinedCodeClass = inlinedCodeClass;
 
-      bool inlinedSiteIsValid = true;
       TR_OpaqueMethodBlock *inlinedMethod = NULL;
 
-      uintptr_t *chainData = (uintptr_t *) reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainForInlinedMethod(reloTarget));
-      if (!reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(inlinedCodeClass, chainData))
-         inlinedSiteIsValid = false;
+      if (!dependencyTableActualPriority)
+         {
+         uintptr_t *chainData = (uintptr_t *) reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainForInlinedMethod(reloTarget));
+         if (!reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(inlinedCodeClass, chainData))
+            inlinedSiteIsValid = false;
+         }
 
       if (inlinedSiteIsValid)
          {
@@ -3662,7 +3679,18 @@ TR_RelocationRecordValidateClass::validateClass(TR_RelocationRuntime *reloRuntim
    // for classes and instance fields, need to compare clazz to entire class chain to make sure they are identical
    // classChainOrRomClass, for classes and instance fields, is a class chain pointer from the relocation record
 
+   auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoValidateClassPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
    void *classChain = classChainOrRomClass;
+
+   if (dependencyTableActualPriority)
+      {
+      uintptr_t chainOffset = reloRuntime->fej9()->sharedCache()->offsetInSharedCacheFromPointer(classChain);
+      return dependencyTable->getChainOffsetOfClass(clazz) == chainOffset;
+      }
+
    return reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(clazz, (uintptr_t *) classChain);
    }
 
@@ -3880,24 +3908,36 @@ TR_RelocationRecordValidateArbitraryClass::applyRelocation(TR_RelocationRuntime 
    void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(classChainIdentifyingLoaderOffset(reloTarget));
    RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: classChainIdentifyingLoader %p\n", classChainIdentifyingLoader);
 
-   J9ClassLoader *classLoader = (J9ClassLoader *)sharedCache->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
-   RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: classLoader %p\n", classLoader);
+   auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoArbitraryClassPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
    TR_OpaqueClassBlock *clazz = NULL;
-
-   if (classLoader)
+   if (dependencyTableActualPriority)
       {
-      uintptr_t *classChainForClassBeingValidated = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(
-                                                    classChainOffsetForClassBeingValidated(reloTarget));
-      clazz = sharedCache->lookupClassFromChainAndLoader(classChainForClassBeingValidated, classLoader, reloRuntime->comp());
+      clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(),
+                                                                                      classChainOffsetForClassBeingValidated(reloTarget),
+                                                                                      classChainIdentifyingLoader);
       }
-
-   static bool doFallback = feGetEnv("TR_DependencyTableNoArbitraryClassFallback") == NULL;
-   if (doFallback && !clazz)
+   else
       {
-      if (auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable())
-         clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(),
-                                                                                         classChainOffsetForClassBeingValidated(reloTarget),
-                                                                                         classChainIdentifyingLoader);
+      J9ClassLoader *classLoader = (J9ClassLoader *)sharedCache->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
+      RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: classLoader %p\n", classLoader);
+
+      if (classLoader)
+         {
+         uintptr_t *classChainForClassBeingValidated = (uintptr_t *)sharedCache->pointerFromOffsetInSharedCache(classChainOffsetForClassBeingValidated(reloTarget));
+         clazz = sharedCache->lookupClassFromChainAndLoader(classChainForClassBeingValidated, classLoader, reloRuntime->comp());
+         }
+
+      static bool doFallback = feGetEnv("TR_DependencyTableNoArbitraryClassFallback") == NULL;
+      if (doFallback && !clazz)
+         {
+         if (auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable())
+            clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(),
+                                                                                            classChainOffsetForClassBeingValidated(reloTarget),
+                                                                                            classChainIdentifyingLoader);
+         }
       }
 
    RELO_LOG(reloRuntime->reloLogger(), 6, "\t\tpreparePrivateData: clazz %p\n", clazz);
@@ -3919,7 +3959,7 @@ TR_RelocationRecordValidateClassByName::applyRelocation(TR_RelocationRuntime *re
    uintptr_t classChainOffset = this->classChainOffset(reloTarget);
    uintptr_t *classChain = (uintptr_t*)reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainOffset);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassByNameRecord(classID, beholderID, classChain))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassByNameRecord(classID, beholderID, classChain, classChainOffset))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::classByNameValidationFailure;
@@ -4394,7 +4434,7 @@ TR_RelocationRecordValidateSystemClassByName::applyRelocation(TR_RelocationRunti
    uintptr_t classChainOffset = this->classChainOffset(reloTarget);
    uintptr_t *classChain = (uintptr_t*)reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainOffset);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateSystemClassByNameRecord(systemClassID, classChain))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateSystemClassByNameRecord(systemClassID, classChain, classChainOffset))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::systemClassByNameValidationFailure;
@@ -5951,7 +5991,22 @@ TR_RelocationRecordPointer::preparePrivateData(TR_RelocationRuntime *reloRuntime
    TR_RelocationRecordPointerPrivateData *reloPrivateData = &(privateData()->pointer);
 
    J9Class *classPointer = NULL;
-   if (getInlinedSiteMethod(reloRuntime, inlinedSiteIndex(reloTarget)) != (TR_OpaqueMethodBlock *)-1)
+   auto dependencyTable = reloRuntime->comp()->getPersistentInfo()->getAOTDependencyTable();
+   static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoPointerPriority") == NULL;
+   bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
+
+   if (depTableHasPriority)
+      {
+      auto sharedCache = reloRuntime->fej9()->sharedCache();
+      void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(classChainIdentifyingLoaderOffsetInSharedCache(reloTarget));
+      RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: classChainIdentifyingLoader %p\n", classChainIdentifyingLoader);
+
+      if (getInlinedSiteMethod(reloRuntime, inlinedSiteIndex(reloTarget)) != (TR_OpaqueMethodBlock *)-1)
+         classPointer = dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
+      else
+         RELO_LOG(reloRuntime->reloLogger(), 6,"\tpreparePrivateData: inlined site invalid\n");
+      }
+   else if (getInlinedSiteMethod(reloRuntime, inlinedSiteIndex(reloTarget)) != (TR_OpaqueMethodBlock *)-1)
       {
       auto sharedCache = reloRuntime->fej9()->sharedCache();
       J9ClassLoader *classLoader = NULL;
