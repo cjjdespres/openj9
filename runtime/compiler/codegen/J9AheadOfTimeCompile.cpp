@@ -2633,6 +2633,8 @@ void J9::AheadOfTimeCompile::processRelocations()
             // flag must still be set to distinguish methods with zero
             // dependencies from methods with untracked dependencies.
             comp->getAotMethodHeaderEntry()->flags |= TR_AOTMethodHeader_TracksDependencies;
+            if (comp->getOptions()->getVerboseOption(TR_VerboseDependencyTracking))
+               TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p compiled with 0 tracked dependencies", method);
             }
          else
             {
@@ -2640,7 +2642,13 @@ void J9::AheadOfTimeCompile::processRelocations()
             auto vmThread = fej9->getCurrentVMThread();
             auto dependencyChain = sharedCache->storeAOTMethodDependencies(vmThread, method, definingClass, dependencies.data(), dependencies.size());
             if (dependencyChain)
+               {
                comp->getAotMethodHeaderEntry()->flags |= TR_AOTMethodHeader_TracksDependencies;
+               if (comp->getOptions()->getVerboseOption(TR_VerboseDependencyTracking))
+                  {
+                  TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Method %p compiled with %lu tracked dependencies", method, totalDependencies);
+                  }
+               }
             }
          }
 #endif /* !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED) */
