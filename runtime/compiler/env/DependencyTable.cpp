@@ -170,7 +170,7 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
    if (isClassLoad)
       {
       classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
-      if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffset)
+      if (!classChain)
          return;
       }
 
@@ -340,7 +340,7 @@ TR_AOTDependencyTable::recheckSubclass(J9Class *ramClass, uintptr_t offset, bool
 
    const uintptr_t *classChain = NULL;
    uintptr_t classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
-   if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == classChainOffset)
+   if (!classChain)
       return;
 
    bool initialized = J9ClassInitSucceeded == ramClass->initializeStatus;
