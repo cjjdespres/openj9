@@ -549,6 +549,9 @@ TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
    {
    auto ramClass = (J9Class *)clazz;
    uintptr_t romClassOffset = TR_SharedCache::INVALID_ROM_CLASS_OFFSET;
+   static bool strictChecking = feGetEnv("TR_DependencyTableStrictChecking") != NULL;
+   static bool noStrictChecking = !strictChecking;
+
    if (!_sharedCache->isClassInSharedCache(clazz, &romClassOffset))
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
@@ -573,6 +576,8 @@ TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
                                         ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset);
          }
 
+      TR_ASSERT_FATAL(noStrictChecking || !_sharedCache->classMatchesCachedVersion(ramClass, NULL, false), "Class %p somehow validated!");
+
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       }
 
@@ -586,6 +591,7 @@ TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
                                         ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset);
          }
 
+      TR_ASSERT_FATAL(noStrictChecking || !_sharedCache->classMatchesCachedVersion(ramClass, NULL, false), "Class %p somehow validated!");
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       }
 
@@ -597,6 +603,8 @@ TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
                                      ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset, chainOffset);
       }
 
+
+   TR_ASSERT_FATAL(noStrictChecking || (_sharedCache->rememberClassNoCache(ramClass, NULL, false) == chainOffset), "Class %p somehow validated!");
    return chainOffset;
    }
 
