@@ -1469,20 +1469,23 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
          if (actualNoStrictChecking)
             return true;
          }
-
-      uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
-      if (chainOffset == dependencyChainOffset)
-         {
-         LOG(1, "\tcached result: validation succeeded\n");
-         if (actualNoStrictChecking)
-            return true;
-         }
       else
          {
-         LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, dependencyChainOffset);
-         if (actualNoStrictChecking)
-            return false;
+         uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
+         if (chainOffset == dependencyChainOffset)
+            {
+            LOG(1, "\tcached result: validation succeeded\n");
+            if (actualNoStrictChecking)
+               return true;
+            }
+         else
+            {
+            LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, dependencyChainOffset);
+            if (actualNoStrictChecking)
+               return false;
+            }
          }
+
       }
 
    uintptr_t classOffsetInCache;
