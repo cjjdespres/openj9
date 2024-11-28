@@ -1125,6 +1125,113 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    return chainOffset;
    }
 
+uintptr_t
+TR_J9SharedCache::rememberClassNoCache(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create, const uintptr_t **classChain)
+   {
+   uintptr_t *chainData = NULL;
+#if defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
+   TR_J9VMBase *fej9 = (TR_J9VMBase *)fe();
+   J9ROMClass *romClass = TR::Compiler->cls.romClassOf(fej9->convertClassPtrToClassOffset(clazz));
+
+   J9UTF8 *className = J9ROMCLASS_CLASSNAME(romClass);
+   LOG(1, "rememberClass class %p romClass %p %.*s\n", clazz, romClass, J9UTF8_LENGTH(className), J9UTF8_DATA(className));
+
+   uintptr_t classOffsetInCache;
+   if (!isROMClassInSharedCache(romClass, &classOffsetInCache))
+      {
+      LOG(1,"\trom class not in shared cache, returning\n");
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
+   char key[17]; // longest possible key length is way less than 16 digits
+   uint32_t keyLength;
+   createClassKey(classOffsetInCache, key, keyLength);
+
+   LOG(3, "\tkey created: %.*s\n", keyLength, key);
+
+   chainData = findChainForClass(clazz, key, keyLength);
+   if (chainData != NULL)
+      {
+      uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      if (classMatchesCachedVersion(clazz, chainData, false))
+         {
+         if (classChain)
+            *classChain = chainData;
+         if (isPointerInSharedCache(chainData, &chainOffset))
+            {
+            LOG(1, "\tcurrent class and class chain found (%p) are identical; returning the class chain\n", chainData);
+            }
+         else
+            {
+            LOG(1, "\tcurrent class and class chain found (%p) are identical but its offset isn't available yet; returning INVALID_CLASS_CHAIN_OFFSET\n", chainData);
+            }
+         }
+      else
+         {
+         LOG(1, "\tcurrent class and class chain found (%p) do not match, so cannot use class chain; returning INVALID_CLASS_CHAIN_OFFSET\n", chainData);
+         }
+      return chainOffset;
+      }
+
+   int32_t numSuperclasses = fe()->numSuperclasses(clazz);
+   int32_t numInterfaces = fe()->numInterfacesImplemented(clazz);
+
+   LOG(3, "\tcreating chain now: 1 + 1 + %d superclasses + %d interfaces\n", numSuperclasses, numInterfaces);
+   uintptr_t chainLength = (2 + numSuperclasses + numInterfaces) * sizeof(uintptr_t);
+   uintptr_t chainDataBuffer[maxClassChainLength];
+   chainData = chainDataBuffer;
+   if (chainLength > maxClassChainLength * sizeof(uintptr_t))
+      {
+      LOG(1, "\t\t > %u so bailing\n", maxClassChainLength);
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
+   if (!fillInClassChain(clazz, chainData, chainLength, numSuperclasses, numInterfaces))
+      {
+      LOG(1, "\tfillInClassChain failed, bailing\n");
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
+   if (!create)
+      {
+      LOG(1, "\tnot asked to create but could create, returning COULD_CREATE_CLASS_CHAIN\n");
+      return COULD_CREATE_CLASS_CHAIN;
+      }
+
+   uintptr_t chainDataLength = chainData[0];
+
+   J9SharedDataDescriptor dataDescriptor;
+   dataDescriptor.address = (uint8_t *)chainData;
+   dataDescriptor.length  = chainDataLength;
+   dataDescriptor.type    = J9SHR_DATA_TYPE_AOTCLASSCHAIN;
+   dataDescriptor.flags   = J9SHRDATA_SINGLE_STORE_FOR_KEY_TYPE;
+
+   if (aotStats())
+      aotStats()->numNewCHEntriesInSharedClass++;
+
+   J9VMThread *vmThread = fej9->getCurrentVMThread();
+   chainData = (uintptr_t *)sharedCacheConfig()->storeSharedData(vmThread, key, keyLength, &dataDescriptor);
+   if (classChain)
+      *classChain = chainData;
+
+   if (chainData)
+      {
+      LOG(1, "\tstored data, chain at %p\n", chainData);
+      }
+   else
+      {
+      LOG(1, "\tunable to store chain\n");
+      TR::Options::getAOTCmdLineOptions()->setOption(TR_NoStoreAOT);
+
+      setSharedCacheDisabledReason(SHARED_CACHE_CLASS_CHAIN_STORE_FAILED);
+      setStoreSharedDataFailedLength(chainDataLength);
+      }
+#endif
+   uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   isPointerInSharedCache(chainData, &chainOffset);
+   return chainOffset;
+   }
+
 UDATA
 TR_J9SharedCache::rememberDebugCounterName(const char *name)
    {
@@ -1334,7 +1441,7 @@ TR_J9SharedCache::validateClassChain(J9ROMClass *romClass, TR_OpaqueClassBlock *
    }
 
 bool
-TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
+TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bool allowCaching)
    {
    J9ROMClass *romClass = TR::Compiler->cls.romClassOf(fe()->convertClassPtrToClassOffset(clazz));
    J9UTF8 * className = J9ROMCLASS_CLASSNAME(romClass);
@@ -1343,7 +1450,7 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
    auto dependencyTable = _compInfo->getPersistentInfo()->getAOTDependencyTable();
    static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoClassMatchesCachedPriority") == NULL;
    bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
-   if (dependencyTableActualPriority)
+   if (allowCaching && dependencyTableActualPriority)
       {
       uintptr_t cachedOffset = dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz);
       if (!chainData)
@@ -1366,6 +1473,7 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
          }
       else
          {
+         TR_ASSERT_FATAL(false, "bizarre!");
          LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, cachedOffset);
          return false;
          }
@@ -1944,7 +2052,7 @@ TR_J9DeserializerSharedCache::lookupClassLoaderAssociatedWithClassChain(void *ch
    }
 
 bool
-TR_J9DeserializerSharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
+TR_J9DeserializerSharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bool allowCaching)
    {
    // During deserialization, we find a matching J9Class for the first entry of the chainData, meaning that
    // its ROM class chain matches what was recorded during compilation. This provides the same guarantees

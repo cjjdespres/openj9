@@ -3820,13 +3820,6 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
       TR::Options::_numberOfUserClassesLoaded ++;
       }
 
-   compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
-
-#if defined(J9VM_OPT_JITSERVER)
-   if (auto deserializer = compInfo->getJITServerAOTDeserializer())
-      deserializer->onClassLoad(cl, vmThread);
-#endif /* defined(J9VM_OPT_JITSERVER) */
-
    if (auto dependencyTable = compInfo->getPersistentInfo()->getAOTDependencyTable())
       {
       getClassNameIfNecessary(vm, clazz, className, classNameLen);
@@ -3839,6 +3832,13 @@ void jitHookClassLoadHelper(J9VMThread *vmThread,
                                    (classNameLen == 23 && !memcmp(className, "java/lang/J9VMInternals", classNameLen));
       dependencyTable->classLoadEvent(clazz, true, isClassInitialization);
       }
+
+   compInfo->getPersistentInfo()->getPersistentClassLoaderTable()->associateClassLoaderWithClass(vmThread, classLoader, clazz);
+
+#if defined(J9VM_OPT_JITSERVER)
+   if (auto deserializer = compInfo->getJITServerAOTDeserializer())
+      deserializer->onClassLoad(cl, vmThread);
+#endif /* defined(J9VM_OPT_JITSERVER) */
 
    // Update the count for the newInstance
    //

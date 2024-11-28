@@ -3262,11 +3262,12 @@ TR_RelocationRecordProfiledInlinedMethod::classChainIdentifyingLoaderOffsetInSha
 void
 TR_RelocationRecordProfiledInlinedMethod::setClassChainForInlinedMethod(
    TR_RelocationTarget *reloTarget, uintptr_t classChainForInlinedMethod,
-   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord
+   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord, TR_OpaqueClassBlock *definingClassForInlinedMethod
 )
    {
    uintptr_t *addr = &((TR_RelocationRecordProfiledInlinedMethodBinaryTemplate *)_record)->_classChainForInlinedMethod;
    reloTarget->storeRelocationRecordValue(classChainForInlinedMethod, addr);
+   aotCompile->comp()->addAOTMethodDependency(definingClassForInlinedMethod, classChainForInlinedMethod);
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -3334,7 +3335,6 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
    bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
 
    bool inlinedSiteIsValid = true;
-   TR_OpaqueClassBlock *dependencyTableCandidate = NULL;
 
    if (reloRuntime->comp()->getOption(TR_UseSymbolValidationManager))
       {
@@ -3348,7 +3348,7 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
       void *classChainIdentifyingLoader = sharedCache->pointerFromOffsetInSharedCache(
                                           classChainIdentifyingLoaderOffsetInSharedCache(reloTarget));
       // this class is guaranteed to have the same chain and loader as what was recorded at compile time
-      dependencyTableCandidate = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
+      inlinedCodeClass = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), classChainForInlinedMethod(reloTarget), classChainIdentifyingLoader);
       }
    else
       {
@@ -5969,11 +5969,12 @@ TR_RelocationRecordPointer::classChainIdentifyingLoaderOffsetInSharedCache(TR_Re
 void
 TR_RelocationRecordPointer::setClassChainForInlinedMethod(
    TR_RelocationTarget *reloTarget, uintptr_t classChainForInlinedMethod,
-   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord
+   TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord, TR_OpaqueClassBlock *ramClass
 )
    {
    uintptr_t *addr = &((TR_RelocationRecordPointerBinaryTemplate *)_record)->_classChainForInlinedMethod;
    reloTarget->storeRelocationRecordValue(classChainForInlinedMethod, addr);
+   aotCompile->comp()->addAOTMethodDependency(ramClass);
 #if defined(J9VM_OPT_JITSERVER)
    aotCompile->addClassChainSerializationRecord(classChainRecord, addr);
 #endif /* defined(J9VM_OPT_JITSERVER) */

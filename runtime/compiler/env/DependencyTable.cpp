@@ -26,6 +26,7 @@
 #include "env/DependencyTable.hpp"
 #include "env/J9SharedCache.hpp"
 #include "env/PersistentCHTable.hpp"
+#include "j9.h"
 
 #if !defined(PERSISTENT_COLLECTIONS_UNSUPPORTED)
 
@@ -159,9 +160,24 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
    {
    auto ramClass = (J9Class *)clazz;
 
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class load event %p %.*s %d %d",
+                                     ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), isClassLoad, isClassInitialization);
+
+      }
+
    uintptr_t classOffset = TR_SharedCache::INVALID_ROM_CLASS_OFFSET;
    if (!_sharedCache->isClassInSharedCache(clazz, &classOffset))
       return;
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class %p rom offset %lu",
+                                     ramClass, classOffset);
+      }
 
    // We only need to check if clazz matches its cached version on load; on
    // initialization, it will be in the _offsetMap if it did match.
@@ -169,9 +185,16 @@ TR_AOTDependencyTable::classLoadEvent(TR_OpaqueClassBlock *clazz, bool isClassLo
    const uintptr_t *classChain = NULL;
    if (isClassLoad)
       {
-      classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
+      classChainOffset = _sharedCache->rememberClassNoCache(ramClass, NULL, true, &classChain);
       if (!classChain)
          return;
+      }
+
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table: class %p chain %p %lu",
+                                     ramClass, classChain, classOffset);
       }
 
    OMR::CriticalSection cs(_tableMonitor);
@@ -339,7 +362,7 @@ TR_AOTDependencyTable::recheckSubclass(J9Class *ramClass, uintptr_t offset, bool
       return;
 
    const uintptr_t *classChain = NULL;
-   uintptr_t classChainOffset = _sharedCache->rememberClass(ramClass, NULL, true, &classChain);
+   uintptr_t classChainOffset = _sharedCache->rememberClassNoCache(ramClass, NULL, true, &classChain);
    if (!classChain)
       return;
 
@@ -453,6 +476,12 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
    void *chain = _sharedCache->pointerFromOffsetInSharedCache(classChainOffset);
    uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
 
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table findCandidate: %lu %p %p %lu",
+                                     classChainOffset, classLoaderChain, chain, romClassOffset);
+      }
+
    OMR::CriticalSection cs(_tableMonitor);
 
    if (!isActive())
@@ -460,12 +489,30 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
 
    auto it = _offsetMap.find(romClassOffset);
    if (it == _offsetMap.end())
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table findCandidate: no entry %lu %p",
+                                        classChainOffset,
+                                        classLoaderChain);
+         }
+
       return NULL;
+      }
 
    // TODO: should probably unify all this for loops into a single find
    J9Class *candidate = NULL;
    for (const auto& entry : it->second._loadedClasses)
       {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table findCandidate: examining %p %p %p %d",
+                                        entry,
+                                        entry->classLoader,
+                                        _sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(entry->classLoader),
+                                        entry->initializeStatus);
+         }
+
       if ((J9ClassInitSucceeded == entry->initializeStatus) &&
           (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(entry->classLoader) == classLoaderChain))
          {
@@ -473,6 +520,14 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
          break;
          }
       }
+
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table findCandidate: using %p for %lu",
+                                        candidate,
+                                        classChainOffset);
+         }
+
    return candidate;
    }
 
@@ -492,20 +547,57 @@ TR_AOTDependencyTable::findCandidateForDependency(const PersistentUnorderedSet<J
 uintptr_t
 TR_AOTDependencyTable::getChainOffsetOfClass(TR_OpaqueClassBlock *clazz)
    {
+   auto ramClass = (J9Class *)clazz;
    uintptr_t romClassOffset = TR_SharedCache::INVALID_ROM_CLASS_OFFSET;
    if (!_sharedCache->isClassInSharedCache(clazz, &romClassOffset))
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table chainOffset: %p %.*s isn't in SCC",
+                                        ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name));
+         }
+
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
 
    OMR::CriticalSection cs(_tableMonitor);
    auto entry = getOffsetEntry(romClassOffset);
    if (!entry)
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table chainOffset: %p %.*s %lu has no entry",
+                                        ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset);
+         }
+
       return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
 
    auto it = entry->_loadedClasses.find((J9Class *)clazz);
    if (it == entry->_loadedClasses.end())
-      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      {
+      if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+         {
+         auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table chainOffset: %p %.*s %lu not in entry",
+                                        ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset);
+         }
 
-   return _sharedCache->offsetInSharedCacheFromPointer((void *)entry->_classChain);
+      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      }
+
+   uintptr_t chainOffset = _sharedCache->offsetInSharedCacheFromPointer((void *)entry->_classChain);
+   if (TR::Options::getVerboseOption(TR_VerboseJITServerConns))
+      {
+      auto name = J9ROMCLASS_CLASSNAME(ramClass->romClass);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Dependency table chainOffset: %p %.*s %lu %lu returned",
+                                     ramClass, J9UTF8_LENGTH(name), J9UTF8_DATA(name), romClassOffset, chainOffset);
+      }
+
+   return chainOffset;
    }
 
 void

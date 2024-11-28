@@ -223,10 +223,13 @@ public:
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
                                     bool create = true, const uintptr_t **classChain = NULL);
 
+   virtual uintptr_t rememberClassNoCache(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
+                                          bool create = true, const uintptr_t **classChain = NULL);
+
    virtual UDATA rememberDebugCounterName(const char *name);
    virtual const char *getDebugCounterName(UDATA offset);
 
-   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL);
+   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL, bool allowCaching=true);
    virtual bool classMatchesCachedVersion(TR_OpaqueClassBlock *classPtr, UDATA *chainData=NULL)
       {
       return classMatchesCachedVersion((J9Class *) classPtr, chainData);
@@ -750,7 +753,7 @@ public:
    virtual bool isROMMethodInSharedCache(J9ROMMethod *romMethod, uintptr_t *cacheOffset = NULL) override { TR_ASSERT_FATAL(false, "called"); return false; }
    virtual uintptr_t offsetInSharedCacheFromROMMethod(J9ROMMethod *romMethod) override { TR_ASSERT_FATAL(false, "called"); return TR_SharedCache::INVALID_ROM_METHOD_OFFSET; }
 
-   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL) override { TR_ASSERT_FATAL(false, "called"); return false;}
+   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL, bool allowCaching=true) override { TR_ASSERT_FATAL(false, "called"); return false;}
 
    virtual void *lookupClassLoaderAssociatedWithClassChain(void *chainData) override
       { TR_ASSERT_FATAL(false, "called"); return NULL; }
@@ -822,7 +825,7 @@ public:
    virtual void *lookupClassLoaderAssociatedWithClassChain(void *chainData) override;
    virtual J9ROMClass *romClassFromOffsetInSharedCache(uintptr_t offset) override;
    virtual J9ROMMethod *romMethodFromOffsetInSharedCache(uintptr_t offset) override;
-   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL) override;
+   virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL, bool allowCaching=true) override;
    virtual TR_OpaqueClassBlock *lookupClassFromChainAndLoader(uintptr_t *chainData, void *classLoader,
                                                               TR::Compilation *comp) override;
 

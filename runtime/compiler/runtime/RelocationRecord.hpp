@@ -971,7 +971,7 @@ class TR_RelocationRecordProfiledInlinedMethod : public TR_RelocationRecordInlin
       uintptr_t classChainIdentifyingLoaderOffsetInSharedCache(TR_RelocationTarget *reloTarget);
 
       void setClassChainForInlinedMethod(TR_RelocationTarget *reloTarget, uintptr_t classChainForInlinedMethod,
-                                         TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+                                         TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord, TR_OpaqueClassBlock *definingClassForInlinedMethod);
       uintptr_t classChainForInlinedMethod(TR_RelocationTarget *reloTarget);
 
       void setMethodIndex(TR_RelocationTarget *reloTarget, uintptr_t methodIndex);
@@ -1809,7 +1809,7 @@ class TR_RelocationRecordPointer : public TR_RelocationRecordWithInlinedSiteInde
       uintptr_t classChainIdentifyingLoaderOffsetInSharedCache(TR_RelocationTarget *reloTarget);
 
       void setClassChainForInlinedMethod(TR_RelocationTarget *reloTarget, uintptr_t classChainOffsetInSharedCache,
-                                         TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord);
+                                         TR::AheadOfTimeCompile *aotCompile, const AOTCacheClassChainRecord *classChainRecord, TR_OpaqueClassBlock *ramClass);
       uintptr_t classChainForInlinedMethod(TR_RelocationTarget *reloTarget);
 
       virtual TR_RelocationRecordAction action(TR_RelocationRuntime *reloRuntime);

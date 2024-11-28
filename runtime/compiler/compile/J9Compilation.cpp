@@ -1594,6 +1594,7 @@ J9::Compilation::addAOTMethodDependency(TR_OpaqueClassBlock *clazz)
    if (getOption(TR_DisableDependencyTracking))
       return;
 
+   // TODO: I think method dependencies are failing here with my aggressive caching???
    auto chainOffset = self()->fej9()->sharedCache()->rememberClass(clazz);
 
    if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET == chainOffset)
