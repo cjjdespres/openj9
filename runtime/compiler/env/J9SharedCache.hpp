@@ -230,9 +230,9 @@ public:
    virtual const char *getDebugCounterName(UDATA offset);
 
    virtual bool classMatchesCachedVersion(J9Class *clazz, UDATA *chainData=NULL, bool allowCaching=true);
-   virtual bool classMatchesCachedVersion(TR_OpaqueClassBlock *classPtr, UDATA *chainData=NULL)
+   virtual bool classMatchesCachedVersion(TR_OpaqueClassBlock *classPtr, UDATA *chainData=NULL, bool allowCaching=true)
       {
-      return classMatchesCachedVersion((J9Class *) classPtr, chainData);
+      return classMatchesCachedVersion((J9Class *) classPtr, chainData, allowCaching);
       }
 
    /**
