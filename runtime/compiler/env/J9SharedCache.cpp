@@ -23,6 +23,7 @@
 #include "env/J9SharedCache.hpp"
 
 #include <algorithm>
+#include "env/SharedCache.hpp"
 #include "j9cfg.h"
 #include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
@@ -1341,8 +1342,20 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData)
    bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
    if (dependencyTableActualPriority)
       {
-      uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
       uintptr_t cachedOffset = dependencyTable->getChainOffsetOfClass((TR_OpaqueClassBlock *)clazz);
+      if (!chainData)
+         {
+         if (TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != cachedOffset)
+            {
+            LOG(1, "\tcached result: validation succeeded\n");
+            return true;
+            }
+
+         LOG(1, "\tcached result: validation failed\n");
+         return true;
+         }
+
+      uintptr_t chainOffset = offsetInSharedCacheFromPointer(chainData);
       if (chainOffset == cachedOffset)
          {
          LOG(1, "\tcached result: validation succeeded\n");
