@@ -1473,7 +1473,6 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
          }
       else
          {
-         TR_ASSERT_FATAL(false, "bizarre!");
          LOG(1, "\tcached result: validation failed %lu %lu\n", chainOffset, cachedOffset);
          return false;
          }
