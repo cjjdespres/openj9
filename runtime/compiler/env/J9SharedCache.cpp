@@ -1451,7 +1451,7 @@ TR_J9SharedCache::classMatchesCachedVersion(J9Class *clazz, UDATA *chainData, bo
    static bool depTableHasPriority = feGetEnv("TR_DependencyTableNoClassMatchesCachedPriority") == NULL;
    bool dependencyTableActualPriority = dependencyTable && depTableHasPriority;
    static bool noStrictChecking = feGetEnv("TR_DependencyTableStrictChecking") == NULL;
-   bool actualNoStrictChecking = noStrictChecking && allowCaching;
+   bool actualNoStrictChecking = !allowCaching || noStrictChecking;
    uintptr_t dependencyChainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
    if (allowCaching && dependencyTableActualPriority)
       {
