@@ -215,9 +215,9 @@ public:
       }
 
    virtual uintptr_t rememberClass(TR_OpaqueClassBlock *classPtr,
-                                    const AOTCacheClassChainRecord **classChainRecord = NULL, const uintptr_t **classChain = NULL)
+                                    const AOTCacheClassChainRecord **classChainRecord = NULL, bool create = true, const uintptr_t **classChain = NULL)
       {
-      return rememberClass((J9Class *)classPtr, classChainRecord, true, classChain);
+      return rememberClass((J9Class *)classPtr, classChainRecord, create, classChain);
       }
 
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
@@ -847,7 +847,7 @@ public:
 
    virtual bool canRememberClass(TR_OpaqueClassBlock *classPtr) override { TR_ASSERT_FATAL(false, "called"); return false; }
    virtual uintptr_t rememberClass(TR_OpaqueClassBlock *classPtr,
-                                   const AOTCacheClassChainRecord **classChainRecord = NULL, const uintptr_t **classChain = NULL) override
+                                   const AOTCacheClassChainRecord **classChainRecord = NULL, bool create = true, const uintptr_t **classChain = NULL) override
       { TR_ASSERT_FATAL(false, "called"); return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET; }
 
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
