@@ -5689,7 +5689,7 @@ typedef struct J9VMThread {
 #define J9VMTHREAD_UNSAFE_INDEXABLE_HEADER_SIZE(vmThread) ((vmThread)->unsafeIndexableHeaderSize)
 
 typedef struct JFRState {
-	char *jfrFileName;
+	const char *jfrFileName;
 	U_8 *metaDataBlobFile;
 	UDATA metaDataBlobFileSize;
 	IDATA blobFileDescriptor;

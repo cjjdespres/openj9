@@ -27,6 +27,8 @@
 #include "JFRChunkWriter.hpp"
 #include "JFRConstantPoolTypes.hpp"
 
+const char *VM_JFRChunkWriter::_defaultJFRFileName = DEFAULT_JFR_FILE_NAME;
+
 void
 VM_JFRChunkWriter::writeJFRHeader()
 {

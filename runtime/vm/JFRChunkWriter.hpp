@@ -167,6 +167,8 @@ private:
 
 	static constexpr int METADATA_ID = 1;
 
+	static const char *_defaultJFRFileName;
+
 protected:
 
 public:
@@ -598,6 +600,12 @@ done:
 
 		/* write size */
 		_bufferWriter->writeLEB128PaddedU32(dataStart, _bufferWriter->getCursor() - dataStart);
+	}
+
+	static const char *
+	defaultJFRFileName()
+	{
+		return _defaultJFRFileName;
 	}
 
 	void

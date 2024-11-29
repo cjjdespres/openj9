@@ -150,7 +150,7 @@ public:
 		bool result = true;
 
 		if (NULL == vm->jfrState.jfrFileName) {
-			vm->jfrState.jfrFileName = (char*)DEFAULT_JFR_FILE_NAME;
+			vm->jfrState.jfrFileName = VM_JFRChunkWriter::defaultJFRFileName();
 		}
 
 		if (!openJFRFile(vm)) {

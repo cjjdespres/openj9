@@ -979,9 +979,9 @@ jfrSamplingThreadProc(void *entryArg)
 jboolean
 setJFRRecordingFileName(J9JavaVM *vm, char *fileName)
 {
-	if ((char*)DEFAULT_JFR_FILE_NAME != vm->jfrState.jfrFileName) {
+	if (VM_JFRChunkWriter::defaultJFRFileName() != vm->jfrState.jfrFileName) {
 		PORT_ACCESS_FROM_JAVAVM(vm);
-		j9mem_free_memory(vm->jfrState.jfrFileName);
+		j9mem_free_memory((void *)vm->jfrState.jfrFileName);
 	}
 	vm->jfrState.jfrFileName = fileName;
 	VM_JFRWriter::closeJFRFile(vm);
