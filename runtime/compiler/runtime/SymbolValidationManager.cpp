@@ -1310,8 +1310,29 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+   auto classOfStatic = TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex);
+   auto result = validateSymbol(classID, classOfStatic);
+   if (!result)
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure: %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, classOfStatic);
+      }
+
+   auto didFail = result;
+
    TR_ResolvedJ9Method::getClassFromCP(_fej9, beholderCP, _comp, cpIndex);
-   return validateSymbol(classID, TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex));
+
+   classOfStatic = TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex);
+   result = validateSymbol(classID, classOfStatic);
+   if (!result)
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure again: %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, classOfStatic);
+      }
+   else if (didFail)
+      {
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP recovery: %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, classOfStatic);
+      }
+
+   return result;
    }
 
 bool
