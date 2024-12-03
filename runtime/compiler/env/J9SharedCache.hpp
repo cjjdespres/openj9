@@ -223,6 +223,8 @@ public:
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
                                     bool create = true);
 
+   virtual uintptr_t *rememberClassNoOffset(J9Class *clazz, bool &couldCreate, const AOTCacheClassChainRecord **classChainRecord = NULL, bool create = true);
+
    virtual UDATA rememberDebugCounterName(const char *name);
    virtual const char *getDebugCounterName(UDATA offset);
 
@@ -741,6 +743,8 @@ public:
 
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
                                    bool create = true) override;
+   virtual uintptr_t *rememberClassNoOffset(J9Class *clazz, bool &couldCreate, const AOTCacheClassChainRecord **classChainRecord = NULL, bool create = true) override
+      { TR_ASSERT_FATAL(false, "called"); return NULL; }
 
    virtual UDATA rememberDebugCounterName(const char *name) override { TR_ASSERT_FATAL(false, "called"); return 0;}
    virtual const char *getDebugCounterName(UDATA offset) override { TR_ASSERT_FATAL(false, "called"); return NULL;}
@@ -850,6 +854,8 @@ public:
    virtual uintptr_t rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord = NULL,
                                    bool create = true) override
       { TR_ASSERT_FATAL(false, "called"); return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET; }
+   virtual uintptr_t *rememberClassNoOffset(J9Class *clazz, bool &couldCreate, const AOTCacheClassChainRecord **classChainRecord = NULL, bool create = true) override
+      { TR_ASSERT_FATAL(false, "called"); return NULL; }
 
    virtual UDATA rememberDebugCounterName(const char *name) override { TR_ASSERT_FATAL(false, "called"); return 0; }
    virtual const char *getDebugCounterName(UDATA offset) override { TR_ASSERT_FATAL(false, "called"); return NULL; }

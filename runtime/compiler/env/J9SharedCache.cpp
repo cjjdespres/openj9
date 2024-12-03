@@ -1021,6 +1021,27 @@ TR_J9SharedCache::createClassKey(UDATA classOffsetInCache, char *key, uint32_t &
 uintptr_t
 TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord **classChainRecord, bool create)
    {
+   bool couldCreate = false;
+   uintptr_t *chainData = rememberClassNoOffset(clazz, couldCreate, classChainRecord, create);
+   if (chainData)
+      {
+      uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      if (!isPointerInSharedCache(chainData, &chainOffset))
+         LOG(1, "\tcurrent class and class chain found (%p) are identical but its offset isn't available yet; returning INVALID_CLASS_CHAIN_OFFSET\n", chainData);
+
+      return chainOffset;
+      }
+   else if (couldCreate)
+      {
+      return COULD_CREATE_CLASS_CHAIN;
+      }
+
+   return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+   }
+
+uintptr_t *
+TR_J9SharedCache::rememberClassNoOffset(J9Class *clazz, bool &couldCreate, const AOTCacheClassChainRecord **classChainRecord, bool create)
+   {
    uintptr_t *chainData = NULL;
 #if defined(J9VM_OPT_SHARED_CLASSES) && (defined(TR_HOST_X86) || defined(TR_HOST_POWER) || defined(TR_HOST_S390) || defined(TR_HOST_ARM) || defined(TR_HOST_ARM64))
    TR_J9VMBase *fej9 = (TR_J9VMBase *)fe();
@@ -1033,7 +1054,7 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    if (!isROMClassInSharedCache(romClass, &classOffsetInCache))
       {
       LOG(1,"\trom class not in shared cache, returning\n");
-      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      return NULL;
       }
 
    char key[17]; // longest possible key length is way less than 16 digits
@@ -1048,20 +1069,14 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
       uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
       if (classMatchesCachedVersion(clazz, chainData))
          {
-         if (isPointerInSharedCache(chainData, &chainOffset))
-            {
-            LOG(1, "\tcurrent class and class chain found (%p) are identical; returning the class chain\n", chainData);
-            }
-         else
-            {
-            LOG(1, "\tcurrent class and class chain found (%p) are identical but its offset isn't available yet; returning INVALID_CLASS_CHAIN_OFFSET\n", chainData);
-            }
+         LOG(1, "\tcurrent class and class chain found (%p) are identical; returning the class chain\n", chainData);
+         return chainData;
          }
       else
          {
-         LOG(1, "\tcurrent class and class chain found (%p) do not match, so cannot use class chain; returning INVALID_CLASS_CHAIN_OFFSET\n", chainData);
+         LOG(1, "\tcurrent class and class chain found (%p) do not match, so cannot use class chain; returning NULL\n", chainData);
+         return NULL;
          }
-      return chainOffset;
       }
 
    int32_t numSuperclasses = fe()->numSuperclasses(clazz);
@@ -1074,19 +1089,20 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
    if (chainLength > maxClassChainLength * sizeof(uintptr_t))
       {
       LOG(1, "\t\t > %u so bailing\n", maxClassChainLength);
-      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      return NULL;
       }
 
    if (!fillInClassChain(clazz, chainData, chainLength, numSuperclasses, numInterfaces))
       {
       LOG(1, "\tfillInClassChain failed, bailing\n");
-      return TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
+      return NULL;
       }
 
    if (!create)
       {
-      LOG(1, "\tnot asked to create but could create, returning COULD_CREATE_CLASS_CHAIN\n");
-      return COULD_CREATE_CLASS_CHAIN;
+      LOG(1, "\tnot asked to create but could create, setting couldCreate=true\n");
+      couldCreate = true;
+      return NULL;
       }
 
    uintptr_t chainDataLength = chainData[0];
@@ -1115,10 +1131,9 @@ TR_J9SharedCache::rememberClass(J9Class *clazz, const AOTCacheClassChainRecord *
       setStoreSharedDataFailedLength(chainDataLength);
       }
 #endif
-   uintptr_t chainOffset = TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET;
-   isPointerInSharedCache(chainData, &chainOffset);
-   return chainOffset;
+   return chainData;
    }
+
 
 UDATA
 TR_J9SharedCache::rememberDebugCounterName(const char *name)
