@@ -23,6 +23,7 @@
 #include <string.h>
 #include "env/VMJ9.h"
 #include "env/ClassLoaderTable.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/JSR292Methods.h"
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
@@ -341,6 +342,8 @@ TR::SymbolValidationManager::validateWellKnownClasses(const uintptr_t *wellKnown
    // relocations, in which case the Compilation is reused.
    bool assignNewIDs = _wellKnownClassChainOffsets == NULL;
    int classCount = static_cast<int>(wellKnownClassChainOffsets[0]);
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    for (int i = 1; i <= classCount; i++)
       {
       uintptr_t classChainOffset = wellKnownClassChainOffsets[i];
@@ -356,7 +359,9 @@ TR::SymbolValidationManager::validateWellKnownClasses(const uintptr_t *wellKnown
       if (clazz == NULL)
          return false;
 
-      if (!_fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain))
+      if (useDependencyTable && !dependencyTable->classMatchesCachedVersion(clazz, classChainOffset))
+         return false;
+      else if (!_fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain))
          return false;
 
       _seenValuesSet.insert(clazz);
@@ -1238,7 +1243,7 @@ TR::SymbolValidationManager::validateSymbol(uint16_t methodID, uint16_t defining
    }
 
 bool
-TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain)
+TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain, uintptr_t classChainOffset)
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
@@ -1247,14 +1252,33 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
    char *className = reinterpret_cast<char *>(J9UTF8_DATA(classNameData));
    uint32_t classNameLength = J9UTF8_LENGTH(classNameData);
    TR_OpaqueClassBlock *clazz = _fej9->getClassFromSignature(className, classNameLength, beholderCP);
-   return validateSymbol(classID, clazz)
-      && _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain);
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
+   if (useDependencyTable)
+      {
+      return validateSymbol(classID, clazz)
+         && dependencyTable->classMatchesCachedVersion(clazz, classChainOffset);
+      }
+   else
+      {
+      return validateSymbol(classID, clazz)
+         && _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain);
+      }
    }
 
 bool
 TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader,
-                                                         void *classChainForClassBeingValidated)
+                                                         void *classChainForClassBeingValidated, uintptr_t classChainOffsetForClassBeingValidated)
    {
+
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
+   if (useDependencyTable)
+      {
+      auto clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
+      return validateSymbol(classID, clazz);
+      }
+
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
    if (classLoader == NULL)
       return false;
@@ -1330,14 +1354,24 @@ TR::SymbolValidationManager::validateClassInstanceOfClassRecord(uint16_t classOn
    }
 
 bool
-TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain)
+TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain, uintptr_t classChainOffset)
    {
    J9ROMClass *romClass = _fej9->sharedCache()->startingROMClassOfClassChain(classChain);
    J9UTF8 * className = J9ROMCLASS_CLASSNAME(romClass);
    TR_OpaqueClassBlock *systemClassByName = _fej9->getSystemClassFromClassName(reinterpret_cast<const char *>(J9UTF8_DATA(className)),
                                                                               J9UTF8_LENGTH(className));
-   return validateSymbol(systemClassID, systemClassByName)
-      && _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain);
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
+   if (useDependencyTable)
+      {
+      return validateSymbol(systemClassID, systemClassByName)
+         && dependencyTable->classMatchesCachedVersion(systemClassByName, classChainOffset);
+      }
+   else
+      {
+      return validateSymbol(systemClassID, systemClassByName)
+        && _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain);
+      }
    }
 
 bool
@@ -1402,9 +1436,15 @@ TR::SymbolValidationManager::validateConcreteSubClassFromClassRecord(uint16_t ch
    }
 
 bool
-TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *classChain)
+TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *classChain, uintptr_t classChainOffset)
    {
    TR_OpaqueClassBlock *definingClass = getClassFromID(classID);
+
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
+   if (useDependencyTable)
+      return dependencyTable->classMatchesCachedVersion(definingClass, classChainOffset);
+
    return _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *) classChain);
    }
 
