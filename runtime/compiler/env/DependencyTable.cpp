@@ -490,12 +490,11 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
    if (it == _offsetMap.end())
       return NULL;
 
-   J9Class *candidate = NULL;
    for (const auto& clazz: it->second._loadedClasses)
       {
       if ((J9ClassInitSucceeded == clazz->initializeStatus) &&
-          (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(candidate->classLoader) == classLoaderChain))
-         return candidate;
+          (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
+         return clazz;
       }
 
    return NULL;
