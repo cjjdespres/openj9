@@ -1243,7 +1243,7 @@ TR::SymbolValidationManager::validateSymbol(uint16_t methodID, uint16_t defining
    }
 
 bool
-TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain, uintptr_t classChainOffset)
+TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_t beholderID, uintptr_t *classChain)
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
@@ -1257,7 +1257,7 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
    if (useDependencyTable)
       {
       return validateSymbol(classID, clazz)
-         && dependencyTable->classMatchesCachedVersion(clazz, classChainOffset);
+         && dependencyTable->classMatchesCachedVersion(clazz, classChain);
       }
    else
       {
@@ -1354,7 +1354,7 @@ TR::SymbolValidationManager::validateClassInstanceOfClassRecord(uint16_t classOn
    }
 
 bool
-TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain, uintptr_t classChainOffset)
+TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClassID, uintptr_t *classChain)
    {
    J9ROMClass *romClass = _fej9->sharedCache()->startingROMClassOfClassChain(classChain);
    J9UTF8 * className = J9ROMCLASS_CLASSNAME(romClass);
@@ -1365,7 +1365,7 @@ TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClas
    if (useDependencyTable)
       {
       return validateSymbol(systemClassID, systemClassByName)
-         && dependencyTable->classMatchesCachedVersion(systemClassByName, classChainOffset);
+         && dependencyTable->classMatchesCachedVersion(systemClassByName, classChain);
       }
    else
       {
@@ -1436,16 +1436,16 @@ TR::SymbolValidationManager::validateConcreteSubClassFromClassRecord(uint16_t ch
    }
 
 bool
-TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *classChain, uintptr_t classChainOffset)
+TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *classChain)
    {
    TR_OpaqueClassBlock *definingClass = getClassFromID(classID);
 
    auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
    bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    if (useDependencyTable)
-      return dependencyTable->classMatchesCachedVersion(definingClass, classChainOffset);
+      return dependencyTable->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
 
-   return _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *) classChain);
+   return _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
    }
 
 bool

@@ -3941,7 +3941,7 @@ TR_RelocationRecordValidateClassByName::applyRelocation(TR_RelocationRuntime *re
    uintptr_t classChainOffset = this->classChainOffset(reloTarget);
    uintptr_t *classChain = (uintptr_t*)reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainOffset);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassByNameRecord(classID, beholderID, classChain, classChainOffset))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassByNameRecord(classID, beholderID, classChain))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::classByNameValidationFailure;
@@ -4416,7 +4416,7 @@ TR_RelocationRecordValidateSystemClassByName::applyRelocation(TR_RelocationRunti
    uintptr_t classChainOffset = this->classChainOffset(reloTarget);
    uintptr_t *classChain = (uintptr_t*)reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainOffset);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateSystemClassByNameRecord(systemClassID, classChain, classChainOffset))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateSystemClassByNameRecord(systemClassID, classChain))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::systemClassByNameValidationFailure;
@@ -4509,7 +4509,7 @@ TR_RelocationRecordValidateClassChain::applyRelocation(TR_RelocationRuntime *rel
    uintptr_t classChainOffset = this->classChainOffset(reloTarget);
    void *classChain = reloRuntime->fej9()->sharedCache()->pointerFromOffsetInSharedCache(classChainOffset);
 
-   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassChainRecord(classID, classChain, classChainOffset))
+   if (reloRuntime->comp()->getSymbolValidationManager()->validateClassChainRecord(classID, classChain))
       return TR_RelocationErrorCode::relocationOK;
    else
       return TR_RelocationErrorCode::classChainValidationFailure;
