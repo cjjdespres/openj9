@@ -359,8 +359,16 @@ TR::SymbolValidationManager::validateWellKnownClasses(const uintptr_t *wellKnown
       if (clazz == NULL)
          return false;
 
-      if (useDependencyTable && !dependencyTable->classMatchesCachedVersion(clazz, classChainOffset))
-         return false;
+      static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
+      if (useDependencyTable)
+         {
+         bool dependencyValid = dependencyTable->classMatchesCachedVersion(clazz, classChainOffset);
+         bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : dependencyValid;
+         if (dependencyValid != traditionallyValid)
+            TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "WKC conflict: %p %d %d", clazz, dependencyValid, traditionallyValid);
+         if (!dependencyValid)
+            return false;
+         }
       else if (!_fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain))
          return false;
 
@@ -1256,8 +1264,14 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
    bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    if (useDependencyTable)
       {
+      static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
+      bool dependencyValid = dependencyTable->classMatchesCachedVersion(clazz, classChain);
+      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : dependencyValid;
+      if (dependencyValid != traditionallyValid)
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "CBN conflict: %p %d %d", clazz, dependencyValid, traditionallyValid);
+
       return validateSymbol(classID, clazz)
-         && dependencyTable->classMatchesCachedVersion(clazz, classChain);
+         && dependencyValid;
       }
    else
       {
@@ -1275,6 +1289,25 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    if (useDependencyTable)
       {
+      static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
+      auto dependencyClazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
+      auto dependencyValid = validateSymbol(classID, dependencyClazz);
+      auto traditionalClazz = dependencyClazz;
+      auto traditionalValid = dependencyValid;
+      if (strictChecking)
+         {
+         J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
+         if (classLoader)
+            {
+            traditionalClazz = (TR_OpaqueClassBlock *)_fej9->sharedCache()->lookupClassFromChainAndLoader(
+               static_cast<uintptr_t *>(classChainForClassBeingValidated), classLoader, _comp
+            );
+            traditionalValid = validateSymbol(classID, traditionalClazz);
+            }
+         }
+      if ((dependencyClazz != traditionalClazz) || (dependencyValid != traditionalValid))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %d %d", dependencyClazz, traditionalClazz, dependencyValid, traditionalValid);
+
       auto clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
       return validateSymbol(classID, clazz);
       }
@@ -1310,11 +1343,12 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    {
    J9Class *beholder = getJ9ClassFromID(beholderID);
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
+   auto classWeWant = getJ9ClassFromID(classID);
    auto classOfStatic = TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex);
    auto result = validateSymbol(classID, classOfStatic);
    if (!result)
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure: %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, classOfStatic);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure: %p %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, classOfStatic, classWeWant);
       }
 
    auto didFail = !result;
@@ -1326,11 +1360,11 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    result = validateSymbol(classID, classOfStatic);
    if (!result)
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure again: %p %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, origClassOfStatic, classOfStatic);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP failure again: %p %p %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, origClassOfStatic, classOfStatic, classWeWant);
       }
    else if (didFail)
       {
-      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP recovery: %p %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, origClassOfStatic, classOfStatic);
+      TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "Static CP recovery: %p %p %p %p %p", _comp->getMethodBeingCompiled()->getPersistentIdentifier(), beholder, origClassOfStatic, classOfStatic, classWeWant);
       }
 
    return result;
@@ -1387,8 +1421,14 @@ TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClas
    bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    if (useDependencyTable)
       {
+      static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
+      bool dependencyValid = dependencyTable->classMatchesCachedVersion(systemClassByName, classChain);
+      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain) : dependencyValid;
+      if (dependencyValid != traditionallyValid)
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "SCBN conflict: %p %d %d", systemClassByName, dependencyValid, traditionallyValid);
+
       return validateSymbol(systemClassID, systemClassByName)
-         && dependencyTable->classMatchesCachedVersion(systemClassByName, classChain);
+         && dependencyValid;
       }
    else
       {
@@ -1466,7 +1506,15 @@ TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *cl
    auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
    bool useDependencyTable = dependencyTable && !_comp->isDeserializedAOTMethod();
    if (useDependencyTable)
-      return dependencyTable->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
+      {
+      static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
+      bool dependencyValid = dependencyTable->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
+      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain) : dependencyValid;
+      if (dependencyValid != traditionallyValid)
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "CBN conflict: %p %d %d", definingClass, dependencyValid, traditionallyValid);
+
+      return dependencyValid;
+      }
 
    return _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
    }
