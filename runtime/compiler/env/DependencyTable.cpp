@@ -500,6 +500,37 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
    return NULL;
    }
 
+
+// TODO: assert is not deserialized aot method, I suppose
+bool
+TR_AOTDependencyTable::classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t chainOffset)
+   {
+   auto chain = (uintptr_t *)_sharedCache->pointerFromOffsetInSharedCache(chainOffset);
+   return classMatchesCachedVersion((J9Class *)ramClass, chain);
+   }
+
+bool
+TR_AOTDependencyTable::classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t *chain)
+   {
+   return classMatchesCachedVersion((J9Class *)ramClass, chain);
+   }
+
+bool
+TR_AOTDependencyTable::classMatchesCachedVersion(J9Class *ramClass, uintptr_t *chain)
+   {
+   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
+
+   OMR::CriticalSection cs(_tableMonitor);
+   if (!isActive())
+      return false;
+
+   auto it = _offsetMap.find(romClassOffset);
+   if (it == _offsetMap.end())
+      return false;
+
+   return it->second._loadedClasses.find((J9Class *)ramClass) != it->second._loadedClasses.end();
+   }
+
 void
 TR_AOTDependencyTable::printStats()
    {
