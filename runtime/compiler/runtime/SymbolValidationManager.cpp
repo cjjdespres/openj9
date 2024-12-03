@@ -1354,7 +1354,8 @@ TR::SymbolValidationManager::validateStaticClassFromCPRecord(uint16_t classID, u
    auto didFail = !result;
    auto origClassOfStatic = classOfStatic;
 
-   TR_ResolvedJ9Method::getClassFromCP(_fej9, beholderCP, _comp, cpIndex);
+   if (cpIndex != -1)
+      _fej9->_vmFunctionTable->resolveClassRef(_fej9->vmThread(), beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
 
    classOfStatic = TR_ResolvedJ9Method::getClassOfStaticFromCP(_fej9, beholderCP, cpIndex);
    result = validateSymbol(classID, classOfStatic);
