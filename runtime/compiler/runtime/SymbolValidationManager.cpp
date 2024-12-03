@@ -363,7 +363,7 @@ TR::SymbolValidationManager::validateWellKnownClasses(const uintptr_t *wellKnown
       if (useDependencyTable)
          {
          bool dependencyValid = dependencyTable->classMatchesCachedVersion(clazz, classChainOffset);
-         bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : dependencyValid;
+         bool traditionallyValid = strictChecking ? (clazz ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : false) : dependencyValid;
          if (dependencyValid != traditionallyValid)
             TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "WKC conflict: %p %d %d", clazz, dependencyValid, traditionallyValid);
          if (!dependencyValid)
@@ -1266,7 +1266,7 @@ TR::SymbolValidationManager::validateClassByNameRecord(uint16_t classID, uint16_
       {
       static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
       bool dependencyValid = dependencyTable->classMatchesCachedVersion(clazz, classChain);
-      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : dependencyValid;
+      bool traditionallyValid = strictChecking ? (clazz ? _fej9->sharedCache()->classMatchesCachedVersion(clazz, classChain) : false) : dependencyValid;
       if (dependencyValid != traditionallyValid)
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "CBN conflict: %p %d %d", clazz, dependencyValid, traditionallyValid);
 
@@ -1427,7 +1427,7 @@ TR::SymbolValidationManager::validateSystemClassByNameRecord(uint16_t systemClas
       {
       static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
       bool dependencyValid = dependencyTable->classMatchesCachedVersion(systemClassByName, classChain);
-      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain) : dependencyValid;
+      bool traditionallyValid = strictChecking ? (systemClassByName ? _fej9->sharedCache()->classMatchesCachedVersion(systemClassByName, classChain) : false) : dependencyValid;
       if (dependencyValid != traditionallyValid)
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "SCBN conflict: %p %d %d", systemClassByName, dependencyValid, traditionallyValid);
 
@@ -1513,7 +1513,7 @@ TR::SymbolValidationManager::validateClassChainRecord(uint16_t classID, void *cl
       {
       static bool strictChecking = feGetEnv("TR_DepTrackDoubleCheck") != NULL;
       bool dependencyValid = dependencyTable->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain);
-      bool traditionallyValid = strictChecking ? _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain) : dependencyValid;
+      bool traditionallyValid = strictChecking ? (definingClass ? _fej9->sharedCache()->classMatchesCachedVersion(definingClass, (uintptr_t *)classChain) : false) : dependencyValid;
       if (dependencyValid != traditionallyValid)
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "CBN conflict: %p %d %d", definingClass, dependencyValid, traditionallyValid);
 
