@@ -3675,6 +3675,11 @@ TR_RelocationRecordValidateClass::validateClass(TR_RelocationRuntime *reloRuntim
    // classChainOrRomClass, for classes and instance fields, is a class chain pointer from the relocation record
 
    void *classChain = classChainOrRomClass;
+   auto dependencyTable = reloRuntime->getPersistentInfo()->getAOTDependencyTable();
+   bool useDependencyTable = dependencyTable && !reloRuntime->comp()->isDeserializedAOTMethod();
+   if (useDependencyTable)
+      return dependencyTable->classMatchesCachedVersion(clazz, (uintptr_t *) classChain);
+
    return reloRuntime->fej9()->sharedCache()->classMatchesCachedVersion(clazz, (uintptr_t *) classChain);
    }
 
