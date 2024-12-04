@@ -1554,6 +1554,8 @@ TR::SymbolValidationManager::validateStaticMethodFromCPRecord(uint16_t methodID,
    J9ConstantPool *beholderCP = J9_CP_FROM_CLASS(beholder);
    J9Method *ramMethod;
 
+   jitGetJ9MethodUsingIndex(_fej9->vmThread(), beholderCP, cpIndex);
+
       {
       TR::VMAccessCriticalSection getResolvedStaticMethod(_fej9);
       ramMethod = jitResolveStaticMethodRef(_vmThread, beholderCP, cpIndex, J9_RESOLVE_FLAG_JIT_COMPILE_TIME);
