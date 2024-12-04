@@ -495,9 +495,12 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
    for (const auto& clazz: it->second._loadedClasses)
       {
       // This is the same validation condition as in jitGetClassInClassloaderFromUTF8()
-      if ((J9ClassInitFailed != clazz->initializeStatus) &&
-          (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
+       if (J9ClassInitFailed != clazz->initializeStatus)
          return clazz;
+
+      // if ((J9ClassInitFailed != clazz->initializeStatus) &&
+      //     (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
+      // return clazz;
       }
 
    return NULL;
