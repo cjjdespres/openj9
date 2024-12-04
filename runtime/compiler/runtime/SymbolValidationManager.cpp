@@ -1306,12 +1306,14 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
             }
          }
 
-      auto targetClazz = getJ9ClassFromID(classID);
-      auto targetClazzValid = dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)targetClazz, (uintptr_t *)classChainForClassBeingValidated);
+      auto targetClazz = getJ9ClassFromID(classID, SymOptional);
       if ((dependencyClazz != traditionalClazz) || (dependencyValid != traditionalValid))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %p %d %d %d", dependencyClazz, traditionalClazz, targetClazz, dependencyValid, traditionalValid, targetClazzValid);
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %p %d %d", dependencyClazz, traditionalClazz, targetClazz, dependencyValid, traditionalValid);
 
-      return targetClazzValid;
+      // TODO: this was once targetClazzValid (using dependency table
+      // validation) and that had zero failures, so should make sure that that
+      // still works.
+      return dependencyValid;
       }
 
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
