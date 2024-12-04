@@ -9864,6 +9864,7 @@ TR::CompilationInfoPerThreadBase::compile(
 
       if (_methodBeingCompiled->isAotLoad())
          {
+         Trc_JIT_compile_performAOTLoad(vmThread, compiler->getHotnessName(compiler->getMethodHotness()), compiler->signature(), method);
          metaData = performAOTLoad(vmThread, compiler, compilee, &vm, method);
          }
 #if defined(J9VM_OPT_JITSERVER)
