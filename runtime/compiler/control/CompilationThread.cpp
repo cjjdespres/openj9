@@ -9872,6 +9872,7 @@ TR::CompilationInfoPerThreadBase::compile(
          catch (std::exception&)
             {
             Trc_JIT_compile_performAOTLoadException(vmThread);
+            throw;
             }
          Trc_JIT_compile_performAOTLoadEnd(vmThread, metaData);
          }
