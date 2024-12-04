@@ -1305,10 +1305,13 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
             traditionalValid = validateSymbol(classID, traditionalClazz);
             }
          }
-      if ((dependencyClazz != traditionalClazz) || (dependencyValid != traditionalValid))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %d %d", dependencyClazz, traditionalClazz, dependencyValid, traditionalValid);
 
-      return dependencyValid;
+      auto targetClazz = getJ9ClassFromID(classID);
+      auto targetClazzValid = dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)targetClazz, (uintptr_t *)classChainForClassBeingValidated);
+      if ((dependencyClazz != traditionalClazz) || (dependencyValid != traditionalValid))
+         TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %p %d %d %d", dependencyClazz, traditionalClazz, targetClazz, dependencyValid, traditionalValid, targetClazzValid);
+
+      return targetClazzValid;
       }
 
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
