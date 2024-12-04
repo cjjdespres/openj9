@@ -9864,8 +9864,16 @@ TR::CompilationInfoPerThreadBase::compile(
 
       if (_methodBeingCompiled->isAotLoad())
          {
-         Trc_JIT_compile_performAOTLoad(vmThread, compiler->getHotnessName(compiler->getMethodHotness()), compiler->signature(), method);
-         metaData = performAOTLoad(vmThread, compiler, compilee, &vm, method);
+         Trc_JIT_compile_performAOTLoadStart(vmThread, compiler->getHotnessName(compiler->getMethodHotness()), compiler->signature(), method);
+         try
+            {
+            metaData = performAOTLoad(vmThread, compiler, compilee, &vm, method);
+            }
+         catch (std::exception&)
+            {
+            Trc_JIT_compile_performAOTLoadException(vmThread);
+            }
+         Trc_JIT_compile_performAOTLoadEnd(vmThread, metaData);
          }
 #if defined(J9VM_OPT_JITSERVER)
       else if (_methodBeingCompiled->isRemoteCompReq()) // JITServer Client Mode
