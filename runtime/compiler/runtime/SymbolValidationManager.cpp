@@ -1308,8 +1308,7 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
       if ((dependencyClazz != traditionalClazz) || (dependencyValid != traditionalValid))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO, "PC conflict: %p %p %d %d", dependencyClazz, traditionalClazz, dependencyValid, traditionalValid);
 
-      auto clazz = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(_comp, classChainOffsetForClassBeingValidated, classChainIdentifyingLoader);
-      return validateSymbol(classID, clazz);
+      return dependencyValid;
       }
 
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
