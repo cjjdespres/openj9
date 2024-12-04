@@ -135,6 +135,5 @@ TraceEvent=Trc_JITServerOutOfSequenceMsg1    Overhead=1 Level=1 Test Template="J
 TraceEvent=Trc_JITServerCompThreadCrashed    Overhead=1 Level=1 Test Template="JITClient: compThreadID=%d server compilation thread crashed while compiling %s @ %s. Requesting JitDump recompilation and switching to local compilations."
 TraceEvent=Trc_JITServerClearCaches    Overhead=1 Level=1 Test Template="JITServer: compThreadID=%d clientSessionData=%p clientUID=%llu clearing all the caches due to class redefinition."
 
-TraceEntry=Trc_JIT_compile_performAOTLoadStart Overhead=1 Level=1 Test Template=" (%s) AOT loading %s j9m=%p"
-TraceExit=Trc_JIT_compile_performAOTLoadEnd Overhead=1 Level=1 Test Template="AOT loading end: %p"
-TraceExit-Exception=Trc_JIT_compile_performAOTLoadException Overhead=1 Level=1 Test Template="AOT loading exception"
+TraceEvent=Trc_JIT_prepareRelocateStart Overhead=1 Level=1 Test Template="Starting loading of %s j9m=%p"
+TraceEvent=Trc_JIT_prepareRelocateEnd Overhead=1 Level=1 Test Template="Finished loading of %s j9m=%p metaData=%p"

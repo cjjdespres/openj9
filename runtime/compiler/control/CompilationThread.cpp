@@ -6811,6 +6811,7 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
       reloRuntime()->initializeHWProfilerRecords(compiler);
       }
 
+   Trc_JIT_prepareRelocateStart(vmThread, compiler->signature(), method);
    metaData = reloRuntime()->prepareRelocateAOTCodeAndData(vmThread,
                                                            fe,
                                                            aotMCCRuntimeCodeCache,
@@ -6820,6 +6821,7 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
                                                            options,
                                                            compiler,
                                                            compilee);
+   Trc_JIT_prepareRelocateEnd(vmThread, compiler->signature(), method, metaData);
    setMetadata(metaData);
    returnCode = reloRuntime()->returnCode();
    reloErrorCode = reloRuntime()->getReloErrorCode();
@@ -9864,17 +9866,7 @@ TR::CompilationInfoPerThreadBase::compile(
 
       if (_methodBeingCompiled->isAotLoad())
          {
-         Trc_JIT_compile_performAOTLoadStart(vmThread, compiler->getHotnessName(compiler->getMethodHotness()), compiler->signature(), method);
-         try
-            {
-            metaData = performAOTLoad(vmThread, compiler, compilee, &vm, method);
-            }
-         catch (std::exception&)
-            {
-            Trc_JIT_compile_performAOTLoadException(vmThread);
-            throw;
-            }
-         Trc_JIT_compile_performAOTLoadEnd(vmThread, metaData);
+         metaData = performAOTLoad(vmThread, compiler, compilee, &vm, method);
          }
 #if defined(J9VM_OPT_JITSERVER)
       else if (_methodBeingCompiled->isRemoteCompReq()) // JITServer Client Mode
