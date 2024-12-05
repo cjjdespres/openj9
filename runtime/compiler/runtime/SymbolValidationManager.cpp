@@ -23,6 +23,7 @@
 #include <string.h>
 #include "env/VMJ9.h"
 #include "env/ClassLoaderTable.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/JSR292Methods.h"
 #include "env/PersistentCHTable.hpp"
 #include "env/VMAccessCriticalSection.hpp"
@@ -1255,6 +1256,15 @@ bool
 TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void *classChainIdentifyingLoader,
                                                          void *classChainForClassBeingValidated)
    {
+
+   static bool bypassProfiledRecord = feGetEnv("TR_DepTableNoBypassProfiledRecord") == NULL;
+   auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
+   if (bypassProfiledRecord && dependencyTable)
+      {
+      auto clazz = getJ9ClassFromID(classID);
+      return dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)clazz, (uintptr_t *)classChainForClassBeingValidated);
+      }
+
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
    if (classLoader == NULL)
       return false;
