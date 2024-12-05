@@ -472,10 +472,11 @@ TR_AOTDependencyTable::resolvePendingLoads()
    _pendingLoads.clear();
    }
 
+// todo: remove loader chain if below works out
 J9Class *
 TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain)
    {
-   TR_ASSERT(classLoaderChain, "Must be given a loader chain");
+   // TR_ASSERT(classLoaderChain, "Must be given a loader chain");
 
    if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
       return NULL;
@@ -495,9 +496,12 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
    for (const auto& clazz: it->second._loadedClasses)
       {
       // This is the same validation condition as in jitGetClassInClassloaderFromUTF8()
-      if ((J9ClassInitFailed != clazz->initializeStatus) &&
-          (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
+      if (J9ClassInitFailed != clazz->initializeStatus)
          return clazz;
+
+      // if ((J9ClassInitFailed != clazz->initializeStatus) &&
+      //     (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
+      //    return clazz;
       }
 
    return NULL;
