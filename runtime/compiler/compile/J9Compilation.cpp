@@ -1640,10 +1640,14 @@ J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClas
    // TODO: Methods may be able to run before their defining class is
    // initialized. Adding this back in will save a fair amount of space in the
    // SCC once that's figured out.
-   //
-   // uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
-   // TR_ASSERT_FATAL(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered");
-   // _aotMethodDependencies.erase(definingClassChainOffset);
+
+   static bool definingClassIsDependency = feGetEnv("TR_DepTableSelfIsDependency") == NULL;
+   if (definingClassIsDependency)
+      {
+      uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
+      TR_ASSERT(TR_SharedCache::INVALID_CLASS_CHAIN_OFFSET != definingClassChainOffset, "Defining class %p of an AOT-compiled method must be remembered", definingClass);
+      _aotMethodDependencies.erase(definingClassChainOffset);
+      }
 
    uintptr_t totalDependencies = _aotMethodDependencies.size();
    if (totalDependencies == 0)
