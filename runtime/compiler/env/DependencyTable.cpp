@@ -446,15 +446,17 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
 void
 TR_AOTDependencyTable::resolvePendingLoads()
    {
+   static const char *targetCountString = feGetEnv("TR_DepTableTargetCount");
+   static int32_t targetCount = targetCountString ? atoi(targetCountString) : 0;
    for (auto& entry: _pendingLoads)
       {
       auto method = entry->first;
       auto initCount = TR::CompilationInfo::getInvocationCount(method);
       auto count = initCount;
-      while (count > 0)
+      while (count > targetCount)
          {
-         if (TR::CompilationInfo::setInvocationCount(method, count, 0))
-            count = 0;
+         if (TR::CompilationInfo::setInvocationCount(method, count, targetCount))
+            count = targetCount;
          else
             count = TR::CompilationInfo::getInvocationCount(method);
          }
@@ -462,7 +464,7 @@ TR_AOTDependencyTable::resolvePendingLoads()
       if (TR::Options::isAnyVerboseOptionSet(TR_VerboseDependencyTracking, TR_VerboseCounts))
          TR_VerboseLog::writeLineLocked(TR_Vlog_INFO,
                                         "Dependency table: pending load %s - method %p count %lu --> %lu",
-                                        (count == 0) ? "success" : "failure",
+                                        (count == targetCount) ? "success" : "failure",
                                         method,
                                         initCount,
                                         count);
