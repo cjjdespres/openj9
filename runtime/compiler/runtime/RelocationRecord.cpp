@@ -40,6 +40,7 @@
 #include "control/Options_inlines.hpp"
 #include "env/CHTable.hpp"
 #include "env/ClassLoaderTable.hpp"
+#include "env/DependencyTable.hpp"
 #include "env/PersistentCHTable.hpp"
 #include "env/jittypes.h"
 #include "env/VMAccessCriticalSection.hpp"
@@ -3321,11 +3322,16 @@ TR_RelocationRecordProfiledInlinedMethod::preparePrivateData(TR_RelocationRuntim
    reloPrivateData->_guardValue = 0;
    bool failValidation = true;
    TR_OpaqueClassBlock *inlinedCodeClass = NULL;
+   auto dependencyTable = reloRuntime->getPersistentInfo()->getAOTDependencyTable();
 
    if (reloRuntime->comp()->getOption(TR_UseSymbolValidationManager))
       {
       uint16_t inlinedCodeClassID = (uint16_t)cpIndex(reloTarget);
       inlinedCodeClass = (TR_OpaqueClassBlock *)reloRuntime->comp()->getSymbolValidationManager()->getJ9ClassFromID(inlinedCodeClassID);
+      }
+   else if (dependencyTable && !reloRuntime->comp()->isDeserializedAOTMethod())
+      {
+      inlinedCodeClass = (TR_OpaqueClassBlock *)dependencyTable->findCandidateWithChainAndLoader(reloRuntime->comp(), (uintptr_t *)classChainForInlinedMethod(reloTarget), NULL);
       }
    else
       {
