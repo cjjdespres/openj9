@@ -1641,7 +1641,7 @@ J9::Compilation::populateAOTMethodDependencies(TR_OpaqueClassBlock *definingClas
    // initialized. Adding this back in will save a fair amount of space in the
    // SCC once that's figured out.
 
-   static bool definingClassIsDependency = feGetEnv("TR_DepTableSelfIsDependency") == NULL;
+   static bool definingClassIsDependency = feGetEnv("TR_DepTableSelfIsDependency") != NULL;
    if (definingClassIsDependency)
       {
       uintptr_t definingClassChainOffset = self()->fej9()->sharedCache()->rememberClass(definingClass);
