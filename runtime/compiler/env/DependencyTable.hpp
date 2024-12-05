@@ -39,7 +39,7 @@ public:
    void classLoadEvent(TR_OpaqueClassBlock *ramClass, bool isClassLoad, bool isClassInitialization) {}
    void invalidateUnloadedClass(TR_OpaqueClassBlock *ramClass) {}
    void invalidateRedefinedClass(TR_PersistentCHTable *table, TR_J9VMBase *fej9, TR_OpaqueClassBlock *oldClass, TR_OpaqueClassBlock *freshClass) {}
-   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain) { return NULL; }
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t *classChain, void *classLoaderChain) { return NULL; }
    bool classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t chainOffset);
    bool classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t *chain);
    void methodWillBeCompiled(J9Method *method) {}
@@ -123,7 +123,7 @@ public:
    // Given a class chain and class loader chain, return an initialized class
    // with a valid class chain starting with that offset and with a class loader
    // with that loader chain
-   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain);
+   J9Class *findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t *classChain, void *classLoaderChain);
    bool classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t chainOffset);
    bool classMatchesCachedVersion(TR_OpaqueClassBlock *ramClass, uintptr_t *chain);
 

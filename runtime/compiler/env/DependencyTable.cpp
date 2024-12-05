@@ -476,15 +476,14 @@ TR_AOTDependencyTable::resolvePendingLoads()
 
 // todo: remove loader chain if below works out
 J9Class *
-TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain)
+TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t *classChain, void *classLoaderChain)
    {
    // TR_ASSERT(classLoaderChain, "Must be given a loader chain");
 
    if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
       return NULL;
 
-   void *chain = _sharedCache->pointerFromOffsetInSharedCache(classChainOffset);
-   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
+   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(classChain);
 
    OMR::CriticalSection cs(_tableMonitor);
 
