@@ -1261,8 +1261,16 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
    if (bypassProfiledRecord && dependencyTable)
       {
-      auto candidate = dependencyTable->findCandidateWithChainAndLoader(_comp, (uintptr_t *)classChainForClassBeingValidated, classChainIdentifyingLoader);
-      return validateSymbol(classID, candidate);
+      auto svmCandidate = getJ9ClassFromID(classID, SymOptional);
+      if (svmCandidate)
+         {
+         return dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)svmCandidate, (uintptr_t *)classChainForClassBeingValidated);
+         }
+      else
+         {
+         auto candidate = dependencyTable->findCandidateWithChainAndLoader(_comp, (uintptr_t *)classChainForClassBeingValidated, classChainIdentifyingLoader);
+         return validateSymbol(classID, candidate);
+         }
       }
 
    J9ClassLoader *classLoader = (J9ClassLoader *)_fej9->sharedCache()->lookupClassLoaderAssociatedWithClassChain(classChainIdentifyingLoader);
