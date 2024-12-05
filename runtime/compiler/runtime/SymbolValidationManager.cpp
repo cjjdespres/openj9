@@ -1261,15 +1261,15 @@ TR::SymbolValidationManager::validateProfiledClassRecord(uint16_t classID, void 
    auto dependencyTable = _fej9->getPersistentInfo()->getAOTDependencyTable();
    if (bypassProfiledRecord && dependencyTable)
       {
-      auto svmCandidate = getJ9ClassFromID(classID, SymOptional);
-      if (svmCandidate)
+      if (isDefinedID(classID))
          {
-         return dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)svmCandidate, (uintptr_t *)classChainForClassBeingValidated);
+         auto svmCandidate = getJ9ClassFromID(classID, SymOptional);
+         return svmCandidate ? dependencyTable->classMatchesCachedVersion((TR_OpaqueClassBlock *)svmCandidate, (uintptr_t *)classChainForClassBeingValidated) : false;
          }
       else
          {
-         auto candidate = dependencyTable->findCandidateWithChainAndLoader(_comp, (uintptr_t *)classChainForClassBeingValidated, classChainIdentifyingLoader);
-         return validateSymbol(classID, candidate);
+         auto dependencyCandidate = dependencyTable->findCandidateWithChainAndLoader(_comp, (uintptr_t *)classChainForClassBeingValidated, classChainIdentifyingLoader);
+         return validateSymbol(classID, dependencyCandidate);
          }
       }
 
