@@ -473,13 +473,28 @@ TR_AOTDependencyTable::resolvePendingLoads()
 J9Class *
 TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t classChainOffset, void *classLoaderChain)
    {
-   TR_ASSERT(classLoaderChain, "Must be given a loader chain");
-
    if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
       return NULL;
 
-   void *chain = _sharedCache->pointerFromOffsetInSharedCache(classChainOffset);
-   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(chain);
+   auto classChain = (uintptr_t *)_sharedCache->pointerFromOffsetInSharedCache(classChainOffset);
+   return findChainLoaderCandidate(comp, classChain, classLoaderChain);
+   }
+
+J9Class *
+TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, uintptr_t *classChain, void *classLoaderChain)
+   {
+   if (comp->isDeserializedAOTMethod() || comp->ignoringLocalSCC())
+      return NULL;
+
+   return findChainLoaderCandidate(comp, classChain, classLoaderChain);
+   }
+
+J9Class *
+TR_AOTDependencyTable::findChainLoaderCandidate(TR::Compilation *comp, uintptr_t *classChain, void *classLoaderChain)
+   {
+   TR_ASSERT(classLoaderChain, "Must be given a loader chain");
+
+   uintptr_t romClassOffset = _sharedCache->startingROMClassOffsetOfClassChain(classChain);
 
    OMR::CriticalSection cs(_tableMonitor);
 
@@ -492,13 +507,14 @@ TR_AOTDependencyTable::findCandidateWithChainAndLoader(TR::Compilation *comp, ui
 
    for (const auto& clazz: it->second._loadedClasses)
       {
-      // This is the same validation condition as in jitGetClassInClassloaderFromUTF8()
+      // Init condition taken from jitGetClassInClassloaderFromUTF8()
       if ((J9ClassInitFailed != clazz->initializeStatus) &&
           (_sharedCache->persistentClassLoaderTable()->lookupClassChainAssociatedWithClassLoader(clazz->classLoader) == classLoaderChain))
          return clazz;
       }
 
    return NULL;
+
    }
 
 void
