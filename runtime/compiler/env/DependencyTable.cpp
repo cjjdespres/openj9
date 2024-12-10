@@ -444,15 +444,18 @@ TR_AOTDependencyTable::invalidateRedefinedClass(TR_PersistentCHTable *table, TR_
 void
 TR_AOTDependencyTable::resolvePendingLoads()
    {
+   static const char *countString = feGetEnv("TR_DepTrackInitCount");
+   static int32_t targetCount = countString ? atoi(countString) : 0;
+
    for (auto& entry: _pendingLoads)
       {
       auto method = entry->first;
       auto initCount = TR::CompilationInfo::getInvocationCount(method);
       auto count = initCount;
-      while (count > 0)
+      while (count > targetCount)
          {
-         if (TR::CompilationInfo::setInvocationCount(method, count, 0))
-            count = 0;
+         if (TR::CompilationInfo::setInvocationCount(method, count, targetCount))
+            count = targetCount;
          else
             count = TR::CompilationInfo::getInvocationCount(method);
          }
