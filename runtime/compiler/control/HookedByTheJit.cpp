@@ -576,8 +576,10 @@ static void jitHookInitializeSendTarget(J9HookInterface * * hook, UDATA eventNum
                   // loads are suppressed if dependencies are unsatisfied,
                   // though remember that counts can decrease faster in the warm
                   // run due to sampling.
+                  static const char *countString = feGetEnv("TR_DepTrackInitCount");
+                  static int32_t targetCount = countString ? atoi(countString) : 0;
                   if (dependencyTable->trackMethod(vmThread, method, romMethod, dependenciesSatisfied))
-                     count = dependenciesSatisfied ? 0 : TR_DEFAULT_INITIAL_COUNT;
+                     count = dependenciesSatisfied ? targetCount : TR_DEFAULT_INITIAL_COUNT;
                   }
 
                if (count == -1)
